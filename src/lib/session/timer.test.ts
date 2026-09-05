@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  URGENCY_THRESHOLD,
   displaySeconds,
   evaluateTimedSet,
   formatDuration,
   isTimerComplete,
+  timerUrgency,
 } from './timer'
 
 describe('evaluateTimedSet — mode minimal', () => {
@@ -50,18 +52,45 @@ describe('evaluateTimedSet — robustesse', () => {
 })
 
 describe('displaySeconds', () => {
-  it('decompte en mode minimal', () => {
-    expect(displaySeconds('minimal', 30, 0)).toBe(30)
-    expect(displaySeconds('minimal', 30, 10)).toBe(20)
+  it('decompte le temps restant', () => {
+    expect(displaySeconds(30, 0)).toBe(30)
+    expect(displaySeconds(30, 10)).toBe(20)
   })
 
-  it('ne descend pas sous zero', () => {
-    expect(displaySeconds('minimal', 30, 45)).toBe(0)
+  it('decompte aussi pour un chrono strict : combien de temps encore', () => {
+    expect(displaySeconds(15, 7)).toBe(8)
   })
 
-  it('compte a l endroit en mode strict', () => {
-    expect(displaySeconds('strict', 15, 7)).toBe(7)
-    expect(displaySeconds('strict', 15, 20)).toBe(20)
+  it('ne descend pas sous zero, meme au depassement', () => {
+    expect(displaySeconds(30, 45)).toBe(0)
+    expect(displaySeconds(15, 20)).toBe(0)
+  })
+})
+
+describe('timerUrgency', () => {
+  it('reste a zero — donc vert — tant que le seuil n est pas franchi', () => {
+    expect(timerUrgency(20, 0)).toBe(0)
+    expect(timerUrgency(20, 10)).toBe(0)
+    // Pile au seuil : encore vert.
+    expect(timerUrgency(20, 20 * URGENCY_THRESHOLD)).toBe(0)
+  })
+
+  it('monte continument du seuil jusqu a l echeance', () => {
+    // A mi-chemin entre 85 % et 100 % de 20 s, soit 18.5 s.
+    expect(timerUrgency(20, 18.5)).toBeCloseTo(0.5)
+  })
+
+  it('atteint 1 a l echeance et y reste', () => {
+    expect(timerUrgency(20, 20)).toBe(1)
+    expect(timerUrgency(20, 35)).toBe(1)
+  })
+
+  it('ne descend pas sous zero pour une duree negative', () => {
+    expect(timerUrgency(20, -5)).toBe(0)
+  })
+
+  it('traite une cible nulle comme deja urgente, sans diviser par zero', () => {
+    expect(timerUrgency(0, 0)).toBe(1)
   })
 })
 

@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { ThemeToggle } from '@/components/theme-toggle'
 import { buttonVariants } from '@/components/ui/button'
 import { listGrids } from '@/lib/grids/queries'
 import { loadActiveGridPlan, type SessionStart } from '@/lib/session/queries'
@@ -55,6 +56,7 @@ export default async function DashboardPage() {
           >
             Historique
           </Link>
+          <ThemeToggle />
           <SignOutButton />
         </div>
       </header>

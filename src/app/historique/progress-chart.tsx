@@ -4,7 +4,8 @@ import type { ProgressPoint } from '@/lib/history/stats'
  * Progression : niveau atteint dans le temps.
  *
  * Une seule serie, donc pas de legende — le titre la nomme — et une seule
- * teinte, celle du texte principal. La courbe est en escalier parce qu'un
+ * teinte : --chart-1, distincte du lime d'interface parce qu'un trait de 2 px
+ * n'a pas les memes contraintes de contraste qu'un aplat de bouton. La courbe est en escalier parce qu'un
  * niveau se franchit d'un coup : interpoler entre deux points laisserait
  * croire a une progression continue qui n'existe pas.
  *
@@ -102,7 +103,7 @@ export function ProgressChart({ points }: { points: ProgressPoint[] }) {
         <path
           d={path}
           fill="none"
-          className="stroke-primary"
+          className="stroke-chart-1"
           strokeWidth={2}
           strokeLinejoin="round"
         />
@@ -113,7 +114,7 @@ export function ProgressChart({ points }: { points: ProgressPoint[] }) {
             cx={x(Date.parse(point.date))}
             cy={y(point.levelPosition)}
             r={4}
-            className="fill-primary stroke-card"
+            className="fill-chart-1 stroke-card"
             strokeWidth={2}
           >
             <title>
