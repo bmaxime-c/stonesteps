@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="StoneSteps">
+  <!-- Variante maskable : le motif tient dans la zone sure de 80% imposee
+       par les lanceurs Android, qui rognent les bords de l'icone. -->
+  <rect width="512" height="512" fill="#0f172a" />
+  <g fill="#f8fafc">
+    <rect x="140" y="320" width="72" height="64" rx="10" />
+    <rect x="236" y="256" width="72" height="128" rx="10" />
+    <rect x="332" y="180" width="72" height="204" rx="10" />
+  </g>
+  <path
+    d="M152 176 L 196 132 L 240 176"
+    fill="none"
+    stroke="#38bdf8"
+    stroke-width="24"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>
