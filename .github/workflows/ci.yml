@@ -25,7 +25,13 @@ jobs:
           node-version: 22
           cache: npm
 
-      - run: npm ci
+      # `npm install` et non `npm ci` : le verrou est genere sous Windows, ou
+      # npm n'inscrit que les binaires natifs de la plateforme courante. Les
+      # variantes Linux (@rolldown/binding-linux-*, lightningcss-linux-*) en
+      # sont absentes, et `npm ci`, qui exige un verrou complet, echoue.
+      # Correctif durable : regenerer le verrou dans un conteneur Linux, puis
+      # revenir a `npm ci`. Voir TODO.md.
+      - run: npm install --no-audit --no-fund
 
       - name: Format
         run: npm run format:check
