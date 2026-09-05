@@ -76,6 +76,8 @@ Objectif démo : je construis ma grille de A à Z et je la retrouve au rechargem
 - [x] Grille modèle « 10 niveaux » proposée à la création, modifiable ensuite
 - [x] Tests : règles de validation, description lisible, réordonnancement,
       cohérence de la grille de référence
+- [x] Confort de saisie : duplication d'un niveau et d'un exercice, niveaux
+      repliables, ajout d'exercices en série sans refermer le formulaire
 
 Reste ouvert :
 
@@ -83,15 +85,17 @@ Reste ouvert :
       descendre à la place : accessibles au clavier, fiables au doigt, et sans
       dépendance supplémentaire. Le glisser-déposer reste plus agréable sur
       grand écran, à ajouter par-dessus si le besoin se confirme.
-- [ ] Duplication d'une grille existante. Prévue au plan initial, non livrée :
-      elle n'a d'intérêt réel qu'avec le partage entre amis, en phase 5.
+- [ ] Duplication d'une grille entière. Prévue au plan initial, non livrée :
+      elle n'a d'intérêt réel qu'avec le partage entre amis, en phase 5. La
+      duplication d'un niveau et d'un exercice, elle, est en place.
 
 ### 🔧 Actions manuelles — phase 2
 
-- [ ] Appliquer la migration `20260905000004_reorder_functions.sql`. Elle sera
-      jouée automatiquement au merge par l'intégration GitHub ; il faut
-      l'appliquer à la main avant si tu veux tester en local ou en preview,
-      qui partagent la même base.
+- [ ] Appliquer les migrations `20260905000004_reorder_functions.sql` et
+      `20260905000005_duplicate_functions.sql`. Elles seront jouées
+      automatiquement au merge par l'intégration GitHub ; il faut les appliquer
+      à la main avant si tu veux tester en local ou en preview, qui partagent
+      la même base.
 
 ---
 

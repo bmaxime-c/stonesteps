@@ -17,6 +17,8 @@ import {
   addLevelExercise,
   deleteLevel,
   deleteLevelExercise,
+  duplicateLevel,
+  duplicateLevelExercise,
   renameLevel,
   reorderLevelExercises,
   reorderLevels,
@@ -72,19 +74,22 @@ export function LevelCard({
   levelCount,
   levelIds,
   exercises,
+  defaultOpen,
 }: {
   gridId: string
   level: EditorLevel
   levelCount: number
   levelIds: string[]
   exercises: Exercise[]
+  defaultOpen: boolean
 }) {
   const [addingExercise, setAddingExercise] = useState(false)
   const [editingRowId, setEditingRowId] = useState<string | null>(null)
 
   const index = levelIds.indexOf(level.id)
   const rowIds = level.exercises.map((e) => e.id)
-  const isFull = level.exercises.length >= MAX_EXERCISES_PER_LEVEL
+  const count = level.exercises.length
+  const isFull = count >= MAX_EXERCISES_PER_LEVEL
 
   return (
     <Card>
@@ -114,20 +119,20 @@ export function LevelCard({
               label="Monter le niveau"
               symbol="↑"
               disabled={index <= 0}
-              fields={{
-                gridId,
-                orderedIds: moveItem(levelIds, index, -1).join(','),
-              }}
+              fields={{ gridId, orderedIds: moveItem(levelIds, index, -1).join(',') }}
             />
             <IconAction
               action={reorderLevels}
               label="Descendre le niveau"
               symbol="↓"
               disabled={index < 0 || index >= levelCount - 1}
-              fields={{
-                gridId,
-                orderedIds: moveItem(levelIds, index, 1).join(','),
-              }}
+              fields={{ gridId, orderedIds: moveItem(levelIds, index, 1).join(',') }}
+            />
+            <IconAction
+              action={duplicateLevel}
+              label="Dupliquer le niveau"
+              symbol="⧉"
+              fields={{ gridId, levelId: level.id }}
             />
             <IconAction
               action={deleteLevel}
@@ -140,107 +145,134 @@ export function LevelCard({
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-3">
-        {level.exercises.length === 0 ? (
-          <p className="text-muted-foreground text-sm">
-            Aucun exercice. Un niveau vide ne peut pas etre valide en seance.
-          </p>
-        ) : (
-          <ul className="divide-border divide-y">
-            {level.exercises.map((exercise, exerciseIndex) => (
-              <li key={exercise.id} className="py-2">
-                {editingRowId === exercise.id ? (
-                  <ExerciseForm
-                    action={updateLevelExercise}
-                    gridId={gridId}
-                    exercises={exercises}
-                    submitLabel="Enregistrer"
-                    initial={{
-                      rowId: exercise.id,
-                      exerciseId: exercise.exerciseId,
-                      sets: exercise.sets,
-                      reps: exercise.reps,
-                      timerMode: exercise.timerMode,
-                      timerSeconds: exercise.timerSeconds,
-                    }}
-                    onDone={() => setEditingRowId(null)}
-                  />
-                ) : (
-                  <div className="flex items-center justify-between gap-2">
-                    <button
-                      type="button"
-                      className="min-w-0 flex-1 text-left"
-                      onClick={() => setEditingRowId(exercise.id)}
-                    >
-                      <span className="block truncate text-sm font-medium">
-                        {exercise.exerciseName}
-                      </span>
-                      <span className="text-muted-foreground block text-xs">
-                        {describeExercise(exercise)}
-                      </span>
-                    </button>
+      <CardContent>
+        {/*
+          <details> plutot qu'un etat React : une grille de dix niveaux tient
+          alors dans un ecran, et il n'y a rien de plus a hydrater.
+        */}
+        <details open={defaultOpen} className="group">
+          <summary className="text-muted-foreground cursor-pointer list-none text-sm">
+            <span className="group-open:hidden">
+              {count === 0
+                ? 'Aucun exercice — deplier'
+                : `${count} exercice${count > 1 ? 's' : ''} — deplier`}
+            </span>
+            <span className="hidden group-open:inline">Replier</span>
+          </summary>
 
-                    <div className="flex shrink-0 items-center">
-                      <IconAction
-                        action={reorderLevelExercises}
-                        label="Monter l'exercice"
-                        symbol="↑"
-                        disabled={exerciseIndex === 0}
-                        fields={{
-                          gridId,
-                          levelId: level.id,
-                          orderedIds: moveItem(rowIds, exerciseIndex, -1).join(','),
+          <div className="mt-3 space-y-3">
+            {count === 0 ? (
+              <p className="text-muted-foreground text-sm">
+                Aucun exercice. Un niveau vide ne peut pas etre valide en seance.
+              </p>
+            ) : (
+              <ul className="divide-border divide-y">
+                {level.exercises.map((exercise, exerciseIndex) => (
+                  <li key={exercise.id} className="py-2">
+                    {editingRowId === exercise.id ? (
+                      <ExerciseForm
+                        action={updateLevelExercise}
+                        gridId={gridId}
+                        exercises={exercises}
+                        submitLabel="Enregistrer"
+                        initial={{
+                          rowId: exercise.id,
+                          exerciseId: exercise.exerciseId,
+                          sets: exercise.sets,
+                          reps: exercise.reps,
+                          timerMode: exercise.timerMode,
+                          timerSeconds: exercise.timerSeconds,
                         }}
+                        onDone={() => setEditingRowId(null)}
                       />
-                      <IconAction
-                        action={reorderLevelExercises}
-                        label="Descendre l'exercice"
-                        symbol="↓"
-                        disabled={exerciseIndex === rowIds.length - 1}
-                        fields={{
-                          gridId,
-                          levelId: level.id,
-                          orderedIds: moveItem(rowIds, exerciseIndex, 1).join(','),
-                        }}
-                      />
-                      <IconAction
-                        action={deleteLevelExercise}
-                        label="Supprimer l'exercice"
-                        symbol="✕"
-                        fields={{ gridId, rowId: exercise.id }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
+                    ) : (
+                      <div className="flex items-center justify-between gap-2">
+                        <button
+                          type="button"
+                          className="min-w-0 flex-1 text-left"
+                          onClick={() => setEditingRowId(exercise.id)}
+                        >
+                          <span className="block truncate text-sm font-medium">
+                            {exercise.exerciseName}
+                          </span>
+                          <span className="text-muted-foreground block text-xs">
+                            {describeExercise(exercise)}
+                          </span>
+                        </button>
 
-        {addingExercise ? (
-          <div className="border-border rounded-lg border p-3">
-            <ExerciseForm
-              action={addLevelExercise}
-              gridId={gridId}
-              levelId={level.id}
-              exercises={exercises}
-              submitLabel="Ajouter"
-              onDone={() => setAddingExercise(false)}
-            />
+                        <div className="flex shrink-0 items-center">
+                          <IconAction
+                            action={reorderLevelExercises}
+                            label="Monter l'exercice"
+                            symbol="↑"
+                            disabled={exerciseIndex === 0}
+                            fields={{
+                              gridId,
+                              levelId: level.id,
+                              orderedIds: moveItem(rowIds, exerciseIndex, -1).join(','),
+                            }}
+                          />
+                          <IconAction
+                            action={reorderLevelExercises}
+                            label="Descendre l'exercice"
+                            symbol="↓"
+                            disabled={exerciseIndex === rowIds.length - 1}
+                            fields={{
+                              gridId,
+                              levelId: level.id,
+                              orderedIds: moveItem(rowIds, exerciseIndex, 1).join(','),
+                            }}
+                          />
+                          <IconAction
+                            action={duplicateLevelExercise}
+                            label="Dupliquer l'exercice"
+                            symbol="⧉"
+                            disabled={isFull}
+                            fields={{ gridId, rowId: exercise.id }}
+                          />
+                          <IconAction
+                            action={deleteLevelExercise}
+                            label="Supprimer l'exercice"
+                            symbol="✕"
+                            fields={{ gridId, rowId: exercise.id }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {addingExercise ? (
+              <div className="border-border rounded-lg border p-3">
+                <ExerciseForm
+                  action={addLevelExercise}
+                  gridId={gridId}
+                  levelId={level.id}
+                  exercises={exercises}
+                  submitLabel="Ajouter"
+                  // Reste ouvert apres un ajout reussi : remplir un niveau,
+                  // c'est enchainer plusieurs exercices d'affilee.
+                  stayOpenOnSuccess
+                  onDone={() => setAddingExercise(false)}
+                />
+              </div>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={isFull}
+                onClick={() => setAddingExercise(true)}
+              >
+                {isFull
+                  ? `Maximum de ${MAX_EXERCISES_PER_LEVEL} exercices atteint`
+                  : 'Ajouter un exercice'}
+              </Button>
+            )}
           </div>
-        ) : (
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={isFull}
-            onClick={() => setAddingExercise(true)}
-          >
-            {isFull
-              ? `Maximum de ${MAX_EXERCISES_PER_LEVEL} exercices atteint`
-              : 'Ajouter un exercice'}
-          </Button>
-        )}
+        </details>
       </CardContent>
     </Card>
   )

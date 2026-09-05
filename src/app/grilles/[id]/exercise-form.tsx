@@ -41,6 +41,7 @@ export function ExerciseForm({
   initial,
   submitLabel,
   onDone,
+  stayOpenOnSuccess = false,
 }: {
   action: FormAction
   gridId: string
@@ -49,11 +50,21 @@ export function ExerciseForm({
   initial?: ExerciseFormValues
   submitLabel: string
   onDone?: () => void
+  /** Garde le formulaire ouvert apres un succes, pour enchainer les saisies. */
+  stayOpenOnSuccess?: boolean
 }) {
+  const [added, setAdded] = useState(0)
+
   const [state, formAction] = useActionState(
     async (prev: ActionState, data: FormData) => {
       const result = await action(prev, data)
-      if (!result.error) onDone?.()
+      if (!result.error) {
+        if (stayOpenOnSuccess) {
+          setAdded((value) => value + 1)
+        } else {
+          onDone?.()
+        }
+      }
       return result
     },
     emptyActionState,
@@ -153,12 +164,17 @@ export function ExerciseForm({
         </div>
       ) : null}
 
-      <div className="flex gap-2">
+      <div className="flex items-center gap-2">
         <SubmitButton label={submitLabel} />
         {onDone ? (
           <Button type="button" size="sm" variant="ghost" onClick={onDone}>
-            Annuler
+            {stayOpenOnSuccess && added > 0 ? 'Terminer' : 'Annuler'}
           </Button>
+        ) : null}
+        {added > 0 ? (
+          <span className="text-muted-foreground text-xs">
+            {added} exercice{added > 1 ? 's' : ''} ajoute{added > 1 ? 's' : ''}
+          </span>
         ) : null}
       </div>
     </form>
