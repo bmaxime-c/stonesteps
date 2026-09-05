@@ -266,20 +266,35 @@ PR obtient sa preview.
 
 ### Migrations et déploiement
 
-- [ ] **Vérifier pourquoi l'intégration GitHub Supabase n'applique pas les
-      migrations au merge.** Constaté le 2026-09-05 : après le merge des PR #4
-      et #5, les fonctions des migrations `0004` et `0005` étaient absentes de
-      la base (sondage de `/rest/v1/rpc/...` → `PGRST202`, alors que
-      `are_friends`, appliquée à la main, répondait). Aucun check Supabase
-      n'apparaissait sur le commit de merge. Deux issues à trancher : - réparer l'intégration (Supabase → Integrations → GitHub : dépôt
-      connecté, branche de production, application automatique) — c'est ce
-      qui était prévu, mais le mécanisme reste silencieux en cas d'échec ; - assumer l'application manuelle et ajouter une étape de CI qui compare
-      les migrations du dépôt à `supabase_migrations.schema_migrations` et
-      fait échouer la PR en cas d'écart. Plus verbeux, mais l'oubli devient
-      impossible.
-- [ ] En attendant, **appliquer chaque nouvelle migration à la main** dans le
-      SQL Editor avant de tester, et enregistrer sa version dans
-      `supabase_migrations.schema_migrations`.
+- [x] **Trancher l'application des migrations au merge.** L'intégration GitHub
+      Supabase ne les appliquait pas et n'affichait aucun check (constaté le
+      2026-09-05 : après le merge des PR #4 et #5, les fonctions de `0004` et
+      `0005` étaient absentes, `/rest/v1/rpc/...` → `PGRST202`). Décision : ne
+      pas dépendre d'un mécanisme silencieux. `.github/workflows/migrations.yml`
+      pousse les migrations avec la CLI Supabase au push sur `main`, et sur PR
+      liste l'écart + poussée à blanc + refus de toute migration existante
+      modifiée. Un échec est désormais visible sur le commit de merge.
+- [ ] **Appliquer à la main les migrations à tester avant merge** (`just db-push`) :
+      local et preview partagent la base de production, la CI ne pousse qu'au
+      merge.
+
+### 🔧 Actions manuelles — migrations automatiques
+
+- [ ] Créer un **access token** Supabase (Account → Access Tokens) et
+      l'enregistrer en secret de dépôt `SUPABASE_ACCESS_TOKEN`
+      (GitHub → Settings → Secrets and variables → Actions).
+- [ ] Enregistrer le mot de passe de la base (Project Settings → Database) en
+      secret `SUPABASE_DB_PASSWORD`.
+- [ ] **Désactiver l'intégration GitHub Supabase** (Supabase → Integrations →
+      GitHub) une fois le workflow vert : deux mécanismes d'application sur la
+      même base finiraient par se contredire.
+- [ ] Vérifier l'historique distant avant la première poussée automatique :
+      `supabase migration list --linked`. Toute migration appliquée à la main
+      sans sa ligne dans `supabase_migrations.schema_migrations` doit être
+      marquée `supabase migration repair --status applied <version>`, sinon la
+      CI la rejouera et échouera.
+- [ ] Lancer le workflow à vide (Actions → Migrations → Run workflow) pour
+      valider secrets et connexion avant d'en dépendre au merge.
 
 ### 🔧 Actions manuelles — déploiement
 

@@ -53,9 +53,35 @@ Variables_.
 
 Les migrations sont dans `supabase/migrations/`.
 
-⚠️ **L'intégration GitHub de Supabase ne les applique pas au merge** — constaté
-le 2026-09-05, la question est ouverte dans `TODO.md`. En attendant, il faut les
-jouer à la main. Pour éviter de reconstruire le bloc à chaque fois :
+Elles sont appliquées **au merge sur `main`** par le workflow
+`.github/workflows/migrations.yml` : la CLI Supabase se lie au projet et joue
+`supabase db push`. L'intégration GitHub de Supabase, silencieuse en cas d'échec
+(constaté le 2026-09-05), n'est plus le mécanisme d'application — si elle est
+encore active côté dashboard, la désactiver pour éviter les doubles passages.
+
+Le workflow demande deux secrets de dépôt (_Settings → Secrets and variables →
+Actions_) :
+
+| Secret                  | Où le trouver                                         |
+| ----------------------- | ----------------------------------------------------- |
+| `SUPABASE_ACCESS_TOKEN` | Supabase → Account → Access Tokens                    |
+| `SUPABASE_DB_PASSWORD`  | mot de passe de la base (Project Settings → Database) |
+
+Le `project_id` vient de `supabase/config.toml`, pas d'un secret.
+
+Sur une pull request, le workflow ne pousse rien : il liste l'écart avec la base
+(`supabase migration list`), fait une poussée à blanc, et échoue si la PR modifie
+ou supprime une migration déjà sur `main`.
+
+Pour tester une migration **avant** le merge — local et preview partagent la même
+base —, l'appliquer à la main :
+
+```bash
+just db-status   # ce qui manque sur la base distante
+just db-push     # applique les migrations manquantes
+```
+
+Sans CLI Supabase installée, le repli reste le SQL Editor :
 
 ```bash
 npm run migration:sql -- --clip                 # la plus récente
@@ -64,8 +90,8 @@ npm run migration:sql -- --all                  # toutes, sur la sortie standard
 ```
 
 Le script enveloppe la migration dans une transaction et enregistre sa version
-dans `supabase_migrations.schema_migrations`, pour que l'intégration ne la
-rejoue pas plus tard. Avec `--clip`, il ne reste qu'à coller dans le
+dans `supabase_migrations.schema_migrations`, pour que la CI ne la rejoue pas au
+merge. Avec `--clip`, il ne reste qu'à coller dans le
 [SQL Editor](https://supabase.com/dashboard) et lancer.
 
 | Migration                            | Contenu                       |
@@ -107,6 +133,8 @@ Avec [`just`](https://github.com/casey/just) si installé, sinon directement en 
 | `just build`     | `npm run build`                   | build de production                                         |
 | `just types`     | —                                 | régénère `src/lib/database.types.ts` (CLI Supabase requise) |
 | `just sql`       | `npm run migration:sql -- --clip` | copie une migration dans le presse-papier                   |
+| `just db-status` | —                                 | migrations locales contre base distante                     |
+| `just db-push`   | —                                 | applique les migrations manquantes                          |
 
 ## Notes
 

@@ -2,10 +2,11 @@
 /*
  * Prepare une migration a coller dans le SQL Editor Supabase.
  *
- * Tant que l'integration GitHub n'applique pas les migrations au merge (voir
- * TODO.md), il faut les jouer a la main. Ce script evite de reconstruire le
- * bloc a chaque fois : il enveloppe la migration dans une transaction et
- * enregistre sa version, pour que l'integration ne la rejoue pas plus tard.
+ * Le merge sur main applique les migrations via la CI (voir
+ * .github/workflows/migrations.yml). Ce script sert au repli manuel : tester
+ * une migration avant merge sans la CLI Supabase installee. Il enveloppe la
+ * migration dans une transaction et enregistre sa version, pour que la CI ne la
+ * rejoue pas au merge.
  *
  * Usage :
  *   node scripts/migration-sql.mjs                 la plus recente

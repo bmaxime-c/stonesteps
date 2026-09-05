@@ -1,0 +1,98 @@
+name: Migrations
+
+# L'integration GitHub de Supabase n'appliquait pas les migrations au merge et
+# echouait en silence (voir TODO.md, constate le 2026-09-05). On la remplace par
+# une etape explicite : la CLI Supabase pousse ici les migrations manquantes, et
+# l'echec est visible sur le commit de merge.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/config.toml'
+      - '.github/workflows/migrations.yml'
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/config.toml'
+      - '.github/workflows/migrations.yml'
+  # Permet de rejouer la poussee sans nouveau commit (onglet Actions -> Run workflow).
+  workflow_dispatch:
+
+# Deux poussees simultanees sur la meme base se marcheraient dessus : on met en
+# file d'attente au lieu d'annuler, une migration commencee doit aller au bout.
+concurrency:
+  group: migrations-production
+  cancel-in-progress: false
+
+jobs:
+  # Garde-fou sans secret : une migration deja poussee ne se modifie pas, on en
+  # ajoute une (regle du CLAUDE.md). Vaut aussi pour les forks, ou les secrets
+  # sont indisponibles.
+  immutability:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Aucune migration existante modifiee ou supprimee
+        run: |
+          base="origin/${{ github.base_ref }}"
+          touched=$(git diff --name-only --diff-filter=MDR "$base"...HEAD -- supabase/migrations || true)
+          if [ -n "$touched" ]; then
+            echo "::error::Ces migrations sont deja sur ${{ github.base_ref }} et ont ete modifiees ou supprimees :"
+            echo "$touched"
+            echo "Ajoute une nouvelle migration plutot que de reecrire celles-ci."
+            exit 1
+          fi
+          echo "Aucune migration existante touchee."
+
+  push:
+    # Les secrets sont absents sur une PR issue d'un fork : on n'y tente rien.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Verifier les secrets
+        run: |
+          missing=""
+          [ -n "$SUPABASE_ACCESS_TOKEN" ] || missing="$missing SUPABASE_ACCESS_TOKEN"
+          [ -n "$SUPABASE_DB_PASSWORD" ] || missing="$missing SUPABASE_DB_PASSWORD"
+          if [ -n "$missing" ]; then
+            echo "::error::Secrets manquants :$missing (Settings -> Secrets and variables -> Actions)."
+            exit 1
+          fi
+
+      # project_id vit dans supabase/config.toml : une seule source de verite.
+      - name: Lier le projet
+        run: |
+          ref=$(sed -n 's/^project_id = "\(.*\)"/\1/p' supabase/config.toml)
+          if [ -z "$ref" ]; then
+            echo "::error::project_id absent de supabase/config.toml."
+            exit 1
+          fi
+          echo "Projet Supabase : $ref"
+          supabase link --project-ref "$ref"
+
+      - name: Etat des migrations
+        run: supabase migration list --linked
+
+      # Sur une PR, on se contente d'annoncer ce qui serait applique au merge.
+      - name: Poussee a blanc (pull request)
+        if: github.event_name == 'pull_request'
+        run: supabase db push --dry-run
+
+      - name: Pousser les migrations
+        if: github.event_name != 'pull_request'
+        run: supabase db push
