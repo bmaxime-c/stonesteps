@@ -54,10 +54,10 @@ Reste à traiter, sans urgence :
       **En retard** : l'application est déjà en ligne, donc atteignable par
       n'importe qui, et sans cette option un compte peut être créé avec
       l'adresse e-mail d'un tiers.
-- [ ] Activer le provider Google si tu veux que le bouton fonctionne :
+- [x] Activer le provider Google si tu veux que le bouton fonctionne :
       Supabase → Authentication → Providers → Google, avec un client OAuth créé
       côté Google Cloud Console. Sinon, retirer le bouton de l'interface.
-- [ ] Vérifier que l'intégration GitHub Supabase pointe bien sur `main` comme
+- [x] Vérifier que l'intégration GitHub Supabase pointe bien sur `main` comme
       branche de production, pour que les migrations s'appliquent au merge
 
 ---
@@ -95,26 +95,40 @@ Reste ouvert :
 
 ---
 
-## Phase 3 — Exécution de séance
+## Phase 3 — Exécution de séance ✅
 
 Objectif démo : une séance complète depuis le téléphone, en salle, sans réseau.
 
-- [ ] Démarrage d'une séance : reprise automatique au dernier niveau non validé
-- [ ] Écran de séance : exercice courant, série courante, progression visible
-- [ ] Chrono `minimal` — compte à rebours à tenir ; l'arrêt anticipé marque
-      l'échec et enregistre la durée réellement tenue
-- [ ] Chrono `strict` — temps limite ; le dépassement marque l'échec
-- [ ] Validation d'une série : réussie, ou échouée avec le nombre de
+- [x] Démarrage d'une séance : reprise automatique au dernier niveau non validé
+- [x] Écran de séance : exercice courant, série courante, progression visible
+- [x] Chrono `minimal` — décompte à tenir ; l'arrêt anticipé marque l'échec et
+      enregistre la durée réellement tenue. Dépasser l'objectif reste une
+      réussite.
+- [x] Chrono `strict` — temps limite ; le dépassement marque l'échec
+- [x] Validation d'une série : réussie, ou échouée avec le nombre de
       répétitions atteintes
-- [ ] Calcul de validation du niveau : toutes les séries de tous les exercices
-- [ ] Fin de séance : récapitulatif, niveau validé ou non
-- [ ] Persistance locale (IndexedDB) pendant la séance
-- [ ] Synchronisation à la reconnexion, idempotente grâce à la clé naturelle
+- [x] Calcul de validation du niveau : toutes les séries de tous les exercices
+- [x] Fin de séance : récapitulatif, niveau validé ou non
+- [x] Persistance locale (IndexedDB) pendant la séance
+- [x] Synchronisation idempotente : l'identifiant de séance est généré par le
+      client, et `set_results` porte la clé naturelle
       `(session_id, level_exercise_id, set_index)`
-- [ ] Indicateur d'état de synchronisation, et reprise d'une séance interrompue
-- [ ] Wake Lock : empêcher l'écran de s'éteindre pendant la séance
-- [ ] Tests : logique de validation, calcul du niveau suivant, idempotence de
-      la synchronisation
+- [x] Indicateur hors ligne, état de synchronisation, reprise automatique au
+      retour du réseau, reprise d'une séance interrompue
+- [x] Wake Lock : l'écran ne s'éteint plus pendant la séance
+- [x] Le service worker met `/seance` en cache : recharger son téléphone en
+      pleine série, sans réseau, ne fait plus perdre la séance
+- [x] Tests : validation de niveau, reprise, déroulé des séries, sémantique des
+      deux chronos (63 tests au total)
+
+Reste ouvert :
+
+- [ ] Temps de repos entre séries. Jamais demandé, mais c'est le manque qui se
+      remarquera le plus vite à l'usage.
+- [ ] Notification sonore ou vibration en fin de chrono : en gainage, on ne
+      regarde pas l'écran.
+- [ ] Les séances non synchronisées d'un compte sont effacées à la déconnexion.
+      Volontaire, mais à revoir si cela se produit en pratique.
 
 ---
 
@@ -177,14 +191,14 @@ PR obtient sa preview.
 
 - [x] Saisir `NEXT_PUBLIC_SUPABASE_URL` et `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
       dans Vercel → Settings → Environment Variables
-- [ ] Basculer la _Site URL_ Supabase sur `https://stonesteps.vercel.app`.
+- [x] Basculer la _Site URL_ Supabase sur `https://stonesteps.vercel.app`.
       Tant qu'elle pointe sur `localhost`, les liens de confirmation envoyés
       par e-mail renvoient vers une machine qui n'est pas celle du
       destinataire.
-- [ ] Ajouter aux _Redirect URLs_ Supabase, en conservant l'entrée localhost : - `https://stonesteps.vercel.app/auth/callback` - `https://stonesteps-*-bmaxime-c.vercel.app/auth/callback` — le joker
+- [x] Ajouter aux _Redirect URLs_ Supabase, en conservant l'entrée localhost : - `https://stonesteps.vercel.app/auth/callback` - `https://stonesteps-*-bmaxime-c.vercel.app/auth/callback` — le joker
       couvre les déploiements de preview, sinon l'authentification casse sur
       chaque PR
-- [ ] 🔒 Réactiver « Confirm email » — Supabase → Authentication → Sign In /
+- [x] 🔒 Réactiver « Confirm email » — Supabase → Authentication → Sign In /
       Providers → Email. **L'application est publique depuis le déploiement :
       sans cette option, n'importe qui peut créer un compte avec l'adresse
       e-mail d'un tiers.**
@@ -193,14 +207,14 @@ PR obtient sa preview.
 
 ## Sécurité — à traiter avant d'ouvrir à d'autres personnes
 
-- [ ] 🔒 Réactiver la confirmation d'e-mail. C'est le point le plus urgent :
+- [x] 🔒 Réactiver la confirmation d'e-mail. C'est le point le plus urgent :
       l'application est en ligne, donc atteignable par n'importe qui.
 - [ ] 🔒 Durcir la politique de mot de passe : longueur minimale à 10 ou 12, et
       activer la détection des mots de passe compromis (Supabase →
       Authentication → Policies)
 - [ ] 🔒 Vérifier les limites de débit sur l'authentification (Supabase →
       Authentication → Rate Limits), en particulier l'envoi d'e-mails
-- [ ] 🔒 Désactiver les clés legacy `anon` / `service_role` une fois que plus
+- [x] 🔒 Désactiver les clés legacy `anon` / `service_role` une fois que plus
       rien ne les utilise
 - [ ] 🔒 Ne jamais introduire la clé secrète dans le code client. Si un script
       d'administration en a besoin un jour, il tourne en local, la clé reste

@@ -10,12 +10,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { buttonVariants } from '@/components/ui/button'
 import { listGrids } from '@/lib/grids/queries'
+import { loadActiveGridPlan, type SessionStart } from '@/lib/session/queries'
 import { createClient } from '@/lib/supabase/server'
 
-import { signOut } from '../(auth)/actions'
 import { activateGrid, createGridFromTemplate } from '../grilles/actions'
 import { NewGrid } from './new-grid'
+import { SignOutButton } from './sign-out-button'
 
 export const metadata: Metadata = { title: 'Mes grilles' }
 
@@ -29,9 +31,10 @@ export default async function DashboardPage() {
   // expire entre le passage du proxy et le rendu.
   if (!user) redirect('/login')
 
-  const [{ data: profile }, grids] = await Promise.all([
+  const [{ data: profile }, grids, plan] = await Promise.all([
     supabase.from('profiles').select('username, display_name').eq('id', user.id).single(),
     listGrids(),
+    loadActiveGridPlan(),
   ])
 
   const name = profile?.display_name ?? profile?.username ?? 'athlete'
@@ -45,12 +48,10 @@ export default async function DashboardPage() {
             {profile ? `@${profile.username}` : 'Profil en cours de creation'}
           </p>
         </div>
-        <form action={signOut}>
-          <Button type="submit" variant="outline" size="sm">
-            Se deconnecter
-          </Button>
-        </form>
+        <SignOutButton />
       </header>
+
+      {plan ? <NextSession plan={plan} /> : null}
 
       {grids.length === 0 ? (
         <Card>
@@ -118,5 +119,49 @@ export default async function DashboardPage() {
         </>
       )}
     </main>
+  )
+}
+
+/**
+ * Le point d'entree de la seance, mis en avant : c'est l'action qu'on vient
+ * chercher en ouvrant l'application en salle.
+ */
+function NextSession({ plan }: { plan: SessionStart }) {
+  if (plan.resumeLevel === null) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Grille terminee</CardTitle>
+          <CardDescription>
+            Tous les niveaux de « {plan.gridName} » sont valides. Ajoute un niveau, ou
+            passe a une autre grille.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    )
+  }
+
+  const level = plan.resumeLevel
+  const setCount = level.exercises.reduce((total, exercise) => total + exercise.sets, 0)
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          Niveau {level.position}
+          {level.name ? ` — ${level.name}` : ''}
+        </CardTitle>
+        <CardDescription>
+          {plan.gridName} · {level.exercises.length} exercice
+          {level.exercises.length > 1 ? 's' : ''}, {setCount} serie
+          {setCount > 1 ? 's' : ''} a valider
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Link href="/seance" className={buttonVariants({ size: 'lg' })}>
+          Demarrer la seance
+        </Link>
+      </CardContent>
+    </Card>
   )
 }
