@@ -55,9 +55,11 @@ Les migrations sont dans `supabase/migrations/`.
 
 Elles sont appliquées **au merge sur `main`** par le workflow
 `.github/workflows/migrations.yml` : la CLI Supabase se lie au projet et joue
-`supabase db push`. L'intégration GitHub de Supabase, silencieuse en cas d'échec
-(constaté le 2026-09-05), n'est plus le mécanisme d'application — si elle est
-encore active côté dashboard, la désactiver pour éviter les doubles passages.
+`supabase db push`. L'intégration GitHub de Supabase n'est pas le mécanisme
+d'application : son app est installée côté GitHub, mais aucun dépôt n'est
+connecté au projet Supabase (constaté le 2026-09-05), et son application au
+merge suppose de toute façon le Branching, payant. Ne pas la connecter sans
+retirer ce workflow.
 
 Le workflow demande deux secrets de dépôt (_Settings → Secrets and variables →
 Actions_) :

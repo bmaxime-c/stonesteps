@@ -287,9 +287,12 @@ PR obtient sa preview.
       (GitHub → Settings → Secrets and variables → Actions).
 - [ ] Enregistrer le mot de passe de la base (Project Settings → Database) en
       secret `SUPABASE_DB_PASSWORD`.
-- [ ] **Désactiver l'intégration GitHub Supabase** (Supabase → Integrations →
-      GitHub) une fois le workflow vert : deux mécanismes d'application sur la
-      même base finiraient par se contredire.
+- [x] Rien à désactiver côté Supabase : l'app GitHub est installée côté GitHub,
+      mais aucun dépôt n'est connecté au projet Supabase (constaté le
+      2026-09-05). L'intégration n'a jamais eu de migration à appliquer, ce qui
+      explique le silence au merge des PR #4 et #5. Ne pas la connecter après
+      coup sans arbitrage : deux mécanismes sur la même base se contrediraient,
+      et son application au merge suppose le Branching, payant.
 - [ ] Vérifier l'historique distant avant la première poussée automatique :
       `supabase migration list --linked`. Toute migration appliquée à la main
       sans sa ligne dans `supabase_migrations.schema_migrations` doit être
