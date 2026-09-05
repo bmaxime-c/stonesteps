@@ -136,18 +136,28 @@ Reste ouvert :
 
 ---
 
-## Phase 4 — Historique et progression
+## Phase 4 — Historique et progression ✅
 
 Objectif démo : je vois où j'en suis et depuis quand.
 
-- [ ] Liste des séances passées, filtrable par grille
-- [ ] Détail d'une séance : exercices, séries, réussites et échecs
-- [ ] Niveau courant mis en avant sur le tableau de bord
-- [ ] Courbe de progression : niveaux validés dans le temps
-- [ ] Statistiques simples : fréquence, séries réussies, exercice le plus
-      souvent bloquant
-- [ ] Export des données personnelles (JSON ou CSV) — utile en soi, et première
-      brique de la conformité RGPD
+- [x] Liste des séances passées, filtrable par grille
+- [x] Détail d'une séance, regroupé par exercice : séries, réussites, échecs,
+      répétitions atteintes et durées tenues
+- [x] Niveau courant mis en avant sur le tableau de bord (livré en phase 3)
+- [x] Courbe de progression : niveaux validés dans le temps. Une seule série,
+      donc une seule teinte et pas de légende ; tracé en escalier parce qu'un
+      niveau se franchit d'un coup. SVG rendu côté serveur, sans JavaScript.
+- [x] Statistiques : séances, niveaux validés, part de séries réussies, cadence
+      hebdomadaire, jours d'affilée, exercice le plus bloquant. Rangée de
+      tuiles, pas un graphique — ce sont des nombres isolés.
+- [x] Export des données personnelles en JSON, `Cache-Control: private, no-store`
+
+Reste ouvert :
+
+- [ ] Un survol interactif sur la courbe. À cette échelle, quelques points, le
+      `<title>` natif du SVG suffit ; à revoir si l'historique s'allonge.
+- [ ] Comparer deux grilles sur la même courbe. Suppose une palette
+      catégorielle validée, ce qu'une série unique n'exige pas.
 
 ---
 
@@ -190,6 +200,23 @@ PR obtient sa preview.
 - [ ] Vérifier l'installation PWA sur un vrai téléphone — première occasion de
       tester le service worker, inactif en local. Si l'icône ne s'affiche pas
       correctement, basculer les icônes SVG en PNG 192 et 512.
+
+### Migrations et déploiement
+
+- [ ] **Vérifier pourquoi l'intégration GitHub Supabase n'applique pas les
+      migrations au merge.** Constaté le 2026-09-05 : après le merge des PR #4
+      et #5, les fonctions des migrations `0004` et `0005` étaient absentes de
+      la base (sondage de `/rest/v1/rpc/...` → `PGRST202`, alors que
+      `are_friends`, appliquée à la main, répondait). Aucun check Supabase
+      n'apparaissait sur le commit de merge. Deux issues à trancher : - réparer l'intégration (Supabase → Integrations → GitHub : dépôt
+      connecté, branche de production, application automatique) — c'est ce
+      qui était prévu, mais le mécanisme reste silencieux en cas d'échec ; - assumer l'application manuelle et ajouter une étape de CI qui compare
+      les migrations du dépôt à `supabase_migrations.schema_migrations` et
+      fait échouer la PR en cas d'écart. Plus verbeux, mais l'oubli devient
+      impossible.
+- [ ] En attendant, **appliquer chaque nouvelle migration à la main** dans le
+      SQL Editor avant de tester, et enregistrer sa version dans
+      `supabase_migrations.schema_migrations`.
 
 ### 🔧 Actions manuelles — déploiement
 
