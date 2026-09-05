@@ -51,12 +51,14 @@ jobs:
           echo "Aucune migration existante touchee."
 
   push:
-    # Les secrets sont absents sur une PR issue d'un fork : on n'y tente rien.
+    # Le secret est absent sur une PR issue d'un fork : on n'y tente rien.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     env:
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      # Chaine de connexion complete (session pooler, compatible IPv4 comme les
+      # runners GitHub). Un seul secret, qui n'ouvre que cette base : un access
+      # token Supabase, lui, vaudrait pour le compte entier.
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
     steps:
       - uses: actions/checkout@v4
 
@@ -64,35 +66,21 @@ jobs:
         with:
           version: latest
 
-      - name: Verifier les secrets
+      - name: Verifier le secret
         run: |
-          missing=""
-          [ -n "$SUPABASE_ACCESS_TOKEN" ] || missing="$missing SUPABASE_ACCESS_TOKEN"
-          [ -n "$SUPABASE_DB_PASSWORD" ] || missing="$missing SUPABASE_DB_PASSWORD"
-          if [ -n "$missing" ]; then
-            echo "::error::Secrets manquants :$missing (Settings -> Secrets and variables -> Actions)."
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error::Secret SUPABASE_DB_URL manquant (Settings -> Secrets and variables -> Actions)."
             exit 1
           fi
-
-      # project_id vit dans supabase/config.toml : une seule source de verite.
-      - name: Lier le projet
-        run: |
-          ref=$(sed -n 's/^project_id = "\(.*\)"/\1/p' supabase/config.toml)
-          if [ -z "$ref" ]; then
-            echo "::error::project_id absent de supabase/config.toml."
-            exit 1
-          fi
-          echo "Projet Supabase : $ref"
-          supabase link --project-ref "$ref"
 
       - name: Etat des migrations
-        run: supabase migration list --linked
+        run: supabase migration list --db-url "$SUPABASE_DB_URL"
 
       # Sur une PR, on se contente d'annoncer ce qui serait applique au merge.
       - name: Poussee a blanc (pull request)
         if: github.event_name == 'pull_request'
-        run: supabase db push --dry-run
+        run: supabase db push --dry-run --db-url "$SUPABASE_DB_URL"
 
       - name: Pousser les migrations
         if: github.event_name != 'pull_request'
-        run: supabase db push
+        run: supabase db push --db-url "$SUPABASE_DB_URL"

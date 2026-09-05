@@ -61,15 +61,14 @@ connecté au projet Supabase (constaté le 2026-09-05), et son application au
 merge suppose de toute façon le Branching, payant. Ne pas la connecter sans
 retirer ce workflow.
 
-Le workflow demande deux secrets de dépôt (_Settings → Secrets and variables →
-Actions_) :
+Le workflow demande un seul secret de dépôt (_Settings → Secrets and variables →
+Actions_), `SUPABASE_DB_URL` : la chaîne de connexion complète, prise dans
+Supabase → Project Settings → Database → _Connection string_, onglet **URI**,
+variante **session pooler** (compatible IPv4, comme les runners GitHub), avec
+`[YOUR-PASSWORD]` remplacé par le mot de passe de la base.
 
-| Secret                  | Où le trouver                                         |
-| ----------------------- | ----------------------------------------------------- |
-| `SUPABASE_ACCESS_TOKEN` | Supabase → Account → Access Tokens                    |
-| `SUPABASE_DB_PASSWORD`  | mot de passe de la base (Project Settings → Database) |
-
-Le `project_id` vient de `supabase/config.toml`, pas d'un secret.
+Un access token Supabase ferait aussi l'affaire, mais il n'est pas scopé : il
+vaut pour le compte entier, alors que cette URL n'ouvre que cette base.
 
 Sur une pull request, le workflow ne pousse rien : il liste l'écart avec la base
 (`supabase migration list`), fait une poussée à blanc, et échoue si la PR modifie

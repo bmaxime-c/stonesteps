@@ -282,11 +282,12 @@ PR obtient sa preview.
 
 ### 🔧 Actions manuelles — migrations automatiques
 
-- [ ] Créer un **access token** Supabase (Account → Access Tokens) et
-      l'enregistrer en secret de dépôt `SUPABASE_ACCESS_TOKEN`
-      (GitHub → Settings → Secrets and variables → Actions).
-- [ ] Enregistrer le mot de passe de la base (Project Settings → Database) en
-      secret `SUPABASE_DB_PASSWORD`.
+- [ ] Enregistrer la chaîne de connexion de la base en secret de dépôt
+      `SUPABASE_DB_URL` (GitHub → Settings → Secrets and variables → Actions).
+      Elle se prend dans Supabase → Project Settings → Database → _Connection
+      string_, onglet URI, variante **session pooler**, avec `[YOUR-PASSWORD]`
+      remplacé par le mot de passe de la base. Un access token Supabase aurait
+      marché aussi, mais il n'est pas scopé : il vaut pour tout le compte.
 - [x] Rien à désactiver côté Supabase : l'app GitHub est installée côté GitHub,
       mais aucun dépôt n'est connecté au projet Supabase (constaté le
       2026-09-05). L'intégration n'a jamais eu de migration à appliquer, ce qui
