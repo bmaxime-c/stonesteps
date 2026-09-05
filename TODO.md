@@ -108,7 +108,12 @@ Objectif démo : une séance complète depuis le téléphone, en salle, sans ré
 - [x] Chrono `minimal` — décompte à tenir ; l'arrêt anticipé marque l'échec et
       enregistre la durée réellement tenue. Dépasser l'objectif reste une
       réussite.
-- [x] Chrono `strict` — temps limite ; le dépassement marque l'échec
+- [x] Chrono `strict` — temps limite ; le dépassement marque l'échec. Affiché
+      en compte à rebours, comme le mode `minimal` : la question posée est
+      toujours « combien de temps encore ». Vert tant qu'au plus 85 % du temps
+      est consommé, puis interpolation continue de l'orange vers le rouge
+      jusqu'à l'échéance (`timerUrgency`, jeton `--status-warning`). La couleur
+      ne porte jamais seule l'information : un texte double le signal.
 - [x] Validation d'une série : réussie, ou échouée avec le nombre de
       répétitions atteintes
 - [x] Calcul de validation du niveau : toutes les séries de tous les exercices
@@ -126,27 +131,6 @@ Objectif démo : une séance complète depuis le téléphone, en salle, sans ré
       deux chronos (63 tests au total)
 
 Reste ouvert :
-
-- [ ] **Chrono `strict` en compte à rebours coloré.** Demandé le 2026-09-05.
-      Aujourd'hui le mode `strict` compte à l'endroit, en montrant le temps
-      consommé ; il doit compter à rebours. Teinte verte au départ, conservée
-      tant qu'il reste au moins 85 % du temps, puis bascule vers l'orange et le
-      rouge.
-      Trois points à trancher avant d'implémenter. Le seuil de 85 % est à
-      confirmer : pris au pied de la lettre, le vert ne dure que les 15
-      premiers pour cent de la durée, donc il vire dès 2,25 s sur une série
-      explosive de 15 s. C'est peut-être voulu — signaler tôt qu'on est en
-      retard sur un effort qui doit être bref — mais si l'intention était
-      « vert jusqu'aux 15 derniers pour cent », c'est le seuil complémentaire
-      qu'il faut. La frontière orange / rouge n'est pas définie : il faut un
-      second seuil, ou une interpolation continue. Et il n'existe pas encore de
-      jeton orange de statut — la palette n'a que `--destructive` et
-      `--chart-3`, qui est une couleur de données ; un vrai jeu bon /
-      attention / critique reste à poser, en le passant au contrôle de
-      contraste comme le reste.
-      Code concerné : `displaySeconds` dans `src/lib/session/timer.ts`, qui
-      renvoie aujourd'hui le temps écoulé pour `strict`, et la coloration du
-      chrono dans `src/app/seance/set-runner.tsx`.
 
 - [ ] Temps de repos entre séries. Jamais demandé, mais c'est le manque qui se
       remarquera le plus vite à l'usage.

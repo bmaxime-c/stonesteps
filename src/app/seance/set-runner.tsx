@@ -11,6 +11,7 @@ import {
   evaluateTimedSet,
   formatDuration,
   isTimerComplete,
+  timerUrgency,
 } from '@/lib/session/timer'
 import { TIMER_MODE_LABELS } from '@/lib/grids/validation'
 
@@ -49,9 +50,21 @@ export function SetRunner({
   const reached =
     timed && isTimerComplete(slot.timerMode as 'minimal' | 'strict', target, elapsed)
 
-  const shown = timed
-    ? displaySeconds(slot.timerMode as 'minimal' | 'strict', target, elapsed)
-    : 0
+  const shown = timed ? displaySeconds(target, elapsed) : 0
+
+  // Chrono strict : la couleur previent d'un budget qui se vide. Vert tant
+  // qu'au plus 85 % du temps est consomme, puis interpolation continue de
+  // l'orange vers le rouge jusqu'a l'echeance.
+  const urgency = timed && slot.timerMode === 'strict' ? timerUrgency(target, elapsed) : 0
+
+  const timerColor =
+    slot.timerMode === 'strict'
+      ? urgency === 0
+        ? 'var(--primary)'
+        : `color-mix(in oklab, var(--status-warning), var(--destructive) ${Math.round(urgency * 100)}%)`
+      : reached
+        ? 'var(--primary)'
+        : 'var(--foreground)'
 
   const reset = () => {
     setStartedAt(null)
@@ -102,13 +115,8 @@ export function SetRunner({
               plutot que par decor — lime quand l'objectif est tenu, rouge
               quand la limite est franchie. */}
           <p
-            className={`figure-hero text-center text-7xl font-semibold ${
-              !reached
-                ? 'text-foreground'
-                : slot.timerMode === 'minimal'
-                  ? 'text-primary'
-                  : 'text-destructive'
-            }`}
+            className="figure-hero text-center text-7xl font-semibold"
+            style={{ color: timerColor }}
             aria-live="off"
           >
             {formatDuration(shown)}
@@ -119,6 +127,14 @@ export function SetRunner({
               {slot.timerMode === 'minimal'
                 ? 'Objectif atteint — tu peux tenir plus longtemps.'
                 : 'Limite depassee.'}
+            </p>
+          ) : null}
+
+          {/* La couleur seule ne porte jamais une information : quand le
+              chrono strict quitte le vert, le texte le dit aussi. */}
+          {slot.timerMode === 'strict' && urgency > 0 && !reached ? (
+            <p className="text-muted-foreground text-center text-sm">
+              Plus que {formatDuration(shown)} avant la limite.
             </p>
           ) : null}
 

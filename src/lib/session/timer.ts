@@ -38,19 +38,39 @@ export function evaluateTimedSet(
 }
 
 /**
- * Sens de lecture du chrono a l'ecran.
+ * Sens de lecture du chrono a l'ecran : les deux modes decomptent.
  *
- * En `minimal` on decompte vers zero : ce qui compte est le temps qu'il reste
- * a tenir. En `strict` on compte a l'endroit, en montrant le temps consomme
- * sur le budget.
+ * En `minimal`, ce qui compte est le temps qu'il reste a tenir. En `strict`,
+ * c'est le temps qu'il reste pour finir. Dans les deux cas la question posee a
+ * celui qui s'entraine est « combien de temps encore », jamais « combien de
+ * temps deja ».
+ *
+ * Le decompte s'arrete a zero. Le depassement n'est pas affiche mais reste
+ * enregistre : c'est `evaluateTimedSet` qui juge, sur la duree reelle.
  */
-export function displaySeconds(
-  mode: Exclude<TimerMode, 'none'>,
-  targetSeconds: number,
-  elapsedSeconds: number,
-): number {
+export function displaySeconds(targetSeconds: number, elapsedSeconds: number): number {
   const elapsed = Math.max(0, Math.floor(elapsedSeconds))
-  return mode === 'minimal' ? Math.max(0, targetSeconds - elapsed) : elapsed
+  return Math.max(0, targetSeconds - elapsed)
+}
+
+/** Part du temps ecoulee au-dela de laquelle le chrono strict quitte le vert. */
+export const URGENCY_THRESHOLD = 0.85
+
+/**
+ * Degre d'urgence d'un chrono strict, entre 0 et 1.
+ *
+ * Vaut 0 tant qu'au plus 85 % du temps est consomme — le chrono reste vert —
+ * puis monte continument jusqu'a 1 a l'echeance. C'est ce nombre qui pilote
+ * l'interpolation de l'orange vers le rouge : la couleur previent d'un budget
+ * qui se vide, elle ne se contente pas d'annoncer la fin.
+ */
+export function timerUrgency(targetSeconds: number, elapsedSeconds: number): number {
+  if (targetSeconds <= 0) return 1
+
+  const ratio = Math.min(1, Math.max(0, elapsedSeconds / targetSeconds))
+  if (ratio <= URGENCY_THRESHOLD) return 0
+
+  return (ratio - URGENCY_THRESHOLD) / (1 - URGENCY_THRESHOLD)
 }
 
 /** Le chrono a-t-il atteint son terme naturel ? */

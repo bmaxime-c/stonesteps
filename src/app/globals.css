@@ -48,6 +48,7 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-status-warning: var(--status-warning);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -92,6 +93,8 @@
   --accent: #ecfccb;
   --accent-foreground: #365314;
   --destructive: #dc2626;
+  /* Statut intermediaire : le chrono strict passe par la avant le rouge. */
+  --status-warning: #c2410c;
 
   --border: #e7e5e4;
   --input: #e7e5e4;
@@ -143,6 +146,7 @@
   --accent: #365314;
   --accent-foreground: #ecfccb;
   --destructive: #f87171;
+  --status-warning: #fb923c;
 
   --border: oklch(1 0 0 / 14%);
   --input: oklch(1 0 0 / 18%);
