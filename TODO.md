@@ -1,6 +1,6 @@
 # StoneSteps — feuille de route
 
-Dernière mise à jour : 2026-09-05
+Dernière mise à jour : 2026-09-05 — phase 1 livrée et déployée
 
 Deux natures de tâches cohabitent ici :
 
@@ -51,8 +51,9 @@ Reste à traiter, sans urgence :
 - [x] Ajouter `http://localhost:3000/auth/callback` aux _Redirect URLs_
 - [ ] 🔒 **Réactiver « Confirm email »** dans Supabase → Authentication →
       Sign In / Providers → Email. Désactivé pour faciliter les tests locaux.
-      **À faire avant tout déploiement** : sans cette option, n'importe qui
-      crée un compte avec l'adresse e-mail d'un tiers.
+      **En retard** : l'application est déjà en ligne, donc atteignable par
+      n'importe qui, et sans cette option un compte peut être créé avec
+      l'adresse e-mail d'un tiers.
 - [ ] Activer le provider Google si tu veux que le bouton fonctionne :
       Supabase → Authentication → Providers → Google, avec un client OAuth créé
       côté Google Cloud Console. Sinon, retirer le bouton de l'interface.
@@ -143,30 +144,42 @@ Objectif démo : je vois la progression d'un ami et je lui partage ma grille.
 
 ---
 
-## Déploiement
+## Déploiement ✅
 
-À traiter dès que la phase 2 est utilisable, pour tester en conditions réelles.
+En ligne : **https://stonesteps.vercel.app**
 
-- [ ] Créer le projet Vercel connecté au dépôt
-- [ ] Vérifier le service worker et l'installation PWA sur un vrai téléphone
+Déploiement continu actif : chaque push sur `main` part en production, chaque
+PR obtient sa preview.
+
+- [x] Créer le projet Vercel connecté au dépôt
+- [x] Vérifier en production : page d'accueil servie, `/dashboard` non connecté
+      redirigé en 307 vers `/login`, manifeste et service worker accessibles
+- [ ] Vérifier l'installation PWA sur un vrai téléphone — première occasion de
+      tester le service worker, inactif en local. Si l'icône ne s'affiche pas
+      correctement, basculer les icônes SVG en PNG 192 et 512.
 
 ### 🔧 Actions manuelles — déploiement
 
-- [ ] Saisir `NEXT_PUBLIC_SUPABASE_URL` et `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- [x] Saisir `NEXT_PUBLIC_SUPABASE_URL` et `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
       dans Vercel → Settings → Environment Variables
-- [ ] Ajouter aux _Redirect URLs_ Supabase :
-      `https://<domaine>.vercel.app/auth/callback` et
-      `https://stonesteps-*.vercel.app/auth/callback` — le joker couvre les
-      déploiements de preview, sinon l'authentification casse sur chaque PR
-- [ ] Basculer la _Site URL_ Supabase sur l'URL de production
-- [ ] 🔒 Confirmer que « Confirm email » est bien réactivé
+- [ ] Basculer la _Site URL_ Supabase sur `https://stonesteps.vercel.app`.
+      Tant qu'elle pointe sur `localhost`, les liens de confirmation envoyés
+      par e-mail renvoient vers une machine qui n'est pas celle du
+      destinataire.
+- [ ] Ajouter aux _Redirect URLs_ Supabase, en conservant l'entrée localhost : - `https://stonesteps.vercel.app/auth/callback` - `https://stonesteps-*-bmaxime-c.vercel.app/auth/callback` — le joker
+      couvre les déploiements de preview, sinon l'authentification casse sur
+      chaque PR
+- [ ] 🔒 Réactiver « Confirm email » — Supabase → Authentication → Sign In /
+      Providers → Email. **L'application est publique depuis le déploiement :
+      sans cette option, n'importe qui peut créer un compte avec l'adresse
+      e-mail d'un tiers.**
 
 ---
 
 ## Sécurité — à traiter avant d'ouvrir à d'autres personnes
 
-- [ ] 🔒 Réactiver la confirmation d'e-mail (rappelé en phase 1, c'est le point
-      le plus important)
+- [ ] 🔒 Réactiver la confirmation d'e-mail. C'est le point le plus urgent :
+      l'application est en ligne, donc atteignable par n'importe qui.
 - [ ] 🔒 Durcir la politique de mot de passe : longueur minimale à 10 ou 12, et
       activer la détection des mots de passe compromis (Supabase →
       Authentication → Policies)
