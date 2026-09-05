@@ -203,29 +203,50 @@ Reste ouvert :
 
 ---
 
-## Phase 5 — Social
+## Phase 5 — Social ✅
 
 Objectif démo : je vois la progression d'un ami et je lui partage ma grille.
 
-- [ ] Recherche d'un membre par pseudo
-- [ ] Demande d'ami, acceptation, refus, blocage, suppression
-- [ ] Partage d'une grille à un ami, et duplication d'une grille reçue
-- [ ] Grilles publiques : consultation et duplication
-- [ ] Consultation du niveau courant d'un ami
-- [ ] Consultation de l'historique d'un ami
-- [ ] Notifications quand un ami valide un niveau (Supabase Realtime, ou e-mail
-      via Edge Function)
-- [ ] Tests d'isolation : vérifier avec deux comptes réels qu'un non-ami ne voit
-      rien, et qu'un ami ne voit que ce qui est prévu
+- [x] Recherche d'un membre par pseudo
+- [x] Demande d'ami, acceptation, refus, blocage, suppression
+- [x] Partage nominatif d'une grille à un ami, distinct de la publication
+      ouverte — fondre les deux rendrait impossible de partager à une personne
+      sans exposer la grille à tout le monde
+- [x] Duplication d'une grille reçue, publique, ou d'un ami. Les exercices
+      personnels de l'auteur sont recopiés dans le catalogue de celui qui
+      duplique, sinon la copie dépendrait d'une ligne appartenant à autrui que
+      `ON DELETE RESTRICT` empêcherait de supprimer.
+- [x] Page « Découvrir » : grilles publiques, partagées, et celles des amis
+- [x] Consultation du niveau courant et de l'historique d'un ami
+- [x] **Correction de sécurité** : la policy `friendships_update_involved`
+      laissait le demandeur accepter sa propre demande et s'octroyer l'accès
+      aux séances de quelqu'un qui n'avait jamais répondu. La RLS ne sait pas
+      comparer l'ancienne et la nouvelle valeur ; un déclencheur le fait.
+- [x] **Correction** : `exercises_select` ne laissait lire que le catalogue
+      intégré et ses propres exercices. La grille d'un ami affichait donc
+      « Exercice supprimé » partout où celui-ci avait créé un exercice
+      personnel.
+
+Reste ouvert :
+
+- [ ] Notifications quand un ami valide un niveau (Supabase Realtime, ou
+      e-mail via Edge Function). Non livré : suppose de décider de la fréquence
+      et du canal, et personne n'a encore assez d'amis pour que ça se remarque.
+- [ ] Le détail des séries échouées d'un ami n'est pas exposé — seulement le
+      niveau et la réussite globale. À rediscuter si le besoin apparaît.
 
 ### 🔧 Actions manuelles — phase 5
 
-- [ ] 🔒 Relire les policies RLS avant d'ouvrir l'application à des tiers, et
-      tester l'isolation avec deux comptes distincts. C'est la seule barrière
-      entre les données de deux utilisateurs.
-- [ ] 🔒 Prévoir la suppression de compte et l'export des données. Dès que
-      l'application héberge les données de tiers, le RGPD s'applique — y compris
-      pour un projet personnel partagé à des amis.
+- [ ] Appliquer la migration `20260905000006_social.sql`.
+- [ ] 🔒 **Tester l'isolation avec deux comptes réels.** Les tests unitaires
+      couvrent la lecture d'une relation, pas la RLS elle-même. À vérifier :
+      un non-ami ne voit ni l'historique ni les grilles privées ; un ami voit
+      le niveau et l'historique mais pas les grilles non partagées ; le
+      demandeur ne peut pas accepter sa propre demande.
+- [ ] 🔒 Prévoir la suppression de compte et l'export des données. L'export
+      existe depuis la phase 4 ; la suppression reste à faire. Dès que
+      l'application héberge les données de tiers, le RGPD s'applique — y
+      compris pour un projet personnel partagé à des amis.
 
 ---
 
