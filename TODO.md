@@ -36,10 +36,12 @@ Reste à traiter, sans urgence :
       courante ; les variantes Linux en sont absentes. C'est le bug
       [npm/cli#4828](https://github.com/npm/cli/issues/4828). Conséquence : la
       CI supprime le verrou avant d'installer, et ne le vérifie donc plus.
-      Deux issues possibles : - régénérer le verrou dans un conteneur Linux, une fois Docker Desktop
-      démarré — mais le problème se reposera en sens inverse en local :
-      `docker run --rm -v "C:/Source/Repos/stonesteps":/w -w /w node:22-slim npm install --package-lock-only` - passer à pnpm, qui gère correctement les dépendances optionnelles par
-      plateforme. Change l'outillage, mais supprime le problème de fond.
+      Deux issues possibles. Régénérer le verrou dans un conteneur Linux, une
+      fois Docker Desktop démarré — mais le problème se reposera en sens
+      inverse en local :
+      `docker run --rm -v "C:/Source/Repos/stonesteps":/w -w /w node:22-slim npm install --package-lock-only`.
+      Ou passer à pnpm, qui gère correctement les dépendances optionnelles par
+      plateforme : cela change l'outillage, mais supprime le problème de fond.
 
 ### 🔧 Actions manuelles — phase 1
 
