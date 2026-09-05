@@ -37,6 +37,9 @@ begin
 end;
 $$;
 
+-- Rejouable : la premiere tentative a pu echouer plus loin dans le fichier.
+drop trigger if exists friendships_guard_transition on public.friendships;
+
 create trigger friendships_guard_transition
   before update on public.friendships
   for each row execute function public.guard_friendship_transition();
@@ -89,6 +92,8 @@ declare
   v_new_grid uuid;
   v_level record;
   v_new_level uuid;
+  v_exercise record;
+  v_new_exercise uuid;
 begin
   if v_me is null then
     raise exception 'Authentification requise';
@@ -114,9 +119,11 @@ begin
   ) on commit drop;
   delete from tmp_exercise_map;
 
-  insert into tmp_exercise_map (source_id, target_id)
-  select source.id, copy.id
-  from (
+  -- Une boucle, et non un INSERT ... RETURNING lateral : Postgres n'autorise
+  -- les instructions qui modifient les donnees que dans un WITH, et apparier
+  -- les lignes inserees a leur source y demanderait une cle stable que le nom
+  -- ne garantit pas. Les volumes se comptent en unites.
+  for v_exercise in
     select distinct e.id, e.name, e.category
     from public.level_exercises le
     join public.levels l on l.id = le.level_id
@@ -124,12 +131,14 @@ begin
     where l.grid_id = p_grid_id
       and not e.is_builtin
       and e.owner_id is distinct from v_me
-  ) as source
-  cross join lateral (
+  loop
     insert into public.exercises (owner_id, name, category, is_builtin)
-    values (v_me, source.name, source.category, false)
-    returning id
-  ) as copy;
+    values (v_me, v_exercise.name, v_exercise.category, false)
+    returning id into v_new_exercise;
+
+    insert into tmp_exercise_map (source_id, target_id)
+    values (v_exercise.id, v_new_exercise);
+  end loop;
 
   for v_level in
     select id, position, name

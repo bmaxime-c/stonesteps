@@ -237,7 +237,9 @@ Reste ouvert :
 
 ### 🔧 Actions manuelles — phase 5
 
-- [ ] Appliquer la migration `20260905000006_social.sql`.
+- [ ] Appliquer la migration `20260905000006_social.sql` :
+      `npm run migration:sql -- 20260905000006 --clip`, puis coller dans le
+      SQL Editor.
 - [ ] 🔒 **Tester l'isolation avec deux comptes réels.** Les tests unitaires
       couvrent la lecture d'une relation, pas la RLS elle-même. À vérifier :
       un non-ami ne voit ni l'historique ni les grilles privées ; un ami voit
@@ -311,6 +313,20 @@ PR obtient sa preview.
       Providers → Email. **L'application est publique depuis le déploiement :
       sans cette option, n'importe qui peut créer un compte avec l'adresse
       e-mail d'un tiers.**
+
+---
+
+## Qualité
+
+- [ ] **Aucun test ne s'exécute contre Postgres.** Les migrations ne sont
+      vérifiées qu'au moment où on les colle dans le SQL Editor : la première
+      version de `duplicate_grid` contenait un `INSERT` dans un `LATERAL`, que
+      Postgres refuse, et rien dans la CI ne l'a vu. Une base jetable
+      (`supabase start`, ou un conteneur Postgres) permettrait de rejouer les
+      migrations à chaque PR, et surtout de tester la RLS avec deux rôles —
+      ce qui est aujourd'hui entièrement manuel.
+- [ ] Aucune vérification visuelle automatisée non plus (déjà noté sous la
+      passe de design).
 
 ---
 
