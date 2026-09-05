@@ -25,13 +25,17 @@ jobs:
           node-version: 22
           cache: npm
 
-      # `npm install` et non `npm ci` : le verrou est genere sous Windows, ou
-      # npm n'inscrit que les binaires natifs de la plateforme courante. Les
-      # variantes Linux (@rolldown/binding-linux-*, lightningcss-linux-*) en
-      # sont absentes, et `npm ci`, qui exige un verrou complet, echoue.
-      # Correctif durable : regenerer le verrou dans un conteneur Linux, puis
-      # revenir a `npm ci`. Voir TODO.md.
-      - run: npm install --no-audit --no-fund
+      # Le verrou est genere sous Windows, ou npm n'inscrit que les binaires
+      # natifs de la plateforme courante : les variantes Linux
+      # (@rolldown/binding-linux-*, lightningcss-linux-*) en sont absentes.
+      # `npm ci` echoue faute d'un verrou complet, et `npm install` le respecte
+      # trop fidelement pour combler le manque. C'est le bug npm/cli#4828, dont
+      # la parade documentee est de repartir sans verrou.
+      # On perd la verification du verrou en CI. Correctif durable dans TODO.md.
+      - name: Install
+        run: |
+          rm -f package-lock.json
+          npm install --no-audit --no-fund
 
       - name: Format
         run: npm run format:check

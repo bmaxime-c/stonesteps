@@ -31,13 +31,15 @@ Reste à traiter, sans urgence :
       l'installabilité n'est pas garantie partout
 - [ ] Installer la CLI Supabase pour que `just types` génère
       `src/lib/database.types.ts` au lieu de le maintenir à la main
-- [ ] Régénérer `package-lock.json` dans un conteneur Linux, puis rebasculer la
-      CI sur `npm ci`. npm sous Windows n'inscrit que les binaires natifs de la
-      plateforme courante, ce qui rend le verrou inutilisable par `npm ci` sur
-      un runner Linux. En attendant, la CI utilise `npm install`, qui n'échoue
-      pas mais ne vérifie plus le verrou.
-      Commande, une fois Docker Desktop démarré :
-      `docker run --rm -v "C:/Source/Repos/stonesteps":/w -w /w node:22-slim npm install --package-lock-only`
+- [ ] Régler proprement le verrou multi-plateforme. npm sous Windows n'inscrit
+      dans `package-lock.json` que les binaires natifs de la plateforme
+      courante ; les variantes Linux en sont absentes. C'est le bug
+      [npm/cli#4828](https://github.com/npm/cli/issues/4828). Conséquence : la
+      CI supprime le verrou avant d'installer, et ne le vérifie donc plus.
+      Deux issues possibles : - régénérer le verrou dans un conteneur Linux, une fois Docker Desktop
+      démarré — mais le problème se reposera en sens inverse en local :
+      `docker run --rm -v "C:/Source/Repos/stonesteps":/w -w /w node:22-slim npm install --package-lock-only` - passer à pnpm, qui gère correctement les dépendances optionnelles par
+      plateforme. Change l'outillage, mais supprime le problème de fond.
 
 ### 🔧 Actions manuelles — phase 1
 
