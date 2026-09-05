@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
 import { Button } from '@/components/ui/button'
@@ -9,11 +10,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { listGrids } from '@/lib/grids/queries'
 import { createClient } from '@/lib/supabase/server'
 
 import { signOut } from '../(auth)/actions'
+import { activateGrid, createGridFromTemplate } from '../grilles/actions'
+import { NewGrid } from './new-grid'
 
-export const metadata: Metadata = { title: 'Tableau de bord' }
+export const metadata: Metadata = { title: 'Mes grilles' }
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -25,19 +29,18 @@ export default async function DashboardPage() {
   // expire entre le passage du proxy et le rendu.
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('username, display_name')
-    .eq('id', user.id)
-    .single()
+  const [{ data: profile }, grids] = await Promise.all([
+    supabase.from('profiles').select('username, display_name').eq('id', user.id).single(),
+    listGrids(),
+  ])
 
   const name = profile?.display_name ?? profile?.username ?? 'athlete'
 
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 space-y-6 p-4">
+    <main className="mx-auto w-full max-w-2xl flex-1 space-y-6 p-4 pb-16">
       <header className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">Salut {name}</h1>
+        <div className="min-w-0">
+          <h1 className="truncate text-2xl font-semibold">Salut {name}</h1>
           <p className="text-muted-foreground text-sm">
             {profile ? `@${profile.username}` : 'Profil en cours de creation'}
           </p>
@@ -49,22 +52,71 @@ export default async function DashboardPage() {
         </form>
       </header>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Aucune grille pour l&apos;instant</CardTitle>
-          <CardDescription>
-            L&apos;editeur de grilles arrive en phase 2. Le socle est en place : compte,
-            base de donnees et regles d&apos;acces.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ul className="text-muted-foreground list-disc space-y-1 pl-5 text-sm">
-            <li>Phase 2 — construire ses niveaux et ses exercices</li>
-            <li>Phase 3 — derouler une seance, chrono compris, hors ligne</li>
-            <li>Phase 4 — historique et progression</li>
-          </ul>
-        </CardContent>
-      </Card>
+      {grids.length === 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Construis ta premiere grille</CardTitle>
+            <CardDescription>
+              Pars de la progression de reference — dix niveaux, cinq exercices chacun —
+              puis adapte-la. Ou commence d&apos;une page blanche.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-2">
+            <form action={createGridFromTemplate}>
+              <Button type="submit">Utiliser la grille de reference</Button>
+            </form>
+            <NewGrid />
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          <section className="space-y-3">
+            <h2 className="text-lg font-medium">Mes grilles</h2>
+            <ul className="space-y-2">
+              {grids.map((grid) => (
+                <li key={grid.id}>
+                  <Card>
+                    <CardContent className="flex items-center justify-between gap-3 py-4">
+                      <Link href={`/grilles/${grid.id}`} className="min-w-0 flex-1">
+                        <span className="flex items-center gap-2">
+                          <span className="truncate font-medium">{grid.name}</span>
+                          {grid.isActive ? (
+                            <span className="bg-muted text-muted-foreground shrink-0 rounded-full px-2 py-0.5 text-xs">
+                              active
+                            </span>
+                          ) : null}
+                        </span>
+                        <span className="text-muted-foreground block text-xs">
+                          {grid.levelCount} niveau{grid.levelCount > 1 ? 'x' : ''}
+                          {grid.description ? ` — ${grid.description}` : ''}
+                        </span>
+                      </Link>
+
+                      {!grid.isActive ? (
+                        <form action={activateGrid} className="shrink-0">
+                          <input type="hidden" name="gridId" value={grid.id} />
+                          <Button type="submit" size="sm" variant="ghost">
+                            Activer
+                          </Button>
+                        </form>
+                      ) : null}
+                    </CardContent>
+                  </Card>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <div className="flex flex-wrap gap-2">
+            <NewGrid />
+            <form action={createGridFromTemplate}>
+              <Button type="submit" variant="outline">
+                Ajouter la grille de reference
+              </Button>
+            </form>
+          </div>
+        </>
+      )}
     </main>
   )
 }

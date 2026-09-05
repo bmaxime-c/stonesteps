@@ -62,21 +62,36 @@ Reste à traiter, sans urgence :
 
 ---
 
-## Phase 2 — Éditeur de grilles
+## Phase 2 — Éditeur de grilles ✅
 
 Objectif démo : je construis ma grille de A à Z et je la retrouve au rechargement.
 
-- [ ] Liste des grilles, création, renommage, suppression
-- [ ] Désigner la grille active (une seule à la fois, contrainte déjà en base)
-- [ ] Ajout / suppression / réordonnancement des niveaux
-- [ ] Dans un niveau : ajout de 1 à 10 exercices, choix dans le catalogue ou
+- [x] Liste des grilles, création, renommage, suppression
+- [x] Désigner la grille active (une seule à la fois, via `set_active_grid`)
+- [x] Ajout / suppression / réordonnancement des niveaux
+- [x] Dans un niveau : ajout de 1 à 10 exercices, choix dans le catalogue ou
       création d'un exercice personnel
-- [ ] Par exercice : séries, répétitions, mode de chrono et durée
-- [ ] Réordonnancement par glisser-déposer (dnd-kit), pensé pour le tactile
-- [ ] Validation côté formulaire alignée sur les contraintes SQL
-- [ ] Grille modèle « 10 niveaux » proposée à la création, duplicable et
-      modifiable
-- [ ] Tests : règles de validation, réordonnancement, duplication
+- [x] Par exercice : séries, répétitions, mode de chrono et durée
+- [x] Validation côté formulaire alignée sur les contraintes SQL
+- [x] Grille modèle « 10 niveaux » proposée à la création, modifiable ensuite
+- [x] Tests : règles de validation, description lisible, réordonnancement,
+      cohérence de la grille de référence
+
+Reste ouvert :
+
+- [ ] Réordonnancement par glisser-déposer. Livré avec des boutons monter /
+      descendre à la place : accessibles au clavier, fiables au doigt, et sans
+      dépendance supplémentaire. Le glisser-déposer reste plus agréable sur
+      grand écran, à ajouter par-dessus si le besoin se confirme.
+- [ ] Duplication d'une grille existante. Prévue au plan initial, non livrée :
+      elle n'a d'intérêt réel qu'avec le partage entre amis, en phase 5.
+
+### 🔧 Actions manuelles — phase 2
+
+- [ ] Appliquer la migration `20260905000004_reorder_functions.sql`. Elle sera
+      jouée automatiquement au merge par l'intégration GitHub ; il faut
+      l'appliquer à la main avant si tu veux tester en local ou en preview,
+      qui partagent la même base.
 
 ---
 
