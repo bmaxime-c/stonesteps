@@ -48,7 +48,15 @@ export default async function DashboardPage() {
             {profile ? `@${profile.username}` : 'Profil en cours de creation'}
           </p>
         </div>
-        <SignOutButton />
+        <div className="flex shrink-0 items-center gap-2">
+          <Link
+            href="/historique"
+            className={buttonVariants({ variant: 'ghost', size: 'sm' })}
+          >
+            Historique
+          </Link>
+          <SignOutButton />
+        </div>
       </header>
 
       {plan ? <NextSession plan={plan} /> : null}
