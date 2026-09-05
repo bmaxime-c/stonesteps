@@ -276,7 +276,8 @@ PR obtient sa preview.
       pousse les migrations avec la CLI Supabase au push sur `main`, et sur PR
       liste l'écart + poussée à blanc + refus de toute migration existante
       modifiée. Un échec est désormais visible sur le commit de merge.
-- [ ] **Appliquer à la main les migrations à tester avant merge** (`just db-push`) :
+- [ ] **Appliquer à la main les migrations à tester avant merge**
+      (`npm run db:push`) :
       local et preview partagent la base de production, la CI ne pousse qu'au
       merge.
 

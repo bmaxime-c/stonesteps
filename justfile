@@ -53,10 +53,10 @@ types:
     npx supabase gen types typescript --project-id $(Select-String -Path supabase/config.toml -Pattern 'project_id = "(.+)"').Matches.Groups[1].Value > src/lib/database.types.ts
 
 # Etat des migrations, locales contre distantes.
-# Prerequis : CLI Supabase installee, `supabase login` puis `supabase link`.
+# Prerequis : `npx supabase login` puis `npx supabase link` (voir README).
 db-status:
-    npx supabase migration list --linked
+    npm run db:status
 
 # Applique a la main les migrations manquantes (la CI le fait au merge sur main).
 db-push:
-    npx supabase db push
+    npm run db:push

@@ -78,9 +78,13 @@ Pour tester une migration **avant** le merge — local et preview partagent la m
 base —, l'appliquer à la main :
 
 ```bash
-just db-status   # ce qui manque sur la base distante
-just db-push     # applique les migrations manquantes
+npm run db:status   # ce qui manque sur la base distante
+npm run db:push     # applique les migrations manquantes
 ```
+
+La CLI Supabase n'a pas besoin d'être installée — `npx` la récupère — mais il
+faut l'avoir authentifiée une fois : `npx supabase login`, puis
+`npx supabase link --project-ref <project_id de supabase/config.toml>`.
 
 Sans CLI Supabase installée, le repli reste le SQL Editor :
 
@@ -134,8 +138,8 @@ Avec [`just`](https://github.com/casey/just) si installé, sinon directement en 
 | `just build`     | `npm run build`                   | build de production                                         |
 | `just types`     | —                                 | régénère `src/lib/database.types.ts` (CLI Supabase requise) |
 | `just sql`       | `npm run migration:sql -- --clip` | copie une migration dans le presse-papier                   |
-| `just db-status` | —                                 | migrations locales contre base distante                     |
-| `just db-push`   | —                                 | applique les migrations manquantes                          |
+| `just db-status` | `npm run db:status`               | migrations locales contre base distante                     |
+| `just db-push`   | `npm run db:push`                 | applique les migrations manquantes                          |
 
 ## Notes
 
