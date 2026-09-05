@@ -84,10 +84,10 @@ export function SetRunner({
   return (
     <div className="space-y-5">
       <div className="text-center">
-        <p className="text-muted-foreground text-sm">
+        <p className="text-muted-foreground text-xs tracking-wide uppercase">
           Serie {slot.setIndex} sur {slot.setCount}
         </p>
-        <h2 className="text-2xl font-semibold">{slot.exerciseName}</h2>
+        <h2 className="mt-1 text-3xl font-semibold">{slot.exerciseName}</h2>
         <p className="text-muted-foreground mt-1 text-sm">
           {slot.reps !== null ? `${slot.reps} repetitions` : 'Tenue'}
           {timed
@@ -98,13 +98,16 @@ export function SetRunner({
 
       {timed ? (
         <div className="space-y-3">
+          {/* Chiffre de tete : lisible a bout de bras, et colore par l'etat
+              plutot que par decor — lime quand l'objectif est tenu, rouge
+              quand la limite est franchie. */}
           <p
-            className={`text-center font-mono text-6xl tabular-nums ${
-              reached && slot.timerMode === 'minimal'
+            className={`figure-hero text-center text-7xl font-semibold ${
+              !reached
                 ? 'text-foreground'
-                : reached && slot.timerMode === 'strict'
-                  ? 'text-destructive'
-                  : 'text-foreground'
+                : slot.timerMode === 'minimal'
+                  ? 'text-primary'
+                  : 'text-destructive'
             }`}
             aria-live="off"
           >
@@ -122,14 +125,19 @@ export function SetRunner({
           {startedAt === null ? (
             <Button
               type="button"
-              className="w-full"
+              className="h-14 w-full text-base"
               size="lg"
               onClick={() => setStartedAt(Date.now())}
             >
               Demarrer le chrono
             </Button>
           ) : (
-            <Button type="button" className="w-full" size="lg" onClick={recordTimed}>
+            <Button
+              type="button"
+              className="h-14 w-full text-base"
+              size="lg"
+              onClick={recordTimed}
+            >
               {slot.timerMode === 'minimal' ? 'Arreter — j ai tenu' : 'Termine'}
             </Button>
           )}
@@ -141,6 +149,7 @@ export function SetRunner({
           <Button
             type="button"
             size="lg"
+            className="h-14 text-base"
             onClick={() =>
               onRecord({ success: true, repsDone: slot.reps, durationSeconds: null })
             }
@@ -151,6 +160,7 @@ export function SetRunner({
             type="button"
             size="lg"
             variant="outline"
+            className="h-14 text-base"
             onClick={() => setFailing(true)}
           >
             Serie manquee
