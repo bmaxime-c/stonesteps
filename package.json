@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "migration:sql": "node scripts/migration-sql.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

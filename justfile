@@ -41,6 +41,12 @@ format-check:
 build:
     npm run build
 
+# Copie une migration dans le presse-papier, prete a coller dans le SQL Editor.
+#   just sql               la plus recente
+#   just sql 20260905000006  une version precise
+sql version="":
+    node scripts/migration-sql.mjs {{version}} --clip
+
 # Regenere src/lib/database.types.ts depuis le schema distant.
 # Prerequis : CLI Supabase installee et `supabase login` effectue.
 types:

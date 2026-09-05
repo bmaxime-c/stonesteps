@@ -51,8 +51,22 @@ Variables_.
 
 ## Base de données
 
-Les migrations sont dans `supabase/migrations/`, appliquées automatiquement par
-l'intégration GitHub de Supabase à chaque push sur la branche de production.
+Les migrations sont dans `supabase/migrations/`.
+
+⚠️ **L'intégration GitHub de Supabase ne les applique pas au merge** — constaté
+le 2026-09-05, la question est ouverte dans `TODO.md`. En attendant, il faut les
+jouer à la main. Pour éviter de reconstruire le bloc à chaque fois :
+
+```bash
+npm run migration:sql -- --clip                 # la plus récente
+npm run migration:sql -- 20260905000006 --clip  # une version précise
+npm run migration:sql -- --all                  # toutes, sur la sortie standard
+```
+
+Le script enveloppe la migration dans une transaction et enregistre sa version
+dans `supabase_migrations.schema_migrations`, pour que l'intégration ne la
+rejoue pas plus tard. Avec `--clip`, il ne reste qu'à coller dans le
+[SQL Editor](https://supabase.com/dashboard) et lancer.
 
 | Migration                            | Contenu                       |
 | ------------------------------------ | ----------------------------- |
@@ -82,16 +96,17 @@ Deux points structurants :
 
 Avec [`just`](https://github.com/casey/just) si installé, sinon directement en npm :
 
-| `just`           | npm                 |                                                             |
-| ---------------- | ------------------- | ----------------------------------------------------------- |
-| `just dev`       | `npm run dev`       | serveur de développement                                    |
-| `just check`     | —                   | format + lint + types + tests + build                       |
-| `just lint`      | `npm run lint`      | ESLint                                                      |
-| `just typecheck` | `npm run typecheck` | `next typegen` puis `tsc --noEmit`                          |
-| `just test`      | `npm run test`      | Vitest                                                      |
-| `just format`    | `npm run format`    | Prettier                                                    |
-| `just build`     | `npm run build`     | build de production                                         |
-| `just types`     | —                   | régénère `src/lib/database.types.ts` (CLI Supabase requise) |
+| `just`           | npm                               |                                                             |
+| ---------------- | --------------------------------- | ----------------------------------------------------------- |
+| `just dev`       | `npm run dev`                     | serveur de développement                                    |
+| `just check`     | —                                 | format + lint + types + tests + build                       |
+| `just lint`      | `npm run lint`                    | ESLint                                                      |
+| `just typecheck` | `npm run typecheck`               | `next typegen` puis `tsc --noEmit`                          |
+| `just test`      | `npm run test`                    | Vitest                                                      |
+| `just format`    | `npm run format`                  | Prettier                                                    |
+| `just build`     | `npm run build`                   | build de production                                         |
+| `just types`     | —                                 | régénère `src/lib/database.types.ts` (CLI Supabase requise) |
+| `just sql`       | `npm run migration:sql -- --clip` | copie une migration dans le presse-papier                   |
 
 ## Notes
 
