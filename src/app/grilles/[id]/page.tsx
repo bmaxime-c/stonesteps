@@ -96,6 +96,11 @@ export default async function GridEditorPage({ params }: PageProps<'/grilles/[id
               levelCount={grid.levels.length}
               levelIds={levelIds}
               exercises={exercises}
+              // Au-dela de trois niveaux, tout deplier noie la page. On ouvre
+              // le dernier : c'est celui qu'on vient d'ajouter.
+              defaultOpen={
+                grid.levels.length <= 3 || level.position === grid.levels.length
+              }
             />
           ))
         )}

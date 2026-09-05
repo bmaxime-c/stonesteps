@@ -242,6 +242,20 @@ export async function deleteLevel(formData: FormData): Promise<void> {
   revalidatePath(`/grilles/${gridId}`)
 }
 
+export async function duplicateLevel(formData: FormData): Promise<void> {
+  const gridId = String(formData.get('gridId') ?? '')
+  const levelId = String(formData.get('levelId') ?? '')
+
+  const { supabase } = await requireUser()
+
+  // Fonction SQL : inserer la copie suppose de decaler les positions
+  // suivantes, ce qui ne tient que dans une transaction unique.
+  const { error } = await supabase.rpc('duplicate_level', { p_level_id: levelId })
+  if (error) throw error
+
+  revalidatePath(`/grilles/${gridId}`)
+}
+
 export async function reorderLevels(formData: FormData): Promise<void> {
   const gridId = String(formData.get('gridId') ?? '')
   const orderedIds = String(formData.get('orderedIds') ?? '')
@@ -366,6 +380,18 @@ export async function deleteLevelExercise(formData: FormData): Promise<void> {
   const { supabase } = await requireUser()
 
   const { error } = await supabase.rpc('delete_level_exercise', { p_row_id: rowId })
+  if (error) throw error
+
+  revalidatePath(`/grilles/${gridId}`)
+}
+
+export async function duplicateLevelExercise(formData: FormData): Promise<void> {
+  const gridId = String(formData.get('gridId') ?? '')
+  const rowId = String(formData.get('rowId') ?? '')
+
+  const { supabase } = await requireUser()
+
+  const { error } = await supabase.rpc('duplicate_level_exercise', { p_row_id: rowId })
   if (error) throw error
 
   revalidatePath(`/grilles/${gridId}`)
