@@ -7,16 +7,6 @@ chacun avec ses séries, ses répétitions et, si besoin, un chrono. On ne monte
 d'un niveau que lorsque **toutes** les séries de **tous** les exercices sont
 réussies. La séance suivante reprend au dernier niveau non validé.
 
-## État d'avancement
-
-| Phase | Contenu                                                                 | Statut  |
-| ----- | ----------------------------------------------------------------------- | ------- |
-| 1     | Socle : Next.js, Supabase, schéma + RLS, authentification, coquille PWA | ✅ fait |
-| 2     | Éditeur de grilles                                                      | à venir |
-| 3     | Exécution de séance, chrono, hors ligne                                 | à venir |
-| 4     | Historique et progression                                               | à venir |
-| 5     | Amis, partage de grilles                                                | backlog |
-
 ## Stack
 
 - **Next.js 16** (App Router, TypeScript, Turbopack)
