@@ -1,7 +1,7 @@
 name: Migrations
 
 # L'integration GitHub de Supabase n'appliquait pas les migrations au merge et
-# echouait en silence (voir TODO.md, constate le 2026-09-05). On la remplace par
+# echouait en silence (constate le 2026-09-05). On la remplace par
 # une etape explicite : la CLI Supabase pousse ici les migrations manquantes, et
 # l'echec est visible sur le commit de merge.
 

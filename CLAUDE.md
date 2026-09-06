@@ -3,6 +3,26 @@
 Application de suivi de progression en callisthénie par niveaux.
 Voir `README.md` pour le fonctionnement et l'installation.
 
+## Suivi du travail
+
+Le reste à faire vit dans le projet GitHub **Stonesteps**
+(<https://github.com/users/bmaxime-c/projects/1>), plus dans un fichier du
+dépôt.
+
+- Le tableau est **priorisé**. Prendre les cartes de la colonne **Ready** dans
+  l'ordre où elles s'y présentent, sans aller en choisir une plus loin parce
+  qu'elle paraît plus simple. Si une carte semble mal placée, le dire plutôt que
+  de la contourner.
+- Passer la carte en **In progress** au moment où le travail commence, pas
+  après coup.
+- La passer en **In review** dès que le travail est terminé et la PR ouverte.
+- **Done** est atteint automatiquement au merge vers `main` : ne jamais y
+  déplacer une carte à la main.
+- Renseigner sur la carte le lien vers la **branche de travail** et vers la
+  **PR**. Une carte brouillon doit d'abord être convertie en issue
+  (« Convert to issue »), sinon rien ne peut lui être rattaché et l'automatisme
+  du merge ne la verra pas.
+
 ## Règle métier centrale
 
 Un niveau n'est validé que si **toutes** les séries de **tous** ses exercices

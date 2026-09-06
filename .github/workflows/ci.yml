@@ -31,7 +31,8 @@ jobs:
       # `npm ci` echoue faute d'un verrou complet, et `npm install` le respecte
       # trop fidelement pour combler le manque. C'est le bug npm/cli#4828, dont
       # la parade documentee est de repartir sans verrou.
-      # On perd la verification du verrou en CI. Correctif durable dans TODO.md.
+      # On perd la verification du verrou en CI. Correctif durable suivi dans le
+      # projet GitHub.
       - name: Install
         run: |
           rm -f package-lock.json
