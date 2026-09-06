@@ -1,6 +1,12 @@
 # StoneSteps — feuille de route
 
-Dernière mise à jour : 2026-09-05 — phase 1 livrée et déployée
+Dernière mise à jour : 2026-09-06 — phases 1 à 5 livrées, migrations appliquées
+par la CI
+
+**Le reste à faire vit désormais dans le projet GitHub
+[Stonesteps](https://github.com/users/bmaxime-c/projects/1)**, une carte par
+item, classées `P0` / `P1` / `P2`. Ce fichier garde la trace de ce qui a été
+livré et des décisions prises — il ne sert plus de liste de travail.
 
 Deux natures de tâches cohabitent ici :
 
@@ -294,9 +300,10 @@ PR obtient sa preview.
       `0001` à `0005` sont enregistrées, aucune réparation nécessaire. Seule
       `0006_social` sera poussée au merge, et elle est réappliquable sans
       risque (`create or replace`, `drop … if exists`).
-- [ ] Après le merge de la PR #9, vérifier dans Actions → Migrations que
-      l'étape « Pousser les migrations » est verte. C'est sa première
-      exécution réelle : jusqu'ici seule la poussée à blanc a tourné.
+- [x] Vérifié le 2026-09-06 sur le commit de merge de la PR #9 : le workflow
+      Migrations est vert et le log indique
+      `Applying migration 20260905000006_social.sql... Finished supabase db push.`
+      La chaîne fonctionne de bout en bout.
 
 ### 🔧 Actions manuelles — déploiement
 
