@@ -1,0 +1,11 @@
+# Le depot est en LF, y compris dans les copies de travail Windows : sans cela
+# `core.autocrlf=true` rematerialise les fichiers en CRLF a chaque changement de
+# branche, et `prettier --check` les rejette tous alors que l'index est sain.
+* text=auto eol=lf
+
+# Fichiers binaires : ne jamais convertir.
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
