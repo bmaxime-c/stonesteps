@@ -283,7 +283,7 @@ PR obtient sa preview.
 
 ### 🔧 Actions manuelles — migrations automatiques
 
-- [ ] Enregistrer la chaîne de connexion de la base en secret de dépôt
+- [x] Enregistrer la chaîne de connexion de la base en secret de dépôt
       `SUPABASE_DB_URL` (GitHub → Settings → Secrets and variables → Actions).
       Elle se prend dans Supabase → Project Settings → Database → _Connection
       string_, onglet URI, variante **session pooler**, avec `[YOUR-PASSWORD]`
@@ -295,13 +295,14 @@ PR obtient sa preview.
       explique le silence au merge des PR #4 et #5. Ne pas la connecter après
       coup sans arbitrage : deux mécanismes sur la même base se contrediraient,
       et son application au merge suppose le Branching, payant.
-- [ ] Vérifier l'historique distant avant la première poussée automatique :
-      `supabase migration list --linked`. Toute migration appliquée à la main
-      sans sa ligne dans `supabase_migrations.schema_migrations` doit être
-      marquée `supabase migration repair --status applied <version>`, sinon la
-      CI la rejouera et échouera.
-- [ ] Lancer le workflow à vide (Actions → Migrations → Run workflow) pour
-      valider secrets et connexion avant d'en dépendre au merge.
+- [x] Historique distant vérifié le 2026-09-06 par le workflow sur la PR #9 :
+      `0001` à `0005` sont enregistrées, aucune réparation nécessaire. Seule
+      `0006_social` sera poussée au merge, et elle est réappliquable sans
+      risque (`create or replace`, `drop … if exists`).
+- [ ] Après le merge de la PR #9, vérifier dans Actions → Migrations que
+      l'étape « Pousser les migrations » est verte, puis décocher l'action
+      manuelle « Appliquer la migration `20260905000006_social.sql` » de la
+      phase 5 : la CI s'en charge désormais.
 
 ### 🔧 Actions manuelles — déploiement
 
