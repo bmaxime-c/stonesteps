@@ -41,7 +41,22 @@ format-check:
 build:
     npm run build
 
+# Copie une migration dans le presse-papier, prete a coller dans le SQL Editor.
+#   just sql               la plus recente
+#   just sql 20260905000006  une version precise
+sql version="":
+    node scripts/migration-sql.mjs {{version}} --clip
+
 # Regenere src/lib/database.types.ts depuis le schema distant.
 # Prerequis : CLI Supabase installee et `supabase login` effectue.
 types:
     npx supabase gen types typescript --project-id $(Select-String -Path supabase/config.toml -Pattern 'project_id = "(.+)"').Matches.Groups[1].Value > src/lib/database.types.ts
+
+# Etat des migrations, locales contre distantes.
+# Prerequis : `npx supabase login` puis `npx supabase link` (voir README).
+db-status:
+    npm run db:status
+
+# Applique a la main les migrations manquantes (la CI le fait au merge sur main).
+db-push:
+    npm run db:push

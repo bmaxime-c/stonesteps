@@ -187,6 +187,70 @@ export async function activateGrid(formData: FormData): Promise<void> {
   revalidatePath(`/grilles/${gridId}`)
 }
 
+export async function duplicateGrid(formData: FormData): Promise<void> {
+  const gridId = String(formData.get('gridId') ?? '')
+  const { supabase } = await requireUser()
+
+  // La fonction SQL lit la source sous RLS : on ne duplique que ce qu'on a le
+  // droit de voir, et les exercices personnels de l'auteur sont recopies dans
+  // le catalogue de celui qui duplique.
+  const { data, error } = await supabase.rpc('duplicate_grid', { p_grid_id: gridId })
+  if (error) throw error
+
+  revalidatePath('/dashboard')
+  redirect(`/grilles/${data as string}`)
+}
+
+export async function setGridVisibility(formData: FormData): Promise<void> {
+  const gridId = String(formData.get('gridId') ?? '')
+  const isPublic = String(formData.get('isPublic') ?? '') === 'true'
+
+  const { supabase } = await requireUser()
+
+  const { error } = await supabase
+    .from('grids')
+    .update({ is_public: isPublic })
+    .eq('id', gridId)
+
+  if (error) throw error
+
+  revalidatePath(`/grilles/${gridId}`)
+  revalidatePath('/dashboard')
+}
+
+export async function shareGridWith(formData: FormData): Promise<void> {
+  const gridId = String(formData.get('gridId') ?? '')
+  const personId = String(formData.get('personId') ?? '')
+
+  const { supabase } = await requireUser()
+
+  const { error } = await supabase
+    .from('grid_shares')
+    .insert({ grid_id: gridId, shared_with: personId })
+
+  // Deja partagee : le bouton a ete presse deux fois, ce n'est pas une erreur.
+  if (error && error.code !== '23505') throw error
+
+  revalidatePath(`/grilles/${gridId}`)
+}
+
+export async function unshareGridWith(formData: FormData): Promise<void> {
+  const gridId = String(formData.get('gridId') ?? '')
+  const personId = String(formData.get('personId') ?? '')
+
+  const { supabase } = await requireUser()
+
+  const { error } = await supabase
+    .from('grid_shares')
+    .delete()
+    .eq('grid_id', gridId)
+    .eq('shared_with', personId)
+
+  if (error) throw error
+
+  revalidatePath(`/grilles/${gridId}`)
+}
+
 // ---------------------------------------------------------------------------
 // Niveaux
 // ---------------------------------------------------------------------------

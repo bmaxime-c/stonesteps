@@ -203,29 +203,52 @@ Reste ouvert :
 
 ---
 
-## Phase 5 — Social
+## Phase 5 — Social ✅
 
 Objectif démo : je vois la progression d'un ami et je lui partage ma grille.
 
-- [ ] Recherche d'un membre par pseudo
-- [ ] Demande d'ami, acceptation, refus, blocage, suppression
-- [ ] Partage d'une grille à un ami, et duplication d'une grille reçue
-- [ ] Grilles publiques : consultation et duplication
-- [ ] Consultation du niveau courant d'un ami
-- [ ] Consultation de l'historique d'un ami
-- [ ] Notifications quand un ami valide un niveau (Supabase Realtime, ou e-mail
-      via Edge Function)
-- [ ] Tests d'isolation : vérifier avec deux comptes réels qu'un non-ami ne voit
-      rien, et qu'un ami ne voit que ce qui est prévu
+- [x] Recherche d'un membre par pseudo
+- [x] Demande d'ami, acceptation, refus, blocage, suppression
+- [x] Partage nominatif d'une grille à un ami, distinct de la publication
+      ouverte — fondre les deux rendrait impossible de partager à une personne
+      sans exposer la grille à tout le monde
+- [x] Duplication d'une grille reçue, publique, ou d'un ami. Les exercices
+      personnels de l'auteur sont recopiés dans le catalogue de celui qui
+      duplique, sinon la copie dépendrait d'une ligne appartenant à autrui que
+      `ON DELETE RESTRICT` empêcherait de supprimer.
+- [x] Page « Découvrir » : grilles publiques, partagées, et celles des amis
+- [x] Consultation du niveau courant et de l'historique d'un ami
+- [x] **Correction de sécurité** : la policy `friendships_update_involved`
+      laissait le demandeur accepter sa propre demande et s'octroyer l'accès
+      aux séances de quelqu'un qui n'avait jamais répondu. La RLS ne sait pas
+      comparer l'ancienne et la nouvelle valeur ; un déclencheur le fait.
+- [x] **Correction** : `exercises_select` ne laissait lire que le catalogue
+      intégré et ses propres exercices. La grille d'un ami affichait donc
+      « Exercice supprimé » partout où celui-ci avait créé un exercice
+      personnel.
+
+Reste ouvert :
+
+- [ ] Notifications quand un ami valide un niveau (Supabase Realtime, ou
+      e-mail via Edge Function). Non livré : suppose de décider de la fréquence
+      et du canal, et personne n'a encore assez d'amis pour que ça se remarque.
+- [ ] Le détail des séries échouées d'un ami n'est pas exposé — seulement le
+      niveau et la réussite globale. À rediscuter si le besoin apparaît.
 
 ### 🔧 Actions manuelles — phase 5
 
-- [ ] 🔒 Relire les policies RLS avant d'ouvrir l'application à des tiers, et
-      tester l'isolation avec deux comptes distincts. C'est la seule barrière
-      entre les données de deux utilisateurs.
-- [ ] 🔒 Prévoir la suppression de compte et l'export des données. Dès que
-      l'application héberge les données de tiers, le RGPD s'applique — y compris
-      pour un projet personnel partagé à des amis.
+- [ ] Appliquer la migration `20260905000006_social.sql` :
+      `npm run migration:sql -- 20260905000006 --clip`, puis coller dans le
+      SQL Editor.
+- [ ] 🔒 **Tester l'isolation avec deux comptes réels.** Les tests unitaires
+      couvrent la lecture d'une relation, pas la RLS elle-même. À vérifier :
+      un non-ami ne voit ni l'historique ni les grilles privées ; un ami voit
+      le niveau et l'historique mais pas les grilles non partagées ; le
+      demandeur ne peut pas accepter sa propre demande.
+- [ ] 🔒 Prévoir la suppression de compte et l'export des données. L'export
+      existe depuis la phase 4 ; la suppression reste à faire. Dès que
+      l'application héberge les données de tiers, le RGPD s'applique — y
+      compris pour un projet personnel partagé à des amis.
 
 ---
 
@@ -245,20 +268,41 @@ PR obtient sa preview.
 
 ### Migrations et déploiement
 
-- [ ] **Vérifier pourquoi l'intégration GitHub Supabase n'applique pas les
-      migrations au merge.** Constaté le 2026-09-05 : après le merge des PR #4
-      et #5, les fonctions des migrations `0004` et `0005` étaient absentes de
-      la base (sondage de `/rest/v1/rpc/...` → `PGRST202`, alors que
-      `are_friends`, appliquée à la main, répondait). Aucun check Supabase
-      n'apparaissait sur le commit de merge. Deux issues à trancher : - réparer l'intégration (Supabase → Integrations → GitHub : dépôt
-      connecté, branche de production, application automatique) — c'est ce
-      qui était prévu, mais le mécanisme reste silencieux en cas d'échec ; - assumer l'application manuelle et ajouter une étape de CI qui compare
-      les migrations du dépôt à `supabase_migrations.schema_migrations` et
-      fait échouer la PR en cas d'écart. Plus verbeux, mais l'oubli devient
-      impossible.
-- [ ] En attendant, **appliquer chaque nouvelle migration à la main** dans le
-      SQL Editor avant de tester, et enregistrer sa version dans
-      `supabase_migrations.schema_migrations`.
+- [x] **Trancher l'application des migrations au merge.** L'intégration GitHub
+      Supabase ne les appliquait pas et n'affichait aucun check (constaté le
+      2026-09-05 : après le merge des PR #4 et #5, les fonctions de `0004` et
+      `0005` étaient absentes, `/rest/v1/rpc/...` → `PGRST202`). Décision : ne
+      pas dépendre d'un mécanisme silencieux. `.github/workflows/migrations.yml`
+      pousse les migrations avec la CLI Supabase au push sur `main`, et sur PR
+      liste l'écart + poussée à blanc + refus de toute migration existante
+      modifiée. Un échec est désormais visible sur le commit de merge.
+- [ ] **Appliquer à la main les migrations à tester avant merge**
+      (`npm run db:push`) :
+      local et preview partagent la base de production, la CI ne pousse qu'au
+      merge.
+
+### 🔧 Actions manuelles — migrations automatiques
+
+- [x] Enregistrer la chaîne de connexion de la base en secret de dépôt
+      `SUPABASE_DB_URL` (GitHub → Settings → Secrets and variables → Actions).
+      Elle se prend dans Supabase → Project Settings → Database → _Connection
+      string_, onglet URI, variante **session pooler**, avec `[YOUR-PASSWORD]`
+      remplacé par le mot de passe de la base. Un access token Supabase aurait
+      marché aussi, mais il n'est pas scopé : il vaut pour tout le compte.
+- [x] Rien à désactiver côté Supabase : l'app GitHub est installée côté GitHub,
+      mais aucun dépôt n'est connecté au projet Supabase (constaté le
+      2026-09-05). L'intégration n'a jamais eu de migration à appliquer, ce qui
+      explique le silence au merge des PR #4 et #5. Ne pas la connecter après
+      coup sans arbitrage : deux mécanismes sur la même base se contrediraient,
+      et son application au merge suppose le Branching, payant.
+- [x] Historique distant vérifié le 2026-09-06 par le workflow sur la PR #9 :
+      `0001` à `0005` sont enregistrées, aucune réparation nécessaire. Seule
+      `0006_social` sera poussée au merge, et elle est réappliquable sans
+      risque (`create or replace`, `drop … if exists`).
+- [ ] Après le merge de la PR #9, vérifier dans Actions → Migrations que
+      l'étape « Pousser les migrations » est verte, puis décocher l'action
+      manuelle « Appliquer la migration `20260905000006_social.sql` » de la
+      phase 5 : la CI s'en charge désormais.
 
 ### 🔧 Actions manuelles — déploiement
 
@@ -275,6 +319,20 @@ PR obtient sa preview.
       Providers → Email. **L'application est publique depuis le déploiement :
       sans cette option, n'importe qui peut créer un compte avec l'adresse
       e-mail d'un tiers.**
+
+---
+
+## Qualité
+
+- [ ] **Aucun test ne s'exécute contre Postgres.** Les migrations ne sont
+      vérifiées qu'au moment où on les colle dans le SQL Editor : la première
+      version de `duplicate_grid` contenait un `INSERT` dans un `LATERAL`, que
+      Postgres refuse, et rien dans la CI ne l'a vu. Une base jetable
+      (`supabase start`, ou un conteneur Postgres) permettrait de rejouer les
+      migrations à chaque PR, et surtout de tester la RLS avec deux rôles —
+      ce qui est aujourd'hui entièrement manuel.
+- [ ] Aucune vérification visuelle automatisée non plus (déjà noté sous la
+      passe de design).
 
 ---
 

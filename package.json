@@ -12,7 +12,10 @@
     "test:watch": "vitest",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "migration:sql": "node scripts/migration-sql.mjs",
+    "db:status": "npx supabase migration list --linked",
+    "db:push": "npx supabase db push"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

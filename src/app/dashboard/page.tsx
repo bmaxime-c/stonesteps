@@ -50,6 +50,9 @@ export default async function DashboardPage() {
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          <Link href="/amis" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+            Amis
+          </Link>
           <Link
             href="/historique"
             className={buttonVariants({ variant: 'ghost', size: 'sm' })}
@@ -125,6 +128,12 @@ export default async function DashboardPage() {
                 Ajouter la grille de reference
               </Button>
             </form>
+            <Link
+              href="/grilles/decouvrir"
+              className={buttonVariants({ variant: 'outline' })}
+            >
+              Decouvrir des grilles
+            </Link>
           </div>
         </>
       )}

@@ -145,6 +145,19 @@ export async function getGrid(gridId: string): Promise<EditorGrid | null> {
   }
 }
 
+/** Identifiants des membres avec qui une grille est explicitement partagee. */
+export async function listGridShares(gridId: string): Promise<string[]> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('grid_shares')
+    .select('shared_with')
+    .eq('grid_id', gridId)
+
+  if (error) throw error
+  return (data ?? []).map((row) => row.shared_with as string)
+}
+
 /** Catalogue integre plus les exercices personnels, tries par nom. */
 export async function listExercises(): Promise<Exercise[]> {
   const supabase = await createClient()

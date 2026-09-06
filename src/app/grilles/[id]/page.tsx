@@ -3,13 +3,15 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 
 import { Button, buttonVariants } from '@/components/ui/button'
-import { getGrid, listExercises } from '@/lib/grids/queries'
+import { loadFriends } from '@/lib/friends/queries'
+import { getGrid, listExercises, listGridShares } from '@/lib/grids/queries'
 import { createClient } from '@/lib/supabase/server'
 
-import { activateGrid, addLevel } from '../actions'
+import { activateGrid, addLevel, duplicateGrid } from '../actions'
 import { GridSettings } from './grid-settings'
 import { LevelCard } from './level-card'
 import { NewExercise } from './new-exercise'
+import { SharePanel } from './share-panel'
 
 export async function generateMetadata({
   params,
@@ -56,14 +58,19 @@ export default async function GridEditorPage({ params }: PageProps<'/grilles/[id
           isActive={grid.isActive}
         />
       ) : (
-        <header className="space-y-1">
+        <header className="space-y-2">
           <h1 className="text-2xl font-semibold">{grid.name}</h1>
           {grid.description ? (
             <p className="text-muted-foreground text-sm">{grid.description}</p>
           ) : null}
           <p className="text-muted-foreground text-xs">
-            Grille d&apos;un autre membre : consultation seule.
+            Grille d&apos;un autre membre : consultation seule. Duplique-la pour en faire
+            la tienne et la modifier.
           </p>
+          <form action={duplicateGrid}>
+            <input type="hidden" name="gridId" value={grid.id} />
+            <Button type="submit">Dupliquer dans mes grilles</Button>
+          </form>
         </header>
       )}
 
@@ -106,6 +113,8 @@ export default async function GridEditorPage({ params }: PageProps<'/grilles/[id
         )}
       </section>
 
+      {isOwner ? <SharePanelSlot gridId={grid.id} isPublic={grid.isPublic} /> : null}
+
       {isOwner ? (
         <div className="flex flex-wrap gap-2">
           <form action={addLevel}>
@@ -120,5 +129,28 @@ export default async function GridEditorPage({ params }: PageProps<'/grilles/[id
         </Link>
       )}
     </main>
+  )
+}
+
+/** Charge amis et partages a part, pour ne pas ralentir le rendu de l'editeur. */
+async function SharePanelSlot({
+  gridId,
+  isPublic,
+}: {
+  gridId: string
+  isPublic: boolean
+}) {
+  const [{ friends }, sharedWith] = await Promise.all([
+    loadFriends(),
+    listGridShares(gridId),
+  ])
+
+  return (
+    <SharePanel
+      gridId={gridId}
+      isPublic={isPublic}
+      friends={friends}
+      sharedWith={sharedWith}
+    />
   )
 }
