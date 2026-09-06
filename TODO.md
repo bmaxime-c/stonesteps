@@ -49,10 +49,8 @@ Reste à traiter, sans urgence :
 - [x] Renseigner `.env.local`
 - [x] Appliquer les migrations via le SQL Editor
 - [x] Ajouter `http://localhost:3000/auth/callback` aux _Redirect URLs_
-- [ ] 🔒 **Réactiver « Confirm email »** dans Supabase → Authentication →
-      Sign In / Providers → Email. Désactivé pour faciliter les tests locaux.
-      **En retard** : l'application est déjà en ligne, donc atteignable par
-      n'importe qui, et sans cette option un compte peut être créé avec
+- [x] 🔒 **Réactiver « Confirm email »** dans Supabase → Authentication →
+      Sign In / Providers → Email. Fait : un compte ne peut plus être créé avec
       l'adresse e-mail d'un tiers.
 - [x] Activer le provider Google si tu veux que le bouton fonctionne :
       Supabase → Authentication → Providers → Google, avec un client OAuth créé
@@ -85,17 +83,15 @@ Reste ouvert :
       descendre à la place : accessibles au clavier, fiables au doigt, et sans
       dépendance supplémentaire. Le glisser-déposer reste plus agréable sur
       grand écran, à ajouter par-dessus si le besoin se confirme.
-- [ ] Duplication d'une grille entière. Prévue au plan initial, non livrée :
-      elle n'a d'intérêt réel qu'avec le partage entre amis, en phase 5. La
-      duplication d'un niveau et d'un exercice, elle, est en place.
+- [x] Duplication d'une grille entière. Reportée à la phase 5, où elle prend
+      son sens avec le partage : `duplicate_grid` est appelée depuis la page
+      d'une grille et depuis « Découvrir ».
 
 ### 🔧 Actions manuelles — phase 2
 
-- [ ] Appliquer les migrations `20260905000004_reorder_functions.sql` et
-      `20260905000005_duplicate_functions.sql`. Elles seront jouées
-      automatiquement au merge par l'intégration GitHub ; il faut les appliquer
-      à la main avant si tu veux tester en local ou en preview, qui partagent
-      la même base.
+- [x] Appliquer les migrations `20260905000004_reorder_functions.sql` et
+      `20260905000005_duplicate_functions.sql`. Faites à la main ; le workflow
+      Migrations les voit enregistrées côté base (vérifié le 2026-09-06).
 
 ---
 
@@ -237,9 +233,8 @@ Reste ouvert :
 
 ### 🔧 Actions manuelles — phase 5
 
-- [ ] Appliquer la migration `20260905000006_social.sql` :
-      `npm run migration:sql -- 20260905000006 --clip`, puis coller dans le
-      SQL Editor.
+- [x] Appliquer la migration `20260905000006_social.sql`. Plus rien à faire à
+      la main : le workflow Migrations la pousse au merge de la PR #9.
 - [ ] 🔒 **Tester l'isolation avec deux comptes réels.** Les tests unitaires
       couvrent la lecture d'une relation, pas la RLS elle-même. À vérifier :
       un non-ami ne voit ni l'historique ni les grilles privées ; un ami voit
@@ -300,9 +295,8 @@ PR obtient sa preview.
       `0006_social` sera poussée au merge, et elle est réappliquable sans
       risque (`create or replace`, `drop … if exists`).
 - [ ] Après le merge de la PR #9, vérifier dans Actions → Migrations que
-      l'étape « Pousser les migrations » est verte, puis décocher l'action
-      manuelle « Appliquer la migration `20260905000006_social.sql` » de la
-      phase 5 : la CI s'en charge désormais.
+      l'étape « Pousser les migrations » est verte. C'est sa première
+      exécution réelle : jusqu'ici seule la poussée à blanc a tourné.
 
 ### 🔧 Actions manuelles — déploiement
 
