@@ -108,7 +108,12 @@ Objectif démo : une séance complète depuis le téléphone, en salle, sans ré
 - [x] Chrono `minimal` — décompte à tenir ; l'arrêt anticipé marque l'échec et
       enregistre la durée réellement tenue. Dépasser l'objectif reste une
       réussite.
-- [x] Chrono `strict` — temps limite ; le dépassement marque l'échec
+- [x] Chrono `strict` — temps limite ; le dépassement marque l'échec. Affiché
+      en compte à rebours, comme le mode `minimal` : la question posée est
+      toujours « combien de temps encore ». Vert tant qu'au plus 85 % du temps
+      est consommé, puis interpolation continue de l'orange vers le rouge
+      jusqu'à l'échéance (`timerUrgency`, jeton `--status-warning`). La couleur
+      ne porte jamais seule l'information : un texte double le signal.
 - [x] Validation d'une série : réussie, ou échouée avec le nombre de
       répétitions atteintes
 - [x] Calcul de validation du niveau : toutes les séries de tous les exercices
@@ -158,6 +163,43 @@ Reste ouvert :
       `<title>` natif du SVG suffit ; à revoir si l'historique s'allonge.
 - [ ] Comparer deux grilles sur la même courbe. Suppose une palette
       catégorielle validée, ce qu'une série unique n'exige pas.
+
+---
+
+## Passe de design ✅
+
+Constat du 2026-09-05 : l'application « n'avait aucun style ». Le CSS
+fonctionnait — 39 Ko servis, toutes les utilitaires présentes — mais le thème
+par défaut de shadcn a une **saturation nulle partout** (`oklch(… 0 0)`). Noir,
+blanc, gris : fonctionnel et parfaitement terne.
+
+- [x] Palette énergique : lime vif sur une base de gris chauds. Deux valeurs
+      distinctes pour l'interface (`#84cc16` / `#a3e635`, des aplats) et pour
+      les données (`--chart-1` `#4d7c0f` / `#65a30d`, un trait de 2 px). Les
+      contraintes de contraste ne sont pas les mêmes.
+- [x] Les deux valeurs de `--chart-1` passent le validateur du guide de
+      visualisation : bande de luminosité, plancher de chroma, contraste ≥ 3:1.
+- [x] Toutes les paires de texte vérifiées à ≥ 4,8:1, au-delà du seuil AA.
+- [x] **Mode sombre réellement actif** : les variables `.dark` existaient mais
+      rien ne posait la classe et il n'y avait aucun `prefers-color-scheme`.
+      Sur un téléphone en sombre, l'application restait blanche. Désormais
+      `next-themes` en `defaultTheme="system"`, plus une bascule manuelle
+      clair / sombre / système.
+- [x] `theme-color` déclaré pour chaque mode : la barre du navigateur suit.
+- [x] Suppression de `@import 'shadcn/tailwind.css'`, qui pointait vers un
+      fichier inexistant.
+- [x] Écran de séance : chrono en chiffre de tête, coloré par l'état — lime
+      quand l'objectif est tenu, rouge quand la limite est franchie — et
+      commandes en 56 px de haut, manipulables d'une main.
+
+Reste ouvert :
+
+- [ ] Aucune vérification visuelle automatisée. Tout a été contrôlé par le
+      validateur de palette, le calcul de contraste et l'inspection du CSS
+      produit, mais personne n'a _regardé_ le rendu. Des captures Playwright
+      combleraient ce trou.
+- [ ] Icônes PWA toujours dans l'ancienne teinte ardoise (`#0f172a`), à
+      reprendre avec la palette lime.
 
 ---
 

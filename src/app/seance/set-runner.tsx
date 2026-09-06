@@ -11,6 +11,7 @@ import {
   evaluateTimedSet,
   formatDuration,
   isTimerComplete,
+  timerUrgency,
 } from '@/lib/session/timer'
 import { TIMER_MODE_LABELS } from '@/lib/grids/validation'
 
@@ -49,9 +50,21 @@ export function SetRunner({
   const reached =
     timed && isTimerComplete(slot.timerMode as 'minimal' | 'strict', target, elapsed)
 
-  const shown = timed
-    ? displaySeconds(slot.timerMode as 'minimal' | 'strict', target, elapsed)
-    : 0
+  const shown = timed ? displaySeconds(target, elapsed) : 0
+
+  // Chrono strict : la couleur previent d'un budget qui se vide. Vert tant
+  // qu'au plus 85 % du temps est consomme, puis interpolation continue de
+  // l'orange vers le rouge jusqu'a l'echeance.
+  const urgency = timed && slot.timerMode === 'strict' ? timerUrgency(target, elapsed) : 0
+
+  const timerColor =
+    slot.timerMode === 'strict'
+      ? urgency === 0
+        ? 'var(--primary)'
+        : `color-mix(in oklab, var(--status-warning), var(--destructive) ${Math.round(urgency * 100)}%)`
+      : reached
+        ? 'var(--primary)'
+        : 'var(--foreground)'
 
   const reset = () => {
     setStartedAt(null)
@@ -84,10 +97,10 @@ export function SetRunner({
   return (
     <div className="space-y-5">
       <div className="text-center">
-        <p className="text-muted-foreground text-sm">
+        <p className="text-muted-foreground text-xs tracking-wide uppercase">
           Serie {slot.setIndex} sur {slot.setCount}
         </p>
-        <h2 className="text-2xl font-semibold">{slot.exerciseName}</h2>
+        <h2 className="mt-1 text-3xl font-semibold">{slot.exerciseName}</h2>
         <p className="text-muted-foreground mt-1 text-sm">
           {slot.reps !== null ? `${slot.reps} repetitions` : 'Tenue'}
           {timed
@@ -98,14 +111,12 @@ export function SetRunner({
 
       {timed ? (
         <div className="space-y-3">
+          {/* Chiffre de tete : lisible a bout de bras, et colore par l'etat
+              plutot que par decor — lime quand l'objectif est tenu, rouge
+              quand la limite est franchie. */}
           <p
-            className={`text-center font-mono text-6xl tabular-nums ${
-              reached && slot.timerMode === 'minimal'
-                ? 'text-foreground'
-                : reached && slot.timerMode === 'strict'
-                  ? 'text-destructive'
-                  : 'text-foreground'
-            }`}
+            className="figure-hero text-center text-7xl font-semibold"
+            style={{ color: timerColor }}
             aria-live="off"
           >
             {formatDuration(shown)}
@@ -119,17 +130,30 @@ export function SetRunner({
             </p>
           ) : null}
 
+          {/* La couleur seule ne porte jamais une information : quand le
+              chrono strict quitte le vert, le texte le dit aussi. */}
+          {slot.timerMode === 'strict' && urgency > 0 && !reached ? (
+            <p className="text-muted-foreground text-center text-sm">
+              Plus que {formatDuration(shown)} avant la limite.
+            </p>
+          ) : null}
+
           {startedAt === null ? (
             <Button
               type="button"
-              className="w-full"
+              className="h-14 w-full text-base"
               size="lg"
               onClick={() => setStartedAt(Date.now())}
             >
               Demarrer le chrono
             </Button>
           ) : (
-            <Button type="button" className="w-full" size="lg" onClick={recordTimed}>
+            <Button
+              type="button"
+              className="h-14 w-full text-base"
+              size="lg"
+              onClick={recordTimed}
+            >
               {slot.timerMode === 'minimal' ? 'Arreter — j ai tenu' : 'Termine'}
             </Button>
           )}
@@ -141,6 +165,7 @@ export function SetRunner({
           <Button
             type="button"
             size="lg"
+            className="h-14 text-base"
             onClick={() =>
               onRecord({ success: true, repsDone: slot.reps, durationSeconds: null })
             }
@@ -151,6 +176,7 @@ export function SetRunner({
             type="button"
             size="lg"
             variant="outline"
+            className="h-14 text-base"
             onClick={() => setFailing(true)}
           >
             Serie manquee

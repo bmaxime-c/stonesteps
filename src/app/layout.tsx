@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 
 import { ServiceWorkerRegister } from '@/components/service-worker-register'
+import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
 
 import './globals.css'
@@ -32,7 +33,12 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#0f172a',
+  // Deux valeurs : la barre du navigateur suit le theme au lieu de rester
+  // sombre sur une page claire.
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#fafaf9' },
+    { media: '(prefers-color-scheme: dark)', color: '#0c0a09' },
+  ],
   // L'app est utilisee en salle, telephone en main : on evite le zoom
   // accidentel entre deux series sans bloquer l'accessibilite.
   initialScale: 1,
@@ -45,11 +51,16 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
     <html
       lang="fr"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      // next-themes ecrit la classe de theme avant l'hydratation : la
+      // divergence est attendue et sans consequence.
+      suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col">
-        {children}
-        <Toaster />
-        <ServiceWorkerRegister />
+        <ThemeProvider>
+          {children}
+          <Toaster />
+          <ServiceWorkerRegister />
+        </ThemeProvider>
       </body>
     </html>
   )

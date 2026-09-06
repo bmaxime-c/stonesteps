@@ -1,15 +1,36 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
-@import 'shadcn/tailwind.css';
+
+/*
+ * Theme StoneSteps.
+ *
+ * Registre volontairement energique : un lime vif porte l'action et la
+ * reussite, sur une base de gris chauds (famille stone) qui evite la froideur
+ * du gris neutre.
+ *
+ * Les couleurs de donnees sont distinctes des couleurs d'interface, parce que
+ * les contraintes ne sont pas les memes. Le lime d'un bouton est un aplat,
+ * avec du texte sombre par-dessus ; celui d'une courbe est un trait de 2 px
+ * qui doit tenir seul contre la surface. D'ou deux valeurs :
+ *
+ *   interface  #84cc16 (clair) / #a3e635 (sombre)
+ *   --chart-1  #4d7c0f (clair) / #65a30d (sombre)
+ *
+ * Les deux valeurs de --chart-1 passent les controles du guide de
+ * visualisation : bande de luminosite, plancher de chroma, contraste >= 3:1
+ * contre leur surface. Le lime d'interface, lui, est hors bande pour un trait.
+ *
+ * Toutes les paires de texte sont a 4.8:1 ou plus, donc au-dela du seuil AA.
+ */
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-geist-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -27,6 +48,7 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-status-warning: var(--status-warning);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -48,83 +70,140 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* --------------------------------------------------------------------------
+   Mode clair
+   -------------------------------------------------------------------------- */
+
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  color-scheme: light;
+
+  --background: #fafaf9;
+  --foreground: #1c1917;
+  --card: #ffffff;
+  --card-foreground: #1c1917;
+  --popover: #ffffff;
+  --popover-foreground: #1c1917;
+
+  --primary: #84cc16;
+  --primary-foreground: #1a2e05;
+  --secondary: #f5f5f4;
+  --secondary-foreground: #1c1917;
+  --muted: #f5f5f4;
+  --muted-foreground: #57534e;
+  --accent: #ecfccb;
+  --accent-foreground: #365314;
+  --destructive: #dc2626;
+  /* Statut intermediaire : le chrono strict passe par la avant le rouge. */
+  --status-warning: #c2410c;
+
+  --border: #e7e5e4;
+  --input: #e7e5e4;
+  --ring: #84cc16;
+
+  --chart-1: #4d7c0f;
+  --chart-2: #57534e;
+  --chart-3: #a16207;
+  --chart-4: #0e7490;
+  --chart-5: #7c3aed;
+
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1c1917;
+  --sidebar-primary: #84cc16;
+  --sidebar-primary-foreground: #1a2e05;
+  --sidebar-accent: #f5f5f4;
+  --sidebar-accent-foreground: #1c1917;
+  --sidebar-border: #e7e5e4;
+  --sidebar-ring: #84cc16;
 }
 
+/* --------------------------------------------------------------------------
+   Mode sombre
+
+   Les valeurs sont definies une fois dans .dark, et la preference systeme se
+   contente de poser cette classe (voir le fournisseur de theme). Ecrire les
+   memes tokens dans un @media aurait cree deux sources a maintenir en
+   parallele, qui divergent au premier oubli.
+   -------------------------------------------------------------------------- */
+
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  color-scheme: dark;
+
+  --background: #0c0a09;
+  --foreground: #fafaf9;
+  --card: #1c1917;
+  --card-foreground: #fafaf9;
+  --popover: #1c1917;
+  --popover-foreground: #fafaf9;
+
+  --primary: #a3e635;
+  --primary-foreground: #1a2e05;
+  --secondary: #292524;
+  --secondary-foreground: #fafaf9;
+  --muted: #292524;
+  --muted-foreground: #a8a29e;
+  --accent: #365314;
+  --accent-foreground: #ecfccb;
+  --destructive: #f87171;
+  --status-warning: #fb923c;
+
+  --border: oklch(1 0 0 / 14%);
+  --input: oklch(1 0 0 / 18%);
+  --ring: #a3e635;
+
+  --chart-1: #65a30d;
+  --chart-2: #a8a29e;
+  --chart-3: #d97706;
+  --chart-4: #22d3ee;
+  --chart-5: #a78bfa;
+
+  --sidebar: #1c1917;
+  --sidebar-foreground: #fafaf9;
+  --sidebar-primary: #a3e635;
+  --sidebar-primary-foreground: #1a2e05;
+  --sidebar-accent: #292524;
+  --sidebar-accent-foreground: #fafaf9;
+  --sidebar-border: oklch(1 0 0 / 14%);
+  --sidebar-ring: #a3e635;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
+    /* Evite qu iOS grossisse le texte en paysage au milieu d'une seance. */
+    -webkit-text-size-adjust: 100%;
   }
+
   html {
     @apply font-sans;
+  }
+
+  /* Les titres portent la hierarchie : plus serres que le corps de texte, qui
+     reste en graisse normale. */
+  h1,
+  h2,
+  h3 {
+    @apply font-heading tracking-tight;
+    text-wrap: balance;
+  }
+
+  /* Supprime le delai de 300 ms au tap sur les commandes tactiles. */
+  button,
+  [role='button'] {
+    touch-action: manipulation;
+  }
+}
+
+@layer utilities {
+  /* Chiffre de tete : le chrono, lu a bout de bras. */
+  .figure-hero {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+    line-height: 1;
   }
 }
