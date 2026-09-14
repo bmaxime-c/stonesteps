@@ -101,6 +101,53 @@ alter table public.levels
 drop index if exists public.levels_grid_idx;
 create index levels_version_idx on public.levels (grid_version_id, position);
 
+-- Les policies de levels et le helper owns_level referencent grid_id : tant
+-- qu'ils existent, Postgres refuse de supprimer la colonne. On les retire et
+-- on les repose sur grid_version_id avant d'y toucher.
+drop policy if exists levels_select_own on public.levels;
+drop policy if exists levels_insert_own on public.levels;
+drop policy if exists levels_update_own on public.levels;
+drop policy if exists levels_delete_own on public.levels;
+
+create or replace function public.owns_grid_version(v uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.owns_grid((select gv.grid_id from public.grid_versions gv where gv.id = v));
+$$;
+
+create or replace function public.owns_level(l uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.owns_grid_version(
+    (select lv.grid_version_id from public.levels lv where lv.id = l)
+  );
+$$;
+
+create policy levels_select_own on public.levels
+  for select to authenticated
+  using (public.owns_grid_version(grid_version_id));
+
+create policy levels_insert_own on public.levels
+  for insert to authenticated
+  with check (public.owns_grid_version(grid_version_id));
+
+create policy levels_update_own on public.levels
+  for update to authenticated
+  using (public.owns_grid_version(grid_version_id))
+  with check (public.owns_grid_version(grid_version_id));
+
+create policy levels_delete_own on public.levels
+  for delete to authenticated
+  using (public.owns_grid_version(grid_version_id));
+
 alter table public.levels drop column grid_id;
 
 -- ---------------------------------------------------------------------------
@@ -122,31 +169,8 @@ alter table public.grids
   drop column rest_seconds;
 
 -- ---------------------------------------------------------------------------
--- Helpers de propriete et RLS
+-- RLS des versions
 -- ---------------------------------------------------------------------------
-
-create or replace function public.owns_grid_version(v uuid)
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select public.owns_grid((select gv.grid_id from public.grid_versions gv where gv.id = v));
-$$;
-
--- owns_level remonte desormais par la version.
-create or replace function public.owns_level(l uuid)
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select public.owns_grid_version(
-    (select lv.grid_version_id from public.levels lv where lv.id = l)
-  );
-$$;
 
 -- current_level disparait : le niveau en cours depend maintenant du report de
 -- publication, et sa regle vit cote applicatif, testee. En garder une seconde
@@ -171,26 +195,3 @@ create policy grid_versions_update_own on public.grid_versions
 create policy grid_versions_delete_own on public.grid_versions
   for delete to authenticated
   using (public.owns_grid(grid_id));
-
--- Les policies de levels passaient par owns_grid(grid_id), colonne disparue.
-drop policy if exists levels_select_own on public.levels;
-drop policy if exists levels_insert_own on public.levels;
-drop policy if exists levels_update_own on public.levels;
-drop policy if exists levels_delete_own on public.levels;
-
-create policy levels_select_own on public.levels
-  for select to authenticated
-  using (public.owns_grid_version(grid_version_id));
-
-create policy levels_insert_own on public.levels
-  for insert to authenticated
-  with check (public.owns_grid_version(grid_version_id));
-
-create policy levels_update_own on public.levels
-  for update to authenticated
-  using (public.owns_grid_version(grid_version_id))
-  with check (public.owns_grid_version(grid_version_id));
-
-create policy levels_delete_own on public.levels
-  for delete to authenticated
-  using (public.owns_grid_version(grid_version_id));
