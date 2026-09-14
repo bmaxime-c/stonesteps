@@ -69,17 +69,16 @@ export function AuthForm({
 
       {isSignUp ? (
         <div className="space-y-2">
-          <Label htmlFor="username">Pseudo</Label>
+          <Label htmlFor="displayName">Nom affiche</Label>
           <Input
-            id="username"
-            name="username"
+            id="displayName"
+            name="displayName"
             type="text"
-            autoComplete="username"
-            pattern="[a-zA-Z0-9_\- ]{3,30}"
-            required
+            autoComplete="name"
+            maxLength={40}
           />
           <p className="text-tertiary text-xs">
-            3 a 30 caracteres. Il identifie ton compte.
+            Facultatif. A defaut, ton adresse e-mail en tient lieu.
           </p>
         </div>
       ) : null}

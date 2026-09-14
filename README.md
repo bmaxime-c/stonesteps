@@ -113,14 +113,24 @@ merge. Avec `--clip`, il ne reste qu'à coller dans le
 | `…000004_reorder_functions.sql`      | réordonnancement des exercices |
 | `…000005_duplicate_functions.sql`    | duplication d'un niveau        |
 | `…000006_social.sql`                 | amis et partage de grilles     |
+| `…914000001_reset_schema.sql`        | **remise à plat** du schéma    |
+| `…914000002_schema.sql`              | grilles, niveaux, historique   |
+| `…914000003_rls_policies.sql`        | Row Level Security             |
+| `…914000004_seed_exercises.sql`      | catalogue d'exercices intégré  |
 
-Ces six migrations portent le **modèle précédent**. La phase 2 de la refonte
-ajoute une migration de reset qui drope le schéma applicatif, puis le schéma
-cible du handoff : `profiles`, `exercises`, `grids` → `levels` →
-`level_exercises` → `level_sets`, et `sessions` → `session_sets`. Le social
-disparaît. Aucune des six n'est modifiée ni supprimée — c'est la règle.
+Les six premières portent le modèle précédent. Aucune n'est modifiée ni
+supprimée — c'est la règle. C'est `reset_schema` qui défait leur effet :
+`drop schema public cascade`, puis le schéma cible du handoff. Les comptes
+`auth.users` survivent, leurs données applicatives non.
 
-Deux points structurants du modèle cible :
+Modèle : `profiles`, `exercises`, `grids` → `levels` → `level_exercises` →
+`level_sets` pour la définition, `sessions` → `session_sets` pour l'historique.
+
+Trois points structurants :
+
+- Le **niveau en cours** d'une grille se dérive, il ne se stocke pas : c'est le
+  premier niveau sans séance validée, exposé par `public.current_level(uuid)`.
+  Une colonne qu'il faudrait tenir à jour finirait par diverger.
 
 - `session_sets` porte une clé naturelle `(session_id, level_set_id, set_index)`.
   C'est elle qui rendrait idempotente une éventuelle synchronisation hors ligne.
