@@ -1,10 +1,9 @@
 'use client'
 
-import { LogOut } from 'lucide-react'
+import { UserRound } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
-import { signOut } from '@/app/(auth)/actions'
 import { cn } from '@/lib/utils'
 
 /**
@@ -14,6 +13,10 @@ import { cn } from '@/lib/utils'
  * constructeur et bibliotheque sont des sous-ecrans d'Accueil, avec un retour
  * explicite plutot qu'un onglet. Seance et resume masquent cette barre
  * entierement — ils vivent hors du groupe de routes qui la monte.
+ *
+ * L'icone de droite mene au compte, ou vit aussi la deconnexion. Elle n'est
+ * pas une troisieme destination : c'est un reglage, pas un ecran ou l'on
+ * travaille.
  */
 
 const TABS = [
@@ -57,16 +60,20 @@ export function TopBar() {
             )
           })}
 
-          <form action={signOut}>
-            <button
-              type="submit"
-              aria-label="Se déconnecter"
-              title="Se déconnecter"
-              className="text-muted-foreground hover:text-foreground hover:bg-chip focus-visible:ring-ring/50 flex size-9 items-center justify-center rounded-full transition-colors outline-none focus-visible:ring-3"
-            >
-              <LogOut className="size-4" />
-            </button>
-          </form>
+          <Link
+            href="/compte"
+            aria-label="Mon compte"
+            title="Mon compte"
+            aria-current={pathname === '/compte' ? 'page' : undefined}
+            className={cn(
+              'hover:bg-chip focus-visible:ring-ring/50 flex size-9 items-center justify-center rounded-full transition-colors outline-none focus-visible:ring-3',
+              pathname === '/compte'
+                ? 'bg-chip text-foreground'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            <UserRound className="size-4" />
+          </Link>
         </nav>
       </div>
     </header>
