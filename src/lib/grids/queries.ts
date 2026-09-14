@@ -2,18 +2,21 @@ import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
 
-import type { Grid } from './model'
+import type { Grid, GridVersion, GridVersionStatus } from './model'
 
 /**
- * Selection d'une grille et de tout son arbre, en une requete.
+ * Selection d'une grille, de ses versions et de tout leur arbre.
  *
- * PostgREST rend les relations imbriquees : inutile de faire quatre allers-
- * retours pour reconstituer grille, niveaux, exercices et series. La RLS fait
- * le reste — inutile de filtrer sur le proprietaire ici, une grille qui n'est
- * pas la sienne ne remonte simplement pas.
+ * PostgREST rend les relations imbriquees : inutile de faire cinq allers-
+ * retours pour reconstituer grille, versions, niveaux, exercices et series. La
+ * RLS fait le reste — une grille qui n'est pas la sienne ne remonte pas.
+ *
+ * Toutes les versions remontent, pas seulement la derniere : l'ecran de
+ * gestion a besoin de savoir qu'un brouillon existe, et la publication a
+ * besoin de comparer le brouillon a la version en place.
  */
-const GRID_SELECT = `
-  id, name, accent_color, rest_seconds,
+const VERSION_SELECT = `
+  id, version, status, name, accent_color, rest_seconds, carried_levels,
   levels (
     id, position,
     level_exercises (
@@ -24,11 +27,16 @@ const GRID_SELECT = `
   )
 `
 
-type GridRow = {
+const GRID_SELECT = `id, created_at, grid_versions ( ${VERSION_SELECT} )`
+
+type VersionRow = {
   id: string
+  version: number
+  status: GridVersionStatus
   name: string
   accent_color: string
   rest_seconds: number
+  carried_levels: number
   levels: {
     id: string
     position: number
@@ -48,13 +56,22 @@ type GridRow = {
   }[]
 }
 
+type GridRow = {
+  id: string
+  created_at: string
+  grid_versions: VersionRow[]
+}
+
 /** Passe des colonnes en snake_case aux formes du domaine, tout trie. */
-function toGrid(row: GridRow): Grid {
+function toVersion(row: VersionRow): GridVersion {
   return {
     id: row.id,
+    version: row.version,
+    status: row.status,
     name: row.name,
     accentColor: row.accent_color,
     restSeconds: row.rest_seconds,
+    carriedLevels: row.carried_levels,
     levels: [...row.levels]
       .sort((a, b) => a.position - b.position)
       .map((level) => ({
@@ -83,6 +100,21 @@ function toGrid(row: GridRow): Grid {
   }
 }
 
+function toGrid(row: GridRow): Grid {
+  const versions = row.grid_versions.map(toVersion)
+
+  return {
+    id: row.id,
+    // La derniere publiee, pas la derniere creee : republier ne doit pas
+    // dependre de l'ordre de retour de PostgREST.
+    published:
+      versions
+        .filter((version) => version.status === 'published')
+        .sort((a, b) => b.version - a.version)[0] ?? null,
+    draft: versions.find((version) => version.status === 'draft') ?? null,
+  }
+}
+
 export async function loadGrid(gridId: string): Promise<Grid | null> {
   const supabase = await createClient()
 
@@ -97,12 +129,10 @@ export async function loadGrid(gridId: string): Promise<Grid | null> {
 }
 
 /**
- * Toutes les grilles de l'utilisateur, arbre compris.
+ * Toutes les grilles de l'utilisateur, versions comprises.
  *
- * L'accueil a besoin du contenu du niveau en cours de chaque grille — nombre
- * d'exercices et de series — donc de l'arbre entier. A l'echelle d'un
- * utilisateur qui suit quelques grilles, une requete suffit ; la decouper
- * reviendrait a multiplier les allers-retours pour rien.
+ * L'accueil n'en garde que celles qui ont une version publiee ; l'ecran de
+ * gestion les montre toutes. Le filtre appartient a l'ecran, pas a la requete.
  */
 export async function loadGrids(): Promise<Grid[]> {
   const supabase = await createClient()

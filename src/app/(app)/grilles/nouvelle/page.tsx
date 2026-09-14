@@ -9,5 +9,17 @@ export const metadata: Metadata = { title: 'Nouvelle grille' }
 
 export default async function NewGridPage() {
   const catalog = await loadExerciseCatalog()
-  return <GridBuilder gridId={null} initial={emptyGrid()} catalog={catalog} />
+
+  // La grille n'existe pas encore : elle nait a l'enregistrement du brouillon,
+  // et n'apparaitra sur l'accueil qu'une fois publiee.
+  return (
+    <GridBuilder
+      gridId={null}
+      initial={emptyGrid()}
+      catalog={catalog}
+      draftSaved={false}
+      publishedVersion={null}
+      nextVersion={1}
+    />
+  )
 }

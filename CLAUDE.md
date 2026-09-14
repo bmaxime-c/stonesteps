@@ -49,6 +49,27 @@ Un niveau validé débloque le suivant : on ne saute jamais un niveau. Le niveau
 en cours d'une grille se **dérive** de l'historique — c'est le premier niveau
 sans séance validée. Ne pas le stocker en colonne.
 
+## Versionnement des grilles
+
+Une grille est une **identité** qui porte des **versions** : au plus un
+brouillon, et une suite de versions publiées. La séance joue toujours la
+dernière version publiée.
+
+- Le constructeur n'écrit **que** dans le brouillon. « Enregistrer » range le
+  travail, « Publier » le met en service et incrémente le numéro de version.
+  Rien ne va jamais directement dans une version publiée — le nom, la couleur
+  et le repos compris, qui vivent sur la version.
+- « Publier » ne s'offre qu'après un enregistrement et tant que rien n'a
+  rebougé.
+- **Report de progression à la publication** : les niveaux de tête dont le
+  contenu n'a pas changé et qui étaient déjà franchis restent acquis. Le reste
+  se rejoue. C'est `carried_levels`, figé une fois pour toutes au moment de
+  publier — un fait de l'événement de publication, pas une progression stockée.
+  Ni cadeau (on ne déverrouille pas un niveau dur en le réécrivant), ni
+  punition (corriger une faute de frappe n'efface pas des mois de progression).
+- L'édition passe par l'onglet **Grilles**. On ne modifie jamais une grille
+  depuis l'écran qui sert à lancer une séance.
+
 Le chrono a deux modes, à ne pas confondre :
 
 - `minimal` — il faut **tenir au moins** `timer_seconds` (gainage, descente lente) ;
@@ -108,6 +129,17 @@ texte courant — il est réservé aux chiffres, aux statuts et aux accents.
 
 Typographie : DM Sans via `next/font/google`, famille unique. Pas de dégradé,
 pas d'image : les seuls effets sont des halos `box-shadow`.
+
+## Navigation
+
+Barre supérieure collante, **trois destinations** : Accueil, Grilles, Stats.
+Le handoff n'en prévoyait que deux ; l'onglet Grilles est l'écart assumé
+qu'impose le versionnement — l'édition doit vivre ailleurs que sur l'écran de
+lancement. Détail de grille, constructeur et bibliothèque restent des
+sous-écrans, avec un retour explicite. L'icône de droite mène au compte : c'est
+un réglage, pas une destination.
+
+Séance et Résumé masquent la barre : ce sont des modes plein écran.
 
 ## Découpage
 

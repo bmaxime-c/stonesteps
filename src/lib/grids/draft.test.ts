@@ -21,7 +21,7 @@ import {
   updateSet,
   type EditableGrid,
 } from './draft'
-import type { Grid } from './model'
+import type { GridVersion } from './model'
 import { isGridValid } from './validation'
 
 function withOneExercise(): EditableGrid {
@@ -35,9 +35,12 @@ describe('creation', () => {
     expect(grid.levels[0].exercises).toEqual([])
   })
 
-  it('charge une grille existante sans perdre ses reglages', () => {
-    const source: Grid = {
-      id: 'g1',
+  it('charge une version existante sans perdre ses reglages', () => {
+    const source: GridVersion = {
+      id: 'v1',
+      version: 2,
+      status: 'published',
+      carriedLevels: 0,
       name: 'Push Day',
       accentColor: '#22E1FF',
       restSeconds: 90,

@@ -8,13 +8,18 @@ import { currentLevel, levelStates } from '@/lib/session/level'
 import { loadAllLevelOutcomes } from '@/lib/session/queries'
 
 /**
- * Accueil : les grilles de l'utilisateur, avec le niveau ou chacune en est.
+ * Accueil : les grilles jouables, avec le niveau ou chacune en est.
  *
- * La progression n'est pas stockee : elle se deduit ici des seances validees,
- * grille par grille.
+ * Seules les grilles publiees y figurent. Un brouillon n'est pas jouable, et
+ * une carte sur laquelle on ne peut rien faire n'a rien a faire sur l'ecran
+ * d'entrainement : il vit dans l'onglet Grilles jusqu'a sa publication.
+ *
+ * La progression n'est pas stockee : elle se deduit ici des seances validees
+ * de la version en service, report de publication compris.
  */
 export default async function HomePage() {
   const [grids, outcomesByGrid] = await Promise.all([loadGrids(), loadAllLevelOutcomes()])
+  const playable = grids.filter((grid) => grid.published !== null)
 
   return (
     <main className="gutter mx-auto flex w-full max-w-[1040px] flex-col gap-[22px] pt-[clamp(20px,3vw,36px)] pb-[72px]">
@@ -31,31 +36,38 @@ export default async function HomePage() {
         }
       />
 
-      {grids.length === 0 ? (
+      {playable.length === 0 ? (
         <EmptyState
-          title="Aucune grille pour l'instant"
-          description="Une grille est une suite de niveaux : on valide un niveau en réussissant toutes ses séries, et le suivant se débloque."
+          title={
+            grids.length === 0 ? "Aucune grille pour l'instant" : 'Aucune grille publiée'
+          }
+          description={
+            grids.length === 0
+              ? 'Une grille est une suite de niveaux : on valide un niveau en réussissant toutes ses séries, et le suivant se débloque.'
+              : "Tes grilles sont encore en brouillon. Publie-les depuis l'onglet Grilles pour pouvoir les lancer."
+          }
           action={
             <Link
-              href="/grilles/nouvelle"
+              href="/grilles"
               className="bg-primary text-primary-foreground rounded-full px-5 py-3 text-[15px] font-extrabold"
             >
-              Créer ma première grille
+              {grids.length === 0 ? 'Créer ma première grille' : 'Ouvrir mes grilles'}
             </Link>
           }
         />
       ) : (
         <ul className="grid grid-cols-[repeat(auto-fit,minmax(min(280px,100%),1fr))] gap-4">
-          {grids.map((grid) => {
+          {playable.map((grid) => {
+            const version = grid.published!
             const outcomes = outcomesByGrid.get(grid.id) ?? []
-            const current = currentLevel(grid.levels, outcomes)
-            const states = levelStates(grid.levels, outcomes)
+            const current = currentLevel(version.levels, outcomes, version.carriedLevels)
+            const states = levelStates(version.levels, outcomes, version.carriedLevels)
             const validatedCount = [...states.values()].filter(
               (state) => state === 'validated',
             ).length
-            const total = grid.levels.length
+            const total = version.levels.length
             const level = current
-              ? grid.levels.find((candidate) => candidate.id === current.id)
+              ? version.levels.find((candidate) => candidate.id === current.id)
               : undefined
 
             return (
@@ -67,20 +79,18 @@ export default async function HomePage() {
                   <div className="flex items-center gap-4">
                     <span
                       className="text-ink-neon flex size-[52px] shrink-0 items-center justify-center rounded-[16px] text-[17px] font-extrabold"
-                      style={{ background: grid.accentColor }}
+                      style={{ background: version.accentColor }}
                       aria-hidden="true"
                     >
-                      {initials(grid.name)}
+                      {initials(version.name)}
                     </span>
 
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[17px] font-bold">{grid.name}</p>
+                      <p className="truncate text-[17px] font-bold">{version.name}</p>
                       <p className="text-tertiary mt-0.5 text-[13px]">
                         {level
                           ? describeLevelContent(level.exercises)
-                          : total === 0
-                            ? 'Grille vide'
-                            : 'Tous les niveaux sont validés'}
+                          : 'Tous les niveaux sont validés'}
                       </p>
                     </div>
 
@@ -95,14 +105,12 @@ export default async function HomePage() {
                         className="h-full rounded-full"
                         style={{
                           width: `${total === 0 ? 0 : (validatedCount / total) * 100}%`,
-                          background: grid.accentColor,
+                          background: version.accentColor,
                         }}
                       />
                     </div>
                     <span className="text-muted-foreground text-xs font-bold whitespace-nowrap">
-                      {total === 0
-                        ? 'Aucun niveau'
-                        : `Niveau ${current ? current.position : total}/${total}`}
+                      {`Niveau ${current ? current.position : total}/${total}`}
                     </span>
                   </div>
                 </Link>

@@ -11,6 +11,8 @@ const grid = {
   name: 'Push Day',
   accentColor: '#00FF87',
   restSeconds: 60,
+  version: 3,
+  hasDraft: false,
 }
 
 function set(over: Partial<LevelSet> = {}): LevelSet {

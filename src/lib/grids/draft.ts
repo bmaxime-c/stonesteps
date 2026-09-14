@@ -12,7 +12,7 @@
  * reordonner par index ferait perdre l'etat des champs.
  */
 
-import type { Grid, GridDraft, TimerMode } from './model'
+import type { GridDraft, GridVersion, TimerMode } from './model'
 
 export const REPS_STEP = 1
 export const SECONDS_STEP = 5
@@ -79,8 +79,10 @@ export function emptyGrid(): EditableGrid {
   }
 }
 
-/** Charge une grille existante dans le constructeur. */
-export function fromGrid(grid: Grid): EditableGrid {
+/** Charge une version existante dans le constructeur. */
+export function fromGrid(
+  grid: Pick<GridVersion, 'name' | 'accentColor' | 'restSeconds' | 'levels'>,
+): EditableGrid {
   return {
     name: grid.name,
     accentColor: grid.accentColor,

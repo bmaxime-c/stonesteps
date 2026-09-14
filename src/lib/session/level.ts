@@ -8,7 +8,7 @@
  * en passant.
  */
 
-import type { Grid, Level } from '@/lib/grids/model'
+import type { Level } from '@/lib/grids/model'
 
 import type { LevelOutcome, SetResult, SetStatus } from './model'
 
@@ -51,6 +51,7 @@ export function countByStatus(
 export function currentLevel(
   levels: Pick<Level, 'id' | 'position'>[],
   outcomes: Pick<LevelOutcome, 'levelId' | 'validated'>[],
+  carriedLevels = 0,
 ): Pick<Level, 'id' | 'position'> | null {
   const validated = new Set(
     outcomes.filter((o) => o.validated && o.levelId).map((o) => o.levelId as string),
@@ -59,7 +60,10 @@ export function currentLevel(
   return (
     [...levels]
       .sort((a, b) => a.position - b.position)
-      .find((level) => !validated.has(level.id)) ?? null
+      // Les niveaux reportes a la publication comptent comme franchis : leur
+      // contenu n'avait pas bouge et ils avaient deja ete valides, sur une
+      // version dont les identifiants de niveau ont disparu depuis.
+      .find((level) => level.position > carriedLevels && !validated.has(level.id)) ?? null
   )
 }
 
@@ -75,9 +79,10 @@ export type LevelState = 'validated' | 'current' | 'locked'
 export function levelStates(
   levels: Pick<Level, 'id' | 'position'>[],
   outcomes: Pick<LevelOutcome, 'levelId' | 'validated'>[],
+  carriedLevels = 0,
 ): Map<string, LevelState> {
   const ordered = [...levels].sort((a, b) => a.position - b.position)
-  const current = currentLevel(ordered, outcomes)
+  const current = currentLevel(ordered, outcomes, carriedLevels)
   const states = new Map<string, LevelState>()
 
   let reachedCurrent = false
@@ -93,12 +98,19 @@ export function levelStates(
   return states
 }
 
-/** Numero du niveau en cours, a partir de 1. Null si la grille est terminee. */
-export function currentLevelNumber(
-  grid: Pick<Grid, 'levels'>,
+/**
+ * Position atteinte dans une version, a partir de 1.
+ *
+ * Une grille terminee rend `levels.length + 1` : c'est ce qu'attend le calcul
+ * du report a la publication, qui compte les niveaux franchis comme ceux
+ * d'avant la position atteinte.
+ */
+export function reachedLevel(
+  levels: Pick<Level, 'id' | 'position'>[],
   outcomes: Pick<LevelOutcome, 'levelId' | 'validated'>[],
-): number | null {
-  return currentLevel(grid.levels, outcomes)?.position ?? null
+  carriedLevels = 0,
+): number {
+  return currentLevel(levels, outcomes, carriedLevels)?.position ?? levels.length + 1
 }
 
 /**

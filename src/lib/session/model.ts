@@ -55,6 +55,7 @@ export type ConsolidateInput = {
   gridId: string
   levelId: string
   gridName: string
+  gridVersion: number
   levelNumber: number
   startedAt: string
   validated: boolean

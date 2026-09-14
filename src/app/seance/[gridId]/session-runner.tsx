@@ -24,6 +24,8 @@ import { Summary } from './summary'
 export type SessionPlan = {
   gridId: string
   gridName: string
+  /** Version publiee jouee : la seance la retient en snapshot. */
+  gridVersion: number
   restSeconds: number
   levelId: string
   levelNumber: number
@@ -87,6 +89,7 @@ export function SessionRunner({ plan }: { plan: SessionPlan }) {
         gridId: plan.gridId,
         levelId: plan.levelId,
         gridName: plan.gridName,
+        gridVersion: plan.gridVersion,
         levelNumber: plan.levelNumber,
         startedAt: new Date(run.startedAt).toISOString(),
         validated: isLevelValidated(results),
