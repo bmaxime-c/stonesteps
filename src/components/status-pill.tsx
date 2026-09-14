@@ -27,6 +27,14 @@ const STYLES: Record<SetStatus | 'progress', { label: string; className: string 
   },
 }
 
+/** Libelles seuls, pour les rendre lisibles sans la pastille. */
+export const STATUS_LABEL: Record<SetStatus | 'progress', string> = {
+  success: STYLES.success.label,
+  surpass: STYLES.surpass.label,
+  fail: STYLES.fail.label,
+  progress: STYLES.progress.label,
+}
+
 /** `null` affiche l'etat neutre « En cours » d'une serie strict en plein effort. */
 export function StatusPill({
   status,

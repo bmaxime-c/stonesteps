@@ -84,19 +84,26 @@ describe('parcours d une seance sans chrono', () => {
     render(<SessionRunner plan={plan()} />)
     expect(screen.getByText('10')).toBeInTheDocument()
     expect(screen.getByText('objectif 10 reps')).toBeInTheDocument()
-    expect(screen.getByText('Réussi')).toBeInTheDocument()
+    expect(screen.getByText('10')).toHaveClass('text-success')
   })
 
-  it('fait evoluer le statut en direct pendant le reglage', async () => {
+  it('n ecrit le statut nulle part pendant la seance', () => {
+    render(<SessionRunner plan={plan()} />)
+    // Le chiffre porte la couleur ; le libelle ne reste que pour les lecteurs
+    // d'ecran, en sr-only.
+    expect(screen.queryByText('Réussi')).toHaveClass('sr-only')
+  })
+
+  it('fait evoluer la couleur du chiffre en direct pendant le reglage', async () => {
     const user = userEvent.setup()
     render(<SessionRunner plan={plan()} />)
 
     await user.click(screen.getByRole('button', { name: 'Ajouter une répétition' }))
-    expect(screen.getByText('Dépassé')).toBeInTheDocument()
+    expect(screen.getByText('11')).toHaveClass('text-surpass')
 
     await user.click(screen.getByRole('button', { name: 'Retirer une répétition' }))
     await user.click(screen.getByRole('button', { name: 'Retirer une répétition' }))
-    expect(screen.getByText('Échoué')).toBeInTheDocument()
+    expect(screen.getByText('9')).toHaveClass('text-fail')
   })
 
   it('valide le niveau quand toutes les series sont reussies', async () => {
@@ -225,9 +232,10 @@ describe('serie strict', () => {
     const user = userEvent.setup()
     render(<SessionRunner plan={strictPlan()} />)
 
-    expect(screen.getByText('En cours')).toBeInTheDocument()
+    // Neutre, donc cyan : ni vert ni rose tant que le verdict n'est pas tombe.
+    expect(screen.getByText('40s')).toHaveClass('text-live')
     await user.click(screen.getByRole('button', { name: 'Démarrer le chrono' }))
-    expect(screen.getByText('En cours')).toBeInTheDocument()
+    expect(screen.getByText('40s')).toHaveClass('text-live')
     expect(screen.getByRole('button', { name: 'Terminé' })).toBeInTheDocument()
   })
 
