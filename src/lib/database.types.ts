@@ -1,80 +1,483 @@
-/**
- * Types de la base, ecrits a la main pour l'instant.
- *
- * A remplacer par la generation automatique des que la CLI Supabase est
- * installee sur le poste :
- *   supabase gen types typescript --project-id <ref> > src/lib/database.types.ts
- * La recette `just types` fait exactement cela.
- */
+export type Json =
+  string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
-export type TimerMode = 'none' | 'minimal' | 'strict'
-export type FriendshipStatus = 'pending' | 'accepted' | 'blocked'
-
-export interface Profile {
-  id: string
-  username: string
-  display_name: string | null
-  avatar_url: string | null
-  created_at: string
-  updated_at: string
+export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: '14.5'
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+  public: {
+    Tables: {
+      exercises: {
+        Row: {
+          created_at: string
+          id: string
+          muscle_group: Database['public']['Enums']['muscle_group']
+          name: string
+          owner_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          muscle_group: Database['public']['Enums']['muscle_group']
+          name: string
+          owner_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          muscle_group?: Database['public']['Enums']['muscle_group']
+          name?: string
+          owner_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'exercises_owner_id_fkey'
+            columns: ['owner_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      grids: {
+        Row: {
+          accent_color: string
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          rest_seconds: number
+          updated_at: string
+        }
+        Insert: {
+          accent_color?: string
+          created_at?: string
+          id?: string
+          name: string
+          owner_id: string
+          rest_seconds?: number
+          updated_at?: string
+        }
+        Update: {
+          accent_color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          rest_seconds?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'grids_owner_id_fkey'
+            columns: ['owner_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      level_exercises: {
+        Row: {
+          exercise_id: string
+          id: string
+          level_id: string
+          position: number
+        }
+        Insert: {
+          exercise_id: string
+          id?: string
+          level_id: string
+          position: number
+        }
+        Update: {
+          exercise_id?: string
+          id?: string
+          level_id?: string
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'level_exercises_exercise_id_fkey'
+            columns: ['exercise_id']
+            isOneToOne: false
+            referencedRelation: 'exercises'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'level_exercises_level_id_fkey'
+            columns: ['level_id']
+            isOneToOne: false
+            referencedRelation: 'levels'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      level_sets: {
+        Row: {
+          id: string
+          level_exercise_id: string
+          position: number
+          target_reps: number
+          timer_mode: Database['public']['Enums']['timer_mode']
+          timer_seconds: number | null
+        }
+        Insert: {
+          id?: string
+          level_exercise_id: string
+          position: number
+          target_reps?: number
+          timer_mode?: Database['public']['Enums']['timer_mode']
+          timer_seconds?: number | null
+        }
+        Update: {
+          id?: string
+          level_exercise_id?: string
+          position?: number
+          target_reps?: number
+          timer_mode?: Database['public']['Enums']['timer_mode']
+          timer_seconds?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'level_sets_level_exercise_id_fkey'
+            columns: ['level_exercise_id']
+            isOneToOne: false
+            referencedRelation: 'level_exercises'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      levels: {
+        Row: {
+          grid_id: string
+          id: string
+          position: number
+        }
+        Insert: {
+          grid_id: string
+          id?: string
+          position: number
+        }
+        Update: {
+          grid_id?: string
+          id?: string
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'levels_grid_id_fkey'
+            columns: ['grid_id']
+            isOneToOne: false
+            referencedRelation: 'grids'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      session_sets: {
+        Row: {
+          actual_value: number
+          exercise_name: string
+          id: string
+          level_set_id: string | null
+          session_id: string
+          set_index: number
+          set_label: string
+          status: Database['public']['Enums']['set_status']
+          target_value: number
+          unit: string
+        }
+        Insert: {
+          actual_value: number
+          exercise_name: string
+          id?: string
+          level_set_id?: string | null
+          session_id: string
+          set_index: number
+          set_label: string
+          status: Database['public']['Enums']['set_status']
+          target_value: number
+          unit: string
+        }
+        Update: {
+          actual_value?: number
+          exercise_name?: string
+          id?: string
+          level_set_id?: string | null
+          session_id?: string
+          set_index?: number
+          set_label?: string
+          status?: Database['public']['Enums']['set_status']
+          target_value?: number
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'session_sets_level_set_id_fkey'
+            columns: ['level_set_id']
+            isOneToOne: false
+            referencedRelation: 'level_sets'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'session_sets_session_id_fkey'
+            columns: ['session_id']
+            isOneToOne: false
+            referencedRelation: 'sessions'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      sessions: {
+        Row: {
+          completed_at: string | null
+          grid_id: string | null
+          grid_name: string
+          id: string
+          level_id: string | null
+          level_number: number
+          owner_id: string
+          started_at: string
+          validated: boolean
+        }
+        Insert: {
+          completed_at?: string | null
+          grid_id?: string | null
+          grid_name: string
+          id?: string
+          level_id?: string | null
+          level_number: number
+          owner_id: string
+          started_at?: string
+          validated?: boolean
+        }
+        Update: {
+          completed_at?: string | null
+          grid_id?: string | null
+          grid_name?: string
+          id?: string
+          level_id?: string | null
+          level_number?: number
+          owner_id?: string
+          started_at?: string
+          validated?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'sessions_grid_id_fkey'
+            columns: ['grid_id']
+            isOneToOne: false
+            referencedRelation: 'grids'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'sessions_level_id_fkey'
+            columns: ['level_id']
+            isOneToOne: false
+            referencedRelation: 'levels'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'sessions_owner_id_fkey'
+            columns: ['owner_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      current_level: { Args: { p_grid_id: string }; Returns: string }
+      owns_grid: { Args: { g: string }; Returns: boolean }
+      owns_level: { Args: { l: string }; Returns: boolean }
+      owns_level_exercise: { Args: { le: string }; Returns: boolean }
+      owns_session: { Args: { s: string }; Returns: boolean }
+    }
+    Enums: {
+      muscle_group: 'push' | 'pull' | 'legs' | 'core'
+      set_status: 'success' | 'surpass' | 'fail'
+      timer_mode: 'none' | 'minimal' | 'strict'
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
 }
 
-export interface Exercise {
-  id: string
-  owner_id: string | null
-  name: string
-  category: string | null
-  is_builtin: boolean
-  created_at: string
-}
+type DatabaseWithoutInternals = Omit<Database, '__InternalSupabase'>
 
-export interface Grid {
-  id: string
-  owner_id: string
-  name: string
-  description: string | null
-  is_public: boolean
-  is_active: boolean
-  created_at: string
-  updated_at: string
-}
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, 'public'>]
 
-export interface Level {
-  id: string
-  grid_id: string
-  position: number
-  name: string | null
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])
+    : never) = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
 }
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema['Tables'] &
+        DefaultSchema['Views'])
+    ? (DefaultSchema['Tables'] &
+        DefaultSchema['Views'])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
 
-export interface LevelExercise {
-  id: string
-  level_id: string
-  exercise_id: string
-  position: number
-  sets: number
-  reps: number | null
-  timer_mode: TimerMode
-  timer_seconds: number | null
-  notes: string | null
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    keyof DefaultSchema['Tables'] | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
+    : never) = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
 }
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
+    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
 
-export interface Session {
-  id: string
-  user_id: string
-  grid_id: string
-  level_id: string
-  started_at: string
-  ended_at: string | null
-  validated: boolean
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    keyof DefaultSchema['Tables'] | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
+    : never) = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
 }
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
+    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
 
-export interface SetResult {
-  id: string
-  session_id: string
-  level_exercise_id: string
-  set_index: number
-  success: boolean
-  reps_done: number | null
-  duration_seconds: number | null
-  recorded_at: string
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    keyof DefaultSchema['Enums'] | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums']
+    : never) = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
 }
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums'][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema['Enums']
+    ? DefaultSchema['Enums'][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    keyof DefaultSchema['CompositeTypes'] | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes']
+    : never) = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes'][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema['CompositeTypes']
+    ? DefaultSchema['CompositeTypes'][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
+  public: {
+    Enums: {
+      muscle_group: ['push', 'pull', 'legs', 'core'],
+      set_status: ['success', 'surpass', 'fail'],
+      timer_mode: ['none', 'minimal', 'strict'],
+    },
+  },
+} as const
