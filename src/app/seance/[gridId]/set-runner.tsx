@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-import { STATUS_STROKE, STATUS_TEXT, StatusPill } from '@/components/status-pill'
+import { STATUS_LABEL, STATUS_STROKE, STATUS_TEXT } from '@/components/status-pill'
 import type { LevelSet } from '@/lib/grids/model'
 import { setTarget } from '@/lib/grids/model'
 import type { SetStatus } from '@/lib/session/model'
@@ -55,9 +55,11 @@ export function SetRunner({
  * Serie sans chrono.
  *
  * Le compteur demarre a l'objectif, pas a zero : l'hypothese par defaut est
- * que la serie est reussie, et l'utilisateur corrige a la marge. Le statut et
- * la couleur du chiffre changent en direct pendant le reglage — c'est le
- * retour principal, avant meme la pastille.
+ * que la serie est reussie, et l'utilisateur corrige a la marge.
+ *
+ * Le statut ne s'ecrit nulle part pendant la seance : il se lit a la couleur
+ * du chiffre, qui change en direct. Un libelle de plus a lire a bout de bras
+ * n'apporte rien quand la couleur dit deja tout.
  */
 function RepsControl({
   set,
@@ -83,6 +85,12 @@ function RepsControl({
 
           <div className="min-w-[120px] text-center">
             <div className={`figure-reps ${STATUS_TEXT[status]}`}>{reps}</div>
+            {/* Le statut ne s'ecrit pas a l'ecran, il se lit a la couleur du
+                chiffre. Il reste annonce aux lecteurs d'ecran, pour qui la
+                couleur seule ne dit rien. */}
+            <span className="sr-only" aria-live="polite">
+              {STATUS_LABEL[status]}
+            </span>
             <p className="text-muted-foreground mt-1.5 text-[15px]">
               objectif {target} reps
             </p>
@@ -95,8 +103,6 @@ function RepsControl({
             +
           </StepButton>
         </div>
-
-        <StatusPill status={status} />
       </div>
 
       <button
@@ -211,7 +217,13 @@ function TimedControl({
         </svg>
 
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-7 text-center">
-          <div className="figure-timer">{display}s</div>
+          {/* Meme parti que le compteur de reps : le statut se lit a la
+              couleur, pas a un libelle. L'anneau la porte deja, le chiffre la
+              reprend pour que l'information tienne au centre du regard. */}
+          <div className={`figure-timer ${STATUS_TEXT[strokeKey]}`}>{display}s</div>
+          <span className="sr-only" aria-live="polite">
+            {STATUS_LABEL[strokeKey]}
+          </span>
           <p className="text-muted-foreground text-[13px]">
             {set.timerMode === 'minimal'
               ? `tenir ${target}s min`
@@ -219,8 +231,6 @@ function TimedControl({
           </p>
         </div>
       </div>
-
-      <StatusPill status={status} />
 
       {view ? (
         <button
