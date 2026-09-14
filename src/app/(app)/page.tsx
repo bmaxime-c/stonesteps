@@ -34,13 +34,13 @@ export default async function HomePage() {
       {grids.length === 0 ? (
         <EmptyState
           title="Aucune grille pour l'instant"
-          description="Une grille est une suite de niveaux : on valide un niveau en reussissant toutes ses series, et le suivant se debloque."
+          description="Une grille est une suite de niveaux : on valide un niveau en réussissant toutes ses séries, et le suivant se débloque."
           action={
             <Link
               href="/grilles/nouvelle"
               className="bg-primary text-primary-foreground rounded-full px-5 py-3 text-[15px] font-extrabold"
             >
-              Creer ma premiere grille
+              Créer ma première grille
             </Link>
           }
         />
@@ -80,7 +80,7 @@ export default async function HomePage() {
                           ? describeLevelContent(level.exercises)
                           : total === 0
                             ? 'Grille vide'
-                            : 'Tous les niveaux sont valides'}
+                            : 'Tous les niveaux sont validés'}
                       </p>
                     </div>
 

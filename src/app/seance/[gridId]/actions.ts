@@ -30,10 +30,10 @@ export async function consolidateSession(
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) return { sessionId: null, error: 'Session expiree. Reconnecte-toi.' }
+  if (!user) return { sessionId: null, error: 'Session expirée. Reconnecte-toi.' }
 
   if (input.results.length === 0) {
-    return { sessionId: null, error: 'Aucune serie a enregistrer.' }
+    return { sessionId: null, error: 'Aucune série à enregistrer.' }
   }
 
   const validated = isLevelValidated(input.results)
@@ -53,7 +53,7 @@ export async function consolidateSession(
     .single()
 
   if (sessionError || !session) {
-    return { sessionId: null, error: "La seance n'a pas pu etre enregistree." }
+    return { sessionId: null, error: "La séance n'a pas pu être enregistrée." }
   }
 
   const { error: setsError } = await supabase.from('session_sets').insert(
@@ -74,7 +74,7 @@ export async function consolidateSession(
     // Compensation : mieux vaut aucune seance qu'une seance amputee de ses
     // series, qui fausserait le verdict comme les statistiques.
     await supabase.from('sessions').delete().eq('id', session.id)
-    return { sessionId: null, error: "Les series n'ont pas pu etre enregistrees." }
+    return { sessionId: null, error: "Les séries n'ont pas pu être enregistrées." }
   }
 
   const { error: completeError } = await supabase
@@ -85,7 +85,7 @@ export async function consolidateSession(
   if (completeError) {
     await supabase.from('session_sets').delete().eq('session_id', session.id)
     await supabase.from('sessions').delete().eq('id', session.id)
-    return { sessionId: null, error: "La seance n'a pas pu etre cloturee." }
+    return { sessionId: null, error: "La séance n'a pas pu être clôturée." }
   }
 
   revalidatePath('/')

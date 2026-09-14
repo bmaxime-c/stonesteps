@@ -10,15 +10,15 @@ import { cn } from '@/lib/utils'
  */
 const STYLES: Record<SetStatus | 'progress', { label: string; className: string }> = {
   success: {
-    label: 'Reussi',
+    label: 'Réussi',
     className: 'bg-success text-ink-neon shadow-[0_0_26px_rgb(0_255_135/0.4)]',
   },
   surpass: {
-    label: 'Depasse',
+    label: 'Dépassé',
     className: 'bg-surpass text-ink-neon shadow-[0_0_26px_rgb(212_255_63/0.4)]',
   },
   fail: {
-    label: 'Echoue',
+    label: 'Échoué',
     className: 'bg-fail text-ink-rose shadow-[0_0_26px_rgb(255_45_111/0.4)]',
   },
   progress: {

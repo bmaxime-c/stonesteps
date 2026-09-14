@@ -27,7 +27,7 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
       <div>
         <h1 className="text-lg font-bold">Connexion</h1>
         <p className="text-muted-foreground mt-1 text-sm">
-          Reprends ta progression la ou tu l&apos;as laissee.
+          Reprends ta progression là où tu l&apos;as laissée.
         </p>
       </div>
 
@@ -53,7 +53,7 @@ export default async function LoginPage({ searchParams }: PageProps<'/login'>) {
       <p className="text-muted-foreground text-sm">
         Pas encore de compte ?{' '}
         <Link href="/signup" className="text-primary font-semibold">
-          Creer un compte
+          Créer un compte
         </Link>
       </p>
     </section>

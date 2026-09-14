@@ -25,11 +25,11 @@ export function validateGrid(draft: GridDraft): GridIssue[] {
 
   const name = draft.name.trim()
   if (name.length === 0) {
-    issues.push({ path: 'name', message: 'Donne un nom a la grille.' })
+    issues.push({ path: 'name', message: 'Donne un nom à la grille.' })
   } else if (name.length > GRID_NAME_MAX) {
     issues.push({
       path: 'name',
-      message: `Le nom ne depasse pas ${GRID_NAME_MAX} caracteres.`,
+      message: `Le nom ne dépasse pas ${GRID_NAME_MAX} caractères.`,
     })
   }
 
@@ -40,7 +40,7 @@ export function validateGrid(draft: GridDraft): GridIssue[] {
   ) {
     issues.push({
       path: 'restSeconds',
-      message: `Le repos va de ${REST_SECONDS_MIN} a ${REST_SECONDS_MAX} secondes.`,
+      message: `Le repos va de ${REST_SECONDS_MIN} à ${REST_SECONDS_MAX} secondes.`,
     })
   }
 
@@ -68,7 +68,7 @@ export function validateGrid(draft: GridDraft): GridIssue[] {
       if (exercise.sets.length === 0) {
         issues.push({
           path: exercisePath,
-          message: `${exercise.exerciseName || 'Cet exercice'} n'a aucune serie.`,
+          message: `${exercise.exerciseName || 'Cet exercice'} n'a aucune série.`,
         })
       }
 
@@ -78,7 +78,7 @@ export function validateGrid(draft: GridDraft): GridIssue[] {
         if (!Number.isInteger(set.targetReps) || set.targetReps < 0) {
           issues.push({
             path: setPath,
-            message: 'Le nombre de repetitions ne peut pas etre negatif.',
+            message: 'Le nombre de répétitions ne peut pas être négatif.',
           })
         }
 
@@ -89,13 +89,13 @@ export function validateGrid(draft: GridDraft): GridIssue[] {
           if (set.timerSeconds !== null) {
             issues.push({
               path: setPath,
-              message: 'Une serie sans chrono ne porte pas de duree.',
+              message: 'Une série sans chrono ne porte pas de durée.',
             })
           }
         } else if (set.timerSeconds === null) {
           issues.push({
             path: setPath,
-            message: 'Une serie chronometree a besoin d une duree.',
+            message: 'Une série chronométrée a besoin d’une durée.',
           })
         } else if (
           !Number.isInteger(set.timerSeconds) ||
@@ -103,7 +103,7 @@ export function validateGrid(draft: GridDraft): GridIssue[] {
         ) {
           issues.push({
             path: setPath,
-            message: `La duree est d au moins ${TIMER_SECONDS_MIN} secondes.`,
+            message: `La durée est d’au moins ${TIMER_SECONDS_MIN} secondes.`,
           })
         }
       })

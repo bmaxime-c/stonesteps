@@ -23,9 +23,9 @@ function set(over: Partial<LevelSet> = {}): LevelSet {
 
 describe('plural', () => {
   it('accorde a partir de deux', () => {
-    expect(plural(0, 'serie')).toBe('0 serie')
-    expect(plural(1, 'serie')).toBe('1 serie')
-    expect(plural(2, 'serie')).toBe('2 series')
+    expect(plural(0, 'série')).toBe('0 série')
+    expect(plural(1, 'série')).toBe('1 série')
+    expect(plural(2, 'série')).toBe('2 séries')
   })
 
   it('accepte un pluriel irregulier', () => {
@@ -65,31 +65,31 @@ describe('describeSets', () => {
         set({ targetReps: 15 }),
         set({ targetReps: 12 }),
       ]),
-    ).toBe('3 series · 15/15/12 reps')
+    ).toBe('3 séries · 15/15/12 reps')
   })
 
   it('resume un maintien', () => {
     const hold = set({ timerMode: 'minimal', timerSeconds: 30 })
-    expect(describeSets([hold, hold])).toBe('2 series · tenir 30s min')
+    expect(describeSets([hold, hold])).toBe('2 séries · tenir 30s min')
   })
 
   it('resume une serie a finir en un temps donne', () => {
     const strict = set({ timerMode: 'strict', timerSeconds: 30, targetReps: 10 })
-    expect(describeSets([strict])).toBe('1 serie · 10 reps en 30s max')
+    expect(describeSets([strict])).toBe('1 série · 10 reps en 30s max')
   })
 
   it('ne casse pas sur un exercice sans serie', () => {
-    expect(describeSets([])).toBe('Aucune serie')
+    expect(describeSets([])).toBe('Aucune série')
   })
 })
 
 describe('describeLevelContent', () => {
   it('compte exercices et series, avec l accord', () => {
     expect(describeLevelContent([{ sets: [set(), set()] }, { sets: [set()] }])).toBe(
-      '2 exercices · 3 series a ce niveau',
+      '2 exercices · 3 séries à ce niveau',
     )
     expect(describeLevelContent([{ sets: [set()] }])).toBe(
-      '1 exercice · 1 serie a ce niveau',
+      '1 exercice · 1 série à ce niveau',
     )
   })
 })
@@ -103,7 +103,7 @@ describe('describeRest', () => {
 
 describe('shortDate', () => {
   it('rend un jour et un mois', () => {
-    expect(shortDate(new Date(2026, 7, 11, 12).toISOString())).toBe('11 aout')
+    expect(shortDate(new Date(2026, 7, 11, 12).toISOString())).toBe('11 août')
   })
 
   it('ne casse pas sur une date invalide', () => {

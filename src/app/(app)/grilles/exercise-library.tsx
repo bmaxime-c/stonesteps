@@ -16,7 +16,7 @@ import type { MuscleGroup } from '@/lib/grids/model'
  */
 
 const GROUP_LABELS: Record<MuscleGroup, string> = {
-  push: 'Poussee',
+  push: 'Poussée',
   pull: 'Tirage',
   legs: 'Jambes',
   core: 'Gainage & skills',
@@ -48,7 +48,7 @@ export function ExerciseLibrary({
         </button>
         <div>
           <h1 className="text-[clamp(22px,3.4vw,28px)] font-bold tracking-[-0.02em]">
-            Bibliotheque d&apos;exercices
+            Bibliothèque d&apos;exercices
           </h1>
           <p className="text-tertiary mt-px text-[13px]">
             L&apos;exercice choisi rejoint le niveau {levelNumber}.

@@ -161,14 +161,14 @@ export function GridBuilder({
 
       <div className="bg-card border-border flex flex-wrap items-center gap-3 rounded-[16px] border px-4 py-3.5">
         <div className="min-w-[160px] flex-1">
-          <p className="text-sm font-bold">Repos entre les series</p>
+          <p className="text-sm font-bold">Repos entre les séries</p>
           <p className="text-tertiary mt-0.5 text-xs">
-            Optionnel — 0 pour enchainer directement
+            Optionnel — 0 pour enchaîner directement
           </p>
         </div>
         <Stepper
           label="repos"
-          value={grid.restSeconds === 0 ? 'desactive' : `${grid.restSeconds}s`}
+          value={grid.restSeconds === 0 ? 'désactivé' : `${grid.restSeconds}s`}
           width="min-w-[78px]"
           onDecrease={() => setGrid(stepRest(grid, -1))}
           onIncrease={() => setGrid(stepRest(grid, 1))}
@@ -231,7 +231,7 @@ export function GridBuilder({
           onClick={() => setGrid(duplicatePreviousLevel(grid, levelIndex))}
           className="border-border text-muted-foreground self-start rounded-full border-[1.5px] border-dashed px-3.5 py-2.5 text-[13px] font-semibold"
         >
-          Dupliquer le niveau precedent
+          Dupliquer le niveau précédent
         </button>
       ) : null}
 
@@ -281,14 +281,14 @@ export function GridBuilder({
             onClick={() => setGrid(addSet(grid, levelIndex, exerciseIndex))}
             className="border-border text-muted-foreground self-start rounded-full border-[1.5px] border-dashed px-3.5 py-2.5 text-[13px] font-semibold"
           >
-            + Ajouter une serie
+            + Ajouter une série
           </button>
         </div>
       ))}
 
       {level && level.exercises.length === 0 ? (
         <p className="text-tertiary p-2 text-center text-sm">
-          Aucun exercice dans ce niveau. Ajoutez-en depuis la bibliotheque.
+          Aucun exercice dans ce niveau. Ajoutez-en depuis la bibliothèque.
         </p>
       ) : null}
 
@@ -313,7 +313,7 @@ export function GridBuilder({
       {confirmingDelete ? (
         <ConfirmDialog
           title="Supprimer cette grille ?"
-          description="Ses niveaux et sa progression partent avec elle. Les seances deja jouees restent dans les statistiques."
+          description="Ses niveaux et sa progression partent avec elle. Les séances déjà jouées restent dans les statistiques."
           confirmLabel="Supprimer"
           onCancel={() => setConfirmingDelete(false)}
           onConfirm={remove}
@@ -340,12 +340,12 @@ function SetRow({
   return (
     <div className="bg-inset flex flex-wrap items-center gap-2.5 rounded-[14px] px-3 py-2.5">
       <span className="text-tertiary min-w-[54px] text-xs font-bold">
-        Serie {index + 1}/{total}
+        Série {index + 1}/{total}
       </span>
 
       {showsReps(set) ? (
         <Stepper
-          label="repetitions"
+          label="répétitions"
           value={`${set.targetReps} reps`}
           width="min-w-[62px]"
           onDecrease={() => onChange((current) => stepReps(current, -1))}

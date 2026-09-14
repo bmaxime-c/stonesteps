@@ -45,7 +45,7 @@ export function GridDetail({
       <div className="flex items-center gap-3">
         <Link
           href="/"
-          aria-label="Retour a l'accueil"
+          aria-label="Retour à l'accueil"
           className="bg-card border-border flex size-9 shrink-0 items-center justify-center rounded-full border"
         >
           <ChevronLeft className="size-4" />
@@ -58,7 +58,7 @@ export function GridDetail({
               ? `Niveau ${currentPosition} sur ${levels.length}`
               : levels.length === 0
                 ? 'Aucun niveau'
-                : 'Tous les niveaux sont valides'}{' '}
+                : 'Tous les niveaux sont validés'}{' '}
             · {describeRest(grid.restSeconds)}
           </p>
         </div>
@@ -162,7 +162,7 @@ function LevelChip({
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
-      aria-label={`Niveau ${level.position}${validated ? ', valide' : current ? ', en cours' : ', verrouille'}`}
+      aria-label={`Niveau ${level.position}${validated ? ', validé' : current ? ', en cours' : ', verrouillé'}`}
       className={cn(
         'flex h-[38px] min-w-[38px] items-center justify-center rounded-[12px] border-[1.5px] px-2.5 text-sm font-bold',
         validated && 'text-ink-neon',
@@ -210,9 +210,9 @@ function LevelFooter({
     <p className="bg-inset border-border text-muted-foreground rounded-[16px] border px-4 py-3.5 text-center text-[13px]">
       {level.state === 'validated'
         ? level.validatedAt
-          ? `Niveau valide le ${shortDate(level.validatedAt)}`
-          : 'Niveau valide'
-        : `Niveau verrouille — validez d'abord le niveau ${currentPosition}`}
+          ? `Niveau validé le ${shortDate(level.validatedAt)}`
+          : 'Niveau validé'
+        : `Niveau verrouillé — validez d'abord le niveau ${currentPosition}`}
     </p>
   )
 }

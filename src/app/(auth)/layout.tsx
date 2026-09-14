@@ -18,7 +18,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             <p className="text-xl font-bold tracking-[-0.02em]">StoneSteps</p>
             <p className="text-tertiary mt-1 text-sm text-balance">
               Une grille de niveaux, aucune concession : on ne monte d&apos;un cran que
-              lorsque toutes les series sont validees.
+              lorsque toutes les séries sont validées.
             </p>
           </div>
         </div>

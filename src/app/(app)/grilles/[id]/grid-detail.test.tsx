@@ -76,24 +76,24 @@ describe('frise des niveaux', () => {
     setup()
     expect(screen.getByText('Niveau 2')).toBeInTheDocument()
     expect(screen.getByText('Planche (gainage)')).toBeInTheDocument()
-    expect(screen.getByText('1 serie · tenir 30s min')).toBeInTheDocument()
+    expect(screen.getByText('1 série · tenir 30s min')).toBeInTheDocument()
   })
 
   it('annonce l etat de chaque pastille', () => {
     setup()
-    expect(screen.getByRole('button', { name: 'Niveau 1, valide' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Niveau 1, validé' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Niveau 2, en cours' })).toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: 'Niveau 3, verrouille' }),
+      screen.getByRole('button', { name: 'Niveau 3, verrouillé' }),
     ).toBeInTheDocument()
   })
 
   it('montre le contenu du niveau tape', async () => {
     const { user } = setup()
-    await user.click(screen.getByRole('button', { name: 'Niveau 1, valide' }))
+    await user.click(screen.getByRole('button', { name: 'Niveau 1, validé' }))
 
     expect(screen.getByText('Pompes')).toBeInTheDocument()
-    expect(screen.getByText('2 series · 10/10 reps')).toBeInTheDocument()
+    expect(screen.getByText('2 séries · 10/10 reps')).toBeInTheDocument()
   })
 })
 
@@ -106,18 +106,18 @@ describe('ce qu on peut lancer', () => {
 
   it('affiche la date de validation sur un niveau deja passe', async () => {
     const { user } = setup()
-    await user.click(screen.getByRole('button', { name: 'Niveau 1, valide' }))
+    await user.click(screen.getByRole('button', { name: 'Niveau 1, validé' }))
 
-    expect(screen.getByText('Niveau valide le 11 aout')).toBeInTheDocument()
+    expect(screen.getByText('Niveau validé le 11 août')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /Commencer/ })).not.toBeInTheDocument()
   })
 
   it('explique pourquoi un niveau plus loin n est pas jouable', async () => {
     const { user } = setup()
-    await user.click(screen.getByRole('button', { name: 'Niveau 3, verrouille' }))
+    await user.click(screen.getByRole('button', { name: 'Niveau 3, verrouillé' }))
 
     expect(
-      screen.getByText("Niveau verrouille — validez d'abord le niveau 2"),
+      screen.getByText("Niveau verrouillé — validez d'abord le niveau 2"),
     ).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /Commencer/ })).not.toBeInTheDocument()
   })

@@ -59,7 +59,7 @@ describe('bibliotheque', () => {
     const { user } = setup()
     await user.click(screen.getByRole('button', { name: '+ Ajouter un exercice' }))
 
-    expect(screen.getByText('Poussee')).toBeInTheDocument()
+    expect(screen.getByText('Poussée')).toBeInTheDocument()
     expect(screen.getByText('Tirage')).toBeInTheDocument()
     expect(screen.getByText("L'exercice choisi rejoint le niveau 1.")).toBeInTheDocument()
   })
@@ -68,9 +68,9 @@ describe('bibliotheque', () => {
     const { user } = setup()
     await addFromLibrary(user, 'Pompes')
 
-    expect(screen.queryByText('Poussee')).not.toBeInTheDocument()
+    expect(screen.queryByText('Poussée')).not.toBeInTheDocument()
     expect(screen.getByText('Pompes')).toBeInTheDocument()
-    expect(screen.getByText('Serie 1/1')).toBeInTheDocument()
+    expect(screen.getByText('Série 1/1')).toBeInTheDocument()
     expect(screen.getByText('10 reps')).toBeInTheDocument()
     expect(screen.getByText('Sans chrono')).toBeInTheDocument()
   })
@@ -81,10 +81,10 @@ describe('series', () => {
     const { user } = setup()
     await addFromLibrary(user, 'Pompes')
 
-    await user.click(screen.getByRole('button', { name: 'Augmenter repetitions' }))
+    await user.click(screen.getByRole('button', { name: 'Augmenter répétitions' }))
     expect(screen.getByText('11 reps')).toBeInTheDocument()
 
-    const down = screen.getByRole('button', { name: 'Diminuer repetitions' })
+    const down = screen.getByRole('button', { name: 'Diminuer répétitions' })
     for (let i = 0; i < 12; i += 1) await user.click(down)
     expect(screen.getByText('0 reps')).toBeInTheDocument()
   })
@@ -97,14 +97,14 @@ describe('series', () => {
     expect(screen.getByRole('button', { name: 'Tenir au moins' })).toBeInTheDocument()
     // La valeur n'est lue nulle part dans ce mode : le pas disparait.
     expect(
-      screen.queryByRole('button', { name: 'Augmenter repetitions' }),
+      screen.queryByRole('button', { name: 'Augmenter répétitions' }),
     ).not.toBeInTheDocument()
     expect(screen.getByText('30s')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Tenir au moins' }))
     expect(screen.getByRole('button', { name: 'Faire en max' })).toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: 'Augmenter repetitions' }),
+      screen.getByRole('button', { name: 'Augmenter répétitions' }),
     ).toBeInTheDocument()
   })
 
@@ -120,15 +120,15 @@ describe('series', () => {
   it('duplique la derniere serie a l ajout, et la retire', async () => {
     const { user } = setup()
     await addFromLibrary(user, 'Pompes')
-    await user.click(screen.getByRole('button', { name: 'Augmenter repetitions' }))
-    await user.click(screen.getByRole('button', { name: '+ Ajouter une serie' }))
+    await user.click(screen.getByRole('button', { name: 'Augmenter répétitions' }))
+    await user.click(screen.getByRole('button', { name: '+ Ajouter une série' }))
 
-    expect(screen.getByText('Serie 1/2')).toBeInTheDocument()
-    expect(screen.getByText('Serie 2/2')).toBeInTheDocument()
+    expect(screen.getByText('Série 1/2')).toBeInTheDocument()
+    expect(screen.getByText('Série 2/2')).toBeInTheDocument()
     expect(screen.getAllByText('11 reps')).toHaveLength(2)
 
     await user.click(screen.getAllByRole('button', { name: 'Retirer' })[1])
-    expect(screen.getByText('Serie 1/1')).toBeInTheDocument()
+    expect(screen.getByText('Série 1/1')).toBeInTheDocument()
   })
 })
 
@@ -141,7 +141,7 @@ describe('niveaux', () => {
     expect(screen.getByText('Niveau 2')).toBeInTheDocument()
     expect(
       screen.getByText(
-        'Aucun exercice dans ce niveau. Ajoutez-en depuis la bibliotheque.',
+        'Aucun exercice dans ce niveau. Ajoutez-en depuis la bibliothèque.',
       ),
     ).toBeInTheDocument()
   })
@@ -160,7 +160,7 @@ describe('niveaux', () => {
 
   it('ne propose la duplication que sur un niveau vide qui en suit un autre', async () => {
     const { user } = setup()
-    const label = 'Dupliquer le niveau precedent'
+    const label = 'Dupliquer le niveau précédent'
 
     // Premier niveau : rien a dupliquer.
     expect(screen.queryByRole('button', { name: label })).not.toBeInTheDocument()
@@ -182,7 +182,7 @@ describe('repos', () => {
     expect(screen.getByText('15s')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Diminuer repos' }))
-    expect(screen.getByText('desactive')).toBeInTheDocument()
+    expect(screen.getByText('désactivé')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Augmenter repos' }))
     await user.click(screen.getByRole('button', { name: 'Augmenter repos' }))
@@ -215,14 +215,14 @@ describe('enregistrement', () => {
   it('affiche l erreur remontee par le serveur sans quitter le constructeur', async () => {
     save.mockResolvedValueOnce({
       gridId: null,
-      error: 'Donne un nom a la grille.',
-      issues: [{ path: 'name', message: 'Donne un nom a la grille.' }],
+      error: 'Donne un nom à la grille.',
+      issues: [{ path: 'name', message: 'Donne un nom à la grille.' }],
     })
 
     const { user } = setup()
     await user.click(screen.getByRole('button', { name: 'Enregistrer' }))
 
-    expect(await screen.findByText('Donne un nom a la grille.')).toBeInTheDocument()
+    expect(await screen.findByText('Donne un nom à la grille.')).toBeInTheDocument()
     expect(push).not.toHaveBeenCalled()
   })
 })

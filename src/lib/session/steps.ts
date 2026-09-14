@@ -24,7 +24,7 @@ export type SetStep = {
 
 /** Libelle affiche dans l'en-tete et le resume : « Serie 2/3 ». */
 export function setLabel(step: Pick<SetStep, 'setNumber' | 'setCount'>): string {
-  return `Serie ${step.setNumber}/${step.setCount}`
+  return `Série ${step.setNumber}/${step.setCount}`
 }
 
 export function buildSteps(level: Pick<Level, 'exercises'>): SetStep[] {

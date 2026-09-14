@@ -32,7 +32,7 @@ export async function saveGrid(input: SaveGridInput): Promise<SaveGridResult> {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    return { gridId: null, error: 'Session expiree. Reconnecte-toi.', issues: [] }
+    return { gridId: null, error: 'Session expirée. Reconnecte-toi.', issues: [] }
   }
 
   const issues = validateGrid({
@@ -56,7 +56,7 @@ export async function saveGrid(input: SaveGridInput): Promise<SaveGridResult> {
   if (gridId) {
     const { error } = await supabase.from('grids').update(meta).eq('id', gridId)
     if (error) {
-      return { gridId: null, error: "La grille n'a pas pu etre enregistree.", issues: [] }
+      return { gridId: null, error: "La grille n'a pas pu être enregistrée.", issues: [] }
     }
   } else {
     const { data, error } = await supabase
@@ -66,7 +66,7 @@ export async function saveGrid(input: SaveGridInput): Promise<SaveGridResult> {
       .single()
 
     if (error || !data) {
-      return { gridId: null, error: "La grille n'a pas pu etre creee.", issues: [] }
+      return { gridId: null, error: "La grille n'a pas pu être créée.", issues: [] }
     }
     gridId = data.id
   }
@@ -79,7 +79,7 @@ export async function saveGrid(input: SaveGridInput): Promise<SaveGridResult> {
   if (clearError) {
     return {
       gridId: null,
-      error: "Le contenu de la grille n'a pas pu etre remplace.",
+      error: "Le contenu de la grille n'a pas pu être remplacé.",
       issues: [],
     }
   }
@@ -92,7 +92,7 @@ export async function saveGrid(input: SaveGridInput): Promise<SaveGridResult> {
   if (levelsError || !levels) {
     return {
       gridId: null,
-      error: "Les niveaux n'ont pas pu etre enregistres.",
+      error: "Les niveaux n'ont pas pu être enregistrés.",
       issues: [],
     }
   }
@@ -117,7 +117,7 @@ export async function saveGrid(input: SaveGridInput): Promise<SaveGridResult> {
   if (exercisesError || !exercises) {
     return {
       gridId: null,
-      error: "Les exercices n'ont pas pu etre enregistres.",
+      error: "Les exercices n'ont pas pu être enregistrés.",
       issues: [],
     }
   }
@@ -144,7 +144,7 @@ export async function saveGrid(input: SaveGridInput): Promise<SaveGridResult> {
   if (setsError) {
     return {
       gridId: null,
-      error: "Les series n'ont pas pu etre enregistrees.",
+      error: "Les séries n'ont pas pu être enregistrées.",
       issues: [],
     }
   }
@@ -166,7 +166,7 @@ export async function deleteGrid(gridId: string): Promise<DeleteGridResult> {
   const supabase = await createClient()
 
   const { error } = await supabase.from('grids').delete().eq('id', gridId)
-  if (error) return { error: "La grille n'a pas pu etre supprimee." }
+  if (error) return { error: "La grille n'a pas pu être supprimée." }
 
   revalidatePath('/')
   return { error: null }

@@ -13,10 +13,10 @@ function translate(message: string): string {
   const known: Record<string, string> = {
     'Invalid login credentials': 'Identifiants incorrects.',
     'Email not confirmed':
-      'Adresse non confirmee. Ouvre le lien recu par e-mail avant de te connecter.',
-    'User already registered': 'Un compte existe deja avec cette adresse.',
+      'Adresse non confirmée. Ouvre le lien reçu par e-mail avant de te connecter.',
+    'User already registered': 'Un compte existe déjà avec cette adresse.',
     'Password should be at least 6 characters':
-      'Le mot de passe doit faire au moins 6 caracteres.',
+      'Le mot de passe doit faire au moins 6 caractères.',
   }
   return known[message] ?? message
 }
@@ -70,7 +70,7 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   }
 
   if (displayName.length > 40) {
-    return { error: 'Le nom affiche ne depasse pas 40 caracteres.', notice: null }
+    return { error: 'Le nom affiché ne dépasse pas 40 caractères.', notice: null }
   }
 
   const supabase = await createClient()
@@ -90,7 +90,7 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   return {
     error: null,
     notice:
-      'Compte cree. Ouvre le lien de confirmation envoye a ton adresse pour activer la connexion.',
+      'Compte créé. Ouvre le lien de confirmation envoyé à ton adresse pour activer la connexion.',
   }
 }
 

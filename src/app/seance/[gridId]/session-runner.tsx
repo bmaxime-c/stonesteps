@@ -230,14 +230,14 @@ export function SessionRunner({ plan }: { plan: SessionPlan }) {
             Niveau {plan.levelNumber}/{plan.levelCount}
           </span>
           <span className="text-[13px] font-semibold tracking-[0.04em] whitespace-nowrap text-white/60 uppercase">
-            Exercice {step.exerciseNumber}/{step.exerciseCount} · Serie {step.setNumber}/
+            Exercice {step.exerciseNumber}/{step.exerciseCount} · Série {step.setNumber}/
             {step.setCount}
           </span>
         </div>
 
         <button
           type="button"
-          aria-label="Quitter la seance"
+          aria-label="Quitter la séance"
           onClick={() => setConfirmingExit(true)}
           className="flex size-[34px] shrink-0 items-center justify-center rounded-full bg-white/12"
         >
@@ -276,10 +276,10 @@ export function SessionRunner({ plan }: { plan: SessionPlan }) {
 
       {confirmingExit ? (
         <ConfirmDialog
-          title="Quitter la seance ?"
-          description="La progression de cette seance est abandonnee, et le niveau reste a repasser en entier."
+          title="Quitter la séance ?"
+          description="La progression de cette séance est abandonnée, et le niveau reste à repasser en entier."
           confirmLabel="Quitter"
-          cancelLabel="Continuer la seance"
+          cancelLabel="Continuer la séance"
           onCancel={() => setConfirmingExit(false)}
           onConfirm={leave}
         />

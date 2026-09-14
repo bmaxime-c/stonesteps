@@ -40,9 +40,9 @@ export function initials(name: string): string {
  *   1 serie · 10 reps en 30s max
  */
 export function describeSets(sets: LevelSet[]): string {
-  if (sets.length === 0) return 'Aucune serie'
+  if (sets.length === 0) return 'Aucune série'
 
-  const count = plural(sets.length, 'serie')
+  const count = plural(sets.length, 'série')
   const first = sets[0]
 
   if (first.timerMode === 'minimal') {
@@ -59,7 +59,7 @@ export function describeSets(sets: LevelSet[]): string {
 /** « 3 exercices · 7 series a ce niveau », avec l'accord qui va bien. */
 export function describeLevelContent(exercises: Pick<LevelExercise, 'sets'>[]): string {
   const setCount = exercises.reduce((total, exercise) => total + exercise.sets.length, 0)
-  return `${plural(exercises.length, 'exercice')} · ${plural(setCount, 'serie')} a ce niveau`
+  return `${plural(exercises.length, 'exercice')} · ${plural(setCount, 'série')} à ce niveau`
 }
 
 /** « repos 60s », ou « sans repos » quand il est desactive. */
@@ -70,17 +70,17 @@ export function describeRest(restSeconds: number): string {
 /** Date courte a la francaise : « 11 aout ». */
 const MONTHS = [
   'janvier',
-  'fevrier',
+  'février',
   'mars',
   'avril',
   'mai',
   'juin',
   'juillet',
-  'aout',
+  'août',
   'septembre',
   'octobre',
   'novembre',
-  'decembre',
+  'décembre',
 ]
 
 export function shortDate(iso: string): string {

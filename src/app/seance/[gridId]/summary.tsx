@@ -34,13 +34,13 @@ export function Summary({
   const counts = countByStatus(results)
 
   const note = validated
-    ? `Prochaine seance : niveau ${levelNumber + 1}`
-    : `${counts.fail} serie${counts.fail > 1 ? 's' : ''} manquee${counts.fail > 1 ? 's' : ''} — la prochaine seance repart du niveau ${levelNumber}`
+    ? `Prochaine séance : niveau ${levelNumber + 1}`
+    : `${counts.fail} série${counts.fail > 1 ? 's' : ''} manquée${counts.fail > 1 ? 's' : ''} — la prochaine séance repart du niveau ${levelNumber}`
 
   return (
     <main className="gutter mx-auto flex w-full max-w-[720px] flex-col gap-[18px] pt-[clamp(20px,3vw,36px)] pb-[72px]">
       <div className="text-center">
-        <p className="text-tertiary text-[15px] font-semibold">Seance terminee</p>
+        <p className="text-tertiary text-[15px] font-semibold">Séance terminée</p>
         <p className="mt-1 text-[26px] font-extrabold">{gridName}</p>
       </div>
 
@@ -53,15 +53,15 @@ export function Summary({
         }
       >
         <p className="text-2xl font-extrabold tracking-[-0.01em]">
-          Niveau {levelNumber} {validated ? 'valide' : 'non valide'}
+          Niveau {levelNumber} {validated ? 'validé' : 'non validé'}
         </p>
         <p className="mt-1.5 text-sm font-semibold opacity-75">{note}</p>
       </div>
 
       <div className="flex gap-2.5">
-        <Counter label="Reussies" value={counts.success} className="text-success" />
-        <Counter label="Depassees" value={counts.surpass} className="text-surpass" />
-        <Counter label="Echouees" value={counts.fail} className="text-fail" />
+        <Counter label="Réussies" value={counts.success} className="text-success" />
+        <Counter label="Dépassées" value={counts.surpass} className="text-surpass" />
+        <Counter label="Échouées" value={counts.fail} className="text-fail" />
       </div>
 
       <ul className="flex flex-col gap-2.5">
@@ -84,7 +84,7 @@ export function Summary({
       </ul>
 
       {saving ? (
-        <p className="text-tertiary text-center text-sm">Enregistrement de la seance…</p>
+        <p className="text-tertiary text-center text-sm">Enregistrement de la séance…</p>
       ) : null}
 
       {saveError ? (
@@ -95,7 +95,7 @@ export function Summary({
             onClick={onRetry}
             className="border-border-strong rounded-full border px-4 py-2 text-sm font-semibold"
           >
-            Reessayer
+            Réessayer
           </button>
         </div>
       ) : null}
@@ -105,7 +105,7 @@ export function Summary({
         onClick={onFinish}
         className="border-border-strong mt-2 w-full rounded-full border-[1.5px] py-[18px] text-[17px] font-bold"
       >
-        Retour a l&apos;accueil
+        Retour à l&apos;accueil
       </button>
     </main>
   )
