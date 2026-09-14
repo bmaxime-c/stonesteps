@@ -7,12 +7,28 @@ chacun avec ses séries, ses répétitions et, si besoin, un chrono. On ne monte
 d'un niveau que lorsque **toutes** les séries de **tous** les exercices sont
 réussies. La séance suivante reprend au dernier niveau non validé.
 
+## Conception
+
+L'application est reconstruite à partir de documents importés de Claude Design,
+qui font foi sur l'interface comme sur le modèle :
+
+| Fichier                               | Rôle                                                  |
+| ------------------------------------- | ----------------------------------------------------- |
+| `handoff.md`                          | prompt d'implémentation phasé : stack, schéma, charte |
+| `design/Callisthenics App.dc.html`    | maquette interactive de référence                     |
+| `design/Handoff Callisthenie.dc.html` | spécification détaillée accompagnant la maquette      |
+
+Le design system Septeo auquel la maquette se réfère (`_ds/…`) est délibérément
+écarté : la charte graphique vient du handoff.
+
 ## Stack
 
 - **Next.js 16** (App Router, TypeScript, Turbopack)
-- **Tailwind CSS 4** + **shadcn/ui** (Base UI)
+- **Tailwind CSS 4** + **shadcn/ui** (Base UI), thème unique sombre
+- **DM Sans** via `next/font/google`
 - **Supabase** — Postgres, Auth, Row Level Security
 - **Vitest** + Testing Library
+- Graphiques en SVG écrit à la main, aucune librairie de charts
 - Hébergement visé : **Vercel**
 
 Pas de backend séparé : les Server Actions Next.js et l'API Supabase suffisent.
@@ -89,19 +105,25 @@ dans `supabase_migrations.schema_migrations`, pour que la CI ne la rejoue pas au
 merge. Avec `--clip`, il ne reste qu'à coller dans le
 [SQL Editor](https://supabase.com/dashboard) et lancer.
 
-| Migration                            | Contenu                       |
-| ------------------------------------ | ----------------------------- |
-| `…000001_init_schema.sql`            | tables, contraintes, triggers |
-| `…000002_rls_policies.sql`           | Row Level Security            |
-| `…000003_seed_builtin_exercises.sql` | catalogue d'exercices intégré |
+| Migration                            | Contenu                        |
+| ------------------------------------ | ------------------------------ |
+| `…000001_init_schema.sql`            | tables, contraintes, triggers  |
+| `…000002_rls_policies.sql`           | Row Level Security             |
+| `…000003_seed_builtin_exercises.sql` | catalogue d'exercices intégré  |
+| `…000004_reorder_functions.sql`      | réordonnancement des exercices |
+| `…000005_duplicate_functions.sql`    | duplication d'un niveau        |
+| `…000006_social.sql`                 | amis et partage de grilles     |
 
-Modèle : `profiles`, `exercises`, `grids` → `levels` → `level_exercises`,
-`sessions` → `set_results`, `friendships`, `grid_shares`.
+Ces six migrations portent le **modèle précédent**. La phase 2 de la refonte
+ajoute une migration de reset qui drope le schéma applicatif, puis le schéma
+cible du handoff : `profiles`, `exercises`, `grids` → `levels` →
+`level_exercises` → `level_sets`, et `sessions` → `session_sets`. Le social
+disparaît. Aucune des six n'est modifiée ni supprimée — c'est la règle.
 
-Deux points structurants :
+Deux points structurants du modèle cible :
 
-- `set_results` porte une clé naturelle `(session_id, level_exercise_id, set_index)`.
-  C'est elle qui rendra la synchronisation hors ligne idempotente en phase 3.
+- `session_sets` porte une clé naturelle `(session_id, level_set_id, set_index)`.
+  C'est elle qui rendrait idempotente une éventuelle synchronisation hors ligne.
 - Le mode de chrono est un enum : `none`, `minimal` (tenir ≥ N secondes) ou
   `strict` (finir en ≤ N secondes).
 
@@ -136,7 +158,10 @@ Avec [`just`](https://github.com/casey/just) si installé, sinon directement en 
 - Le fichier `src/proxy.ts` remplace `middleware.ts` : c'est la convention
   Next 16. Il rafraîchit la session Supabase et protège les routes privées.
 - Le service worker (`public/sw.js`) ne met en cache que la coquille de
-  l'application et ne s'active qu'en production. Le cache des données de séance
-  arrive en phase 3.
-- Les icônes PWA sont en SVG. À convertir en PNG 192/512 si l'installation doit
-  être garantie sur les navigateurs qui n'acceptent pas le SVG.
+  l'application — page hors ligne et manifeste — et ne s'active qu'en
+  production. Aucun HTML authentifié n'est conservé.
+- Les icônes PWA sont en SVG. Leur conversion en PNG 192/512 est prévue en
+  phase 7 : le SVG passe sur Chrome mais l'installabilité n'est pas garantie
+  partout.
+- La séance survit à un rafraîchissement grâce à sa route propre
+  (`/seance/[gridId]`) et à `sessionStorage`, pas à un cache réseau.

@@ -3,8 +3,13 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { env } from '@/lib/env'
 
-/** Prefixes accessibles sans etre connecte. */
-const PUBLIC_PATHS = ['/', '/login', '/signup', '/auth', '/offline']
+/**
+ * Prefixes accessibles sans etre connecte.
+ *
+ * La racine n'en fait pas partie : c'est l'accueil, qui liste les grilles de
+ * l'utilisateur. Toute route applicative sans session redirige vers /login.
+ */
+const PUBLIC_PATHS = ['/login', '/signup', '/auth', '/offline']
 
 export function isPublic(pathname: string): boolean {
   return PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`))

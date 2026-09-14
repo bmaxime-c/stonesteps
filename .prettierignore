@@ -2,3 +2,7 @@ node_modules
 .next
 package-lock.json
 src/components/ui
+
+# Documents importes de Claude Design : conserves tels quels.
+design/
+handoff.md

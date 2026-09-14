@@ -1,0 +1,835 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <script src="./doc-page.js"></script>
+        <style>
+          doc-page:not(:defined) {
+            visibility: hidden;
+          }
+          body {
+            margin: 0;
+          }
+          a {
+            color: #0b7d4b;
+          }
+          a:hover {
+            color: #095f39;
+          }
+          .h {
+            font-family: 'DM Sans', system-ui, sans-serif;
+            font-weight: 700;
+            letter-spacing: -0.015em;
+            color: #101915;
+            margin: 28px 0 8px;
+          }
+          .h1 {
+            font-size: 30px;
+            line-height: 1.15;
+            margin: 0 0 6px;
+          }
+          .h2 {
+            font-size: 19px;
+            border-top: 1px solid #dde3df;
+            padding-top: 14px;
+          }
+          .h3 {
+            font-size: 15px;
+            margin: 18px 0 6px;
+          }
+          .p {
+            font-family: 'DM Sans', system-ui, sans-serif;
+            font-size: 14.5px;
+            line-height: 1.62;
+            color: #26332c;
+            margin: 0 0 10px;
+            text-wrap: pretty;
+            orphans: 3;
+            widows: 3;
+          }
+          .small {
+            font-size: 12.5px;
+            color: #5a6b62;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'DM Sans', system-ui, sans-serif;
+            font-size: 13px;
+            margin: 6px 0 14px;
+          }
+          th {
+            text-align: left;
+            font-weight: 700;
+            color: #101915;
+            border-bottom: 1.5px solid #101915;
+            padding: 7px 8px;
+          }
+          td {
+            border-bottom: 1px solid #e3e8e5;
+            padding: 7px 8px;
+            color: #26332c;
+            vertical-align: top;
+          }
+          tr {
+            break-inside: avoid;
+          }
+          code {
+            font-family: ui-monospace, Menlo, monospace;
+            font-size: 12.5px;
+            background: #f1f5f2;
+            padding: 1px 5px;
+            border-radius: 4px;
+            color: #0b4b2f;
+          }
+          pre {
+            font-family: ui-monospace, Menlo, monospace;
+            font-size: 12px;
+            line-height: 1.55;
+            background: #f1f5f2;
+            border: 1px solid #e0e7e3;
+            border-radius: 8px;
+            padding: 12px 14px;
+            overflow: visible;
+            white-space: pre-wrap;
+            break-inside: avoid;
+            color: #16291f;
+          }
+          ul {
+            font-family: 'DM Sans', system-ui, sans-serif;
+            font-size: 14.5px;
+            line-height: 1.6;
+            color: #26332c;
+            margin: 0 0 12px;
+            padding-left: 20px;
+          }
+          li {
+            margin-bottom: 5px;
+          }
+          .callout {
+            border-left: 3px solid #00c46a;
+            background: #f2fbf6;
+            padding: 12px 14px;
+            border-radius: 0 8px 8px 0;
+            break-inside: avoid;
+            margin: 0 0 14px;
+          }
+          .sw {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 4px 0 16px;
+          }
+          .swi {
+            width: 132px;
+            break-inside: avoid;
+          }
+          .swb {
+            height: 44px;
+            border-radius: 8px;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+          }
+          .swl {
+            font-family: ui-monospace, Menlo, monospace;
+            font-size: 11px;
+            color: #5a6b62;
+            margin-top: 4px;
+          }
+        </style>
+      </helmet>
+      <doc-page margin="0.8in">
+        <h1 class="h h1">Suivi callisthénie — spécification de handoff</h1>
+        <p class="p small">
+          Maquette de référence : <code>Callisthenics App.dc.html</code> (webapp
+          responsive, thème néon vert). Ce document décrit l'application à construire
+          <b>à partir de zéro</b> : stack recommandée, socle Vercel + Supabase, tokens
+          visuels, modèle de navigation, progression par niveaux, règles métier de la
+          séance, agrégations statistiques. Le prompt d'implémentation phasé qui
+          l'accompagne est dans <code>prompt-implementation.md</code>.
+        </p>
+
+        <h2 class="h h2">1. Stack recommandée et socle à créer</h2>
+        <p class="p">
+          Deux éléments d'infrastructure sont donnés : l'hébergement sur <b>Vercel</b> et
+          la base sur <b>Supabase</b>. Ils dictent le reste : Next.js en App Router se
+          déploie sur Vercel sans configuration, et ses Server Actions écrivent dans
+          Supabase sans backend intermédiaire. Le projet part d'une base vierge — aucun
+          code existant n'est repris.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Couche</th>
+              <th>Choix</th>
+              <th>Raison</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Framework</td>
+              <td>Next.js 16 (App Router, Turbopack) + React 19 + TypeScript strict</td>
+              <td>
+                Déploiement Vercel natif ; la séance a besoin d'une route propre
+                (<code>/seance/[planId]</code>) pour survivre à un rafraîchissement
+              </td>
+            </tr>
+            <tr>
+              <td>Styles</td>
+              <td>Tailwind CSS 4, thème déclaré en <code>@theme inline</code></td>
+              <td>
+                Le thème tient en une quinzaine de couleurs : pas de librairie de
+                composants à réhabiller
+              </td>
+            </tr>
+            <tr>
+              <td>Composants</td>
+              <td>
+                shadcn/ui (style <code>base-nova</code>, base Base UI) pour les
+                primitives, sur-mesure ailleurs
+              </td>
+              <td>
+                Séance et statistiques sont spécifiques ; les composer avec une librairie
+                coûterait plus qu'il ne rapporte
+              </td>
+            </tr>
+            <tr>
+              <td>Données et auth</td>
+              <td>Supabase Postgres + Auth e-mail, via <code>@supabase/ssr</code></td>
+              <td>Déjà en place ; RLS porte l'isolation des données</td>
+            </tr>
+            <tr>
+              <td>Accès aux données</td>
+              <td>Server Components en lecture, Server Actions en écriture</td>
+              <td>Pas d'API relais, pas de state manager global</td>
+            </tr>
+            <tr>
+              <td>Graphiques</td>
+              <td>SVG écrit à la main</td>
+              <td>Trois visualisations simples ; aucune librairie de charts</td>
+            </tr>
+            <tr>
+              <td>Tests</td>
+              <td>Vitest sur la couche métier uniquement</td>
+              <td>Les règles de statut et les agrégations sont la partie à prouver</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="p">
+          Le schéma est <b>relationnel</b> :
+          <code>grids → levels → level_exercises → level_sets</code> pour la définition,
+          <code>sessions → session_sets</code> pour l'historique, avec les noms d'exercice
+          et de plan recopiés en snapshot dans l'historique pour qu'une séance passée
+          survive à la modification ou la suppression de son plan. Trois énumérations
+          Postgres : <code>timer_mode</code> (<code>none</code>, <code>minimal</code>,
+          <code>strict</code>), <code>set_status</code> (<code>success</code>,
+          <code>surpass</code>, <code>fail</code>), <code>muscle_group</code>. Une séance
+          porte son niveau (<code>level_id</code>) et son verdict (<code>validated</code>)
+          ; la progression d'une grille est le premier niveau non validé, dérivé de
+          l'historique plutôt que dupliqué. La table <code>session_sets</code> porte une
+          clé naturelle <code>(session_id, plan_set_id, set_index)</code>, qui rendra
+          idempotente une éventuelle synchronisation hors ligne.
+        </p>
+        <div class="callout">
+          <p class="p" style="margin: 0">
+            Chaque table est protégée par RLS, propriétaire seul. Les policies des tables
+            enfants remontent au propriétaire par un helper
+            <code>security definer</code> plutôt qu'en référençant directement une autre
+            table protégée, pour éviter les récursions. Le catalogue d'exercices est la
+            seule exception : lecture ouverte quand
+            <code>owner_id is null</code> (exercices intégrés).
+          </p>
+        </div>
+        <p class="p">
+          Les conventions du dépôt <code>stonesteps</code> sont reprises telles quelles
+          pour qu'un développeur passant d'un projet à l'autre ne change pas d'habitudes :
+          interface et commentaires en français mais code, identifiants et migrations en
+          ASCII anglais ; Prettier sans point-virgule, guillemets simples, 90 colonnes ;
+          alias <code>@/*</code> vers <code>src/</code> ; recettes <code>just</code> qui
+          appellent les scripts npm, avec <code>just check</code> (format, lint, types,
+          tests, build) avant toute proposition ; variables
+          <code>NEXT_PUBLIC_SUPABASE_URL</code> et
+          <code>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code> validées au chargement dans
+          <code>src/lib/env.ts</code>, clé secrète jamais utilisée par l'app ;
+          <code>src/proxy.ts</code> au lieu de <code>middleware.ts</code> (convention Next
+          16) pour rafraîchir la session ; migrations appliquées au merge sur
+          <code>main</code> par un workflow GitHub avec le seul secret
+          <code>SUPABASE_DB_URL</code> (URI session pooler), jamais par l'intégration
+          GitHub de Supabase.
+        </p>
+        <p class="p">
+          Ordre de construction : socle et auth → schéma et RLS → couche métier testée →
+          écran de séance → plans et constructeur → statistiques → PWA. Chaque phase est
+          démo-able de bout en bout ; le détail est dans
+          <code>prompt-implementation.md</code>.
+        </p>
+
+        <h2 class="h h2">2. Ce que couvre la maquette</h2>
+        <p class="p">
+          Sept écrans, deux domaines fonctionnels : la construction de grilles de
+          progression, et l'exécution d'une séance suivie de ses statistiques. Une
+          <b>grille</b> est une suite ordonnée de <b>niveaux</b> ; chaque niveau porte ses
+          exercices et ses séries. On ne s'entraîne jamais « sur une grille » en général,
+          toujours sur un niveau précis — celui en cours.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Écran</th>
+              <th>Rôle</th>
+              <th>Entrée / sortie</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Accueil</td>
+              <td>Liste des grilles avec le niveau en cours, création</td>
+              <td>→ Détail grille, → Constructeur</td>
+            </tr>
+            <tr>
+              <td>Détail grille</td>
+              <td>Frise des niveaux, contenu du niveau sélectionné</td>
+              <td>→ Séance (niveau en cours), → Constructeur</td>
+            </tr>
+            <tr>
+              <td>Constructeur</td>
+              <td>Nom, niveaux, exercices, séries, modes de chrono</td>
+              <td>→ Bibliothèque, → Détail grille (enregistrer)</td>
+            </tr>
+            <tr>
+              <td>Bibliothèque</td>
+              <td>Catalogue d'exercices groupés</td>
+              <td>→ Constructeur (exercice ajouté)</td>
+            </tr>
+            <tr>
+              <td>Séance</td>
+              <td>Exécution série par série, plein écran</td>
+              <td>→ Résumé</td>
+            </tr>
+            <tr>
+              <td>Résumé</td>
+              <td>Verdict de niveau, bilan de la séance, statuts par série</td>
+              <td>→ Accueil</td>
+            </tr>
+            <tr>
+              <td>Stats</td>
+              <td>KPI, progression, niveaux, répartition, régularité</td>
+              <td>—</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2 class="h h2">3. Navigation</h2>
+        <p class="p">
+          Un seul niveau de navigation persistante : une barre supérieure collante avec
+          deux destinations, <b>Accueil</b> et <b>Stats</b>. Les écrans Détail grille,
+          Constructeur et Bibliothèque sont des sous-écrans d'Accueil (retour explicite,
+          pas d'onglet dédié).
+        </p>
+        <p class="p">
+          Deux écrans masquent la barre : <b>Séance</b> et <b>Résumé</b>. C'est volontaire
+          — la séance est un mode plein écran dont on ne sort que par la croix (avec
+          confirmation) ou par la fin de la dernière série ; le résumé est l'étape de
+          sortie de ce mode.
+        </p>
+        <div class="callout">
+          <p class="p" style="margin: 0">
+            La séance a sa propre route (<code>/seance/[gridId]</code>, sur le niveau en
+            cours) plutôt qu'un état local : elle doit survivre à un rafraîchissement
+            accidentel en cours d'entraînement. La maquette ne le fait pas — c'est un
+            écart assumé du prototype.
+          </p>
+        </div>
+
+        <h2 class="h h2">4. Thème visuel</h2>
+        <p class="p">
+          Interface sombre, un vert néon dominant, deux néons secondaires pour la
+          catégorisation et les statuts. Aucun dégradé, aucune image : les seuls effets
+          sont des halos (<code>box-shadow</code>) sur les éléments actionnables et les
+          pastilles de statut.
+        </p>
+        <div class="sw">
+          <div class="swi">
+            <div class="swb" style="background: #06120c"></div>
+            <div class="swl">#06120C · fond page</div>
+          </div>
+          <div class="swi">
+            <div class="swb" style="background: #0e1f16"></div>
+            <div class="swl">#0E1F16 · surface carte</div>
+          </div>
+          <div class="swi">
+            <div class="swb" style="background: #081710"></div>
+            <div class="swl">#081710 · ligne de série</div>
+          </div>
+          <div class="swi">
+            <div class="swb" style="background: #152b1f"></div>
+            <div class="swl">#152B1F · chip inactif</div>
+          </div>
+          <div class="swi">
+            <div class="swb" style="background: #00ff87"></div>
+            <div class="swl">#00FF87 · accent / réussi</div>
+          </div>
+          <div class="swi">
+            <div class="swb" style="background: #d4ff3f"></div>
+            <div class="swl">#D4FF3F · dépassé</div>
+          </div>
+          <div class="swi">
+            <div class="swb" style="background: #ff2d6f"></div>
+            <div class="swl">#FF2D6F · échoué</div>
+          </div>
+          <div class="swi">
+            <div class="swb" style="background: #22e1ff"></div>
+            <div class="swl">#22E1FF · en cours / cat. 2</div>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Token</th>
+              <th>Valeur</th>
+              <th>Usage</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Texte principal</td>
+              <td><code>#E8FFF2</code></td>
+              <td>Titres, valeurs, libellés actifs</td>
+            </tr>
+            <tr>
+              <td>Texte secondaire</td>
+              <td><code>#9CC4AE</code></td>
+              <td>Libellés de contrôle, boutons fantômes</td>
+            </tr>
+            <tr>
+              <td>Texte tertiaire</td>
+              <td><code>#6E9682</code></td>
+              <td>Métadonnées, légendes, placeholders</td>
+            </tr>
+            <tr>
+              <td>Bordures</td>
+              <td><code>#1D3A2A</code> / <code>#2A5340</code></td>
+              <td>Hairline de carte / contour de contrôle</td>
+            </tr>
+            <tr>
+              <td>Encre sur néon</td>
+              <td><code>#05170E</code></td>
+              <td>Texte sur vert, cyan et lime (jamais de blanc)</td>
+            </tr>
+            <tr>
+              <td>Encre sur rose</td>
+              <td><code>#1A0009</code></td>
+              <td>Texte sur <code>#FF2D6F</code></td>
+            </tr>
+            <tr>
+              <td>Halo d'action</td>
+              <td><code>0 0 24–34px rgba(0,255,135,.35)</code></td>
+              <td>CTA primaire, bouton de validation</td>
+            </tr>
+            <tr>
+              <td>Halo de statut</td>
+              <td><code>0 0 26px {statusColor}66</code></td>
+              <td>Pastille de statut en séance</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="p">
+          <b>Règle de contraste :</b> les néons sont clairs — tout texte posé dessus est
+          une encre sombre. Inversement, aucun néon n'est utilisé pour du texte courant
+          sur fond sombre : il est réservé aux chiffres, aux statuts et aux accents.
+        </p>
+
+        <h3 class="h h3">Typographie et formes</h3>
+        <ul>
+          <li>Famille unique, sans-serif géométrique (la maquette utilise DM Sans).</li>
+          <li>
+            Titres d'écran <code>clamp(26px, 4vw, 34px)</code>, poids 700,
+            <code>letter-spacing:-0.02em</code>.
+          </li>
+          <li>Corps 14–15 px, libellés 12–13 px, métadonnées 12 px.</li>
+          <li>
+            Chiffres de séance : reps <code>88px</code>/800, chrono <code>52px</code>/800
+            — lisibles à un mètre.
+          </li>
+          <li>
+            Rayons : cartes 20 px, lignes internes 14 px, boutons et chips en pilule,
+            pastilles 999 px.
+          </li>
+          <li>
+            Cibles tactiles : 34 px minimum au constructeur, 64 px pour les pas de reps en
+            séance.
+          </li>
+        </ul>
+
+        <h2 class="h h2">5. Modèle de données</h2>
+        <p class="p">
+          Une grille contient des niveaux ordonnés ; un niveau contient des exercices
+          ordonnés ; un exercice contient des séries ordonnées ; une série porte un
+          objectif de répétitions et, optionnellement, un mode chronométré.
+        </p>
+        <pre>
+Grid   { id, name, accentColor, restSeconds, currentLevel, levels: Level[] }
+Level  { exercises: Exercise[] }
+Exercise { name, sets: Set[] }
+Set    { reps: number, timed: null | Timed }
+Timed  { mode: 'hold' | 'max', seconds: number }
+
+// hold : « tenir au moins N secondes »  → reps ignoré
+// max  : « faire les reps en N secondes max » → reps = objectif</pre>
+        <p class="p">Résultat produit par l'exécution d'une série :</p>
+        <pre>
+SetResult { exerciseName, setLabel, actual, target, unit: 'reps'|'s',
+            status: 'success'|'fail'|'surpass' }
+Session   { gridId, levelIndex, startedAt, results: SetResult[], validated }</pre>
+        <p class="p">
+          <code>currentLevel</code> n'est pas une donnée saisie : c'est l'index du premier
+          niveau non validé, dérivé de l'historique des séances. Le stocker en dur
+          exposerait à des désynchronisations.
+        </p>
+        <p class="p">
+          Correspondance avec le schéma : les modes de la maquette <code>hold</code> et
+          <code>max</code> s'appellent <code>minimal</code> et <code>strict</code> dans
+          l'enum Postgres, comme dans <code>stonesteps</code>.
+        </p>
+        <p class="p">
+          Un point d'attention repris de la maquette : sur une série <code>hold</code>, le
+          champ <code>reps</code> n'a aucun effet. Le constructeur masque donc le pas de
+          reps dès que le mode passe à « tenir au moins ». Conservez cette règle, sinon
+          l'utilisateur saisit une valeur morte.
+        </p>
+
+        <h2 class="h h2">6. Règles de statut</h2>
+        <p class="p">
+          Trois statuts, une seule comparaison par type de série. Ce sont ces règles qui
+          alimentent les statistiques : elles doivent être calculées côté métier, pas dans
+          la vue.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Type de série</th>
+              <th>Grandeur mesurée</th>
+              <th>Réussi</th>
+              <th>Dépassé</th>
+              <th>Échoué</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Sans chrono</td>
+              <td>reps effectuées vs objectif</td>
+              <td>égal</td>
+              <td>supérieur</td>
+              <td>inférieur</td>
+            </tr>
+            <tr>
+              <td>Chrono « tenir au moins »</td>
+              <td>secondes tenues vs objectif</td>
+              <td>égal</td>
+              <td>supérieur</td>
+              <td>inférieur</td>
+            </tr>
+            <tr>
+              <td>Chrono « faire en max »</td>
+              <td>secondes écoulées vs limite</td>
+              <td>terminé avant la limite</td>
+              <td>terminé sous 50 % de la limite</td>
+              <td>limite atteinte sans validation</td>
+            </tr>
+          </tbody>
+        </table>
+        <h3 class="h h3">Validation d'un niveau — tout ou rien</h3>
+        <p class="p">
+          Un niveau n'est validé que si <b>toutes</b> les séries de <b>tous</b> ses
+          exercices sont réussies ou dépassées. Une seule série échouée invalide le niveau
+          entier, et la séance suivante repart du même niveau. C'est la règle métier
+          centrale de l'application : toute évolution qui l'assouplit doit être discutée,
+          pas décidée en passant.
+        </p>
+        <p class="p">
+          Un niveau validé débloque le suivant, qui devient le niveau en cours de la
+          grille. Les niveaux au-delà sont consultables mais pas lançables : on ne saute
+          pas un niveau.
+        </p>
+        <p class="p">
+          Une série échouée est notée telle quelle : pas de reprise immédiate, pas de
+          seconde tentative sur la même série. L'utilisateur enchaîne, et l'échec reste
+          visible dans le résumé et dans les statistiques.
+        </p>
+        <p class="p">
+          Détail du mode « faire en max » : le compte à rebours part de la limite. Si
+          l'utilisateur valide, on compare le temps écoulé à la limite ; s'il n'a pas
+          validé quand le chrono atteint zéro, la série est automatiquement clôturée en
+          échec et l'app enchaîne sur la suivante.
+        </p>
+
+        <h2 class="h h2">7. Écran de séance — comportement</h2>
+        <p class="p">
+          Un seul état par série affichée. L'écran n'affiche jamais deux contrôles
+          concurrents : soit un compteur de reps, soit un anneau de chrono.
+        </p>
+        <h3 class="h h3">Série sans chrono</h3>
+        <ul>
+          <li>
+            Le compteur démarre <b>à l'objectif</b>, pas à zéro : l'hypothèse par défaut
+            est que la série est réussie, l'utilisateur corrige à la marge.
+          </li>
+          <li>Deux pas de 64 px encadrent le chiffre ; plancher à 0, pas de plafond.</li>
+          <li>
+            La pastille de statut et la couleur du chiffre changent
+            <b>en direct</b> pendant le réglage — c'est le retour principal.
+          </li>
+          <li>Un bouton pleine largeur « Valider la série » enregistre et avance.</li>
+        </ul>
+        <h3 class="h h3">Série chronométrée</h3>
+        <ul>
+          <li>
+            Anneau de progression (rayon 96, trait 14) avec la valeur au centre en HTML,
+            pas en <code>&lt;text&gt;</code> SVG.
+          </li>
+          <li>
+            Mode « tenir » : le chrono compte à la hausse, l'anneau se remplit, le statut
+            évolue en direct (échoué → réussi → dépassé).
+          </li>
+          <li>
+            Mode « max » : compte à rebours, statut neutre « en cours » pendant l'effort,
+            statut calculé à la validation.
+          </li>
+          <li>Un seul bouton visible : « Démarrer le chrono » puis « Terminé ».</li>
+        </ul>
+        <h3 class="h h3">Repos entre les séries</h3>
+        <ul>
+          <li>
+            Paramètre du plan, optionnel : <code>restSeconds</code>, réglable par pas de
+            15 s de 0 à 300 s ; <code>0</code> désactive le repos et enchaîne directement.
+          </li>
+          <li>
+            Déclenché après chaque validation de série, sauf après la dernière série de la
+            séance (on passe alors au résumé).
+          </li>
+          <li>
+            Écran dédié dans le même mode plein écran : compte à rebours géant en cyan,
+            rappel de la prochaine série, bouton « Passer le repos ».
+          </li>
+          <li>
+            À l'expiration du compte à rebours, l'app revient automatiquement sur le
+            contrôle de la série suivante ; aucune action requise.
+          </li>
+        </ul>
+
+        <h3 class="h h3">Progression et sortie</h3>
+        <ul>
+          <li>
+            En-tête : un badge « Niveau 4/12 » suivi de « Exercice i/n · Série j/m », plus
+            une barre de progression calculée sur le total de séries
+            <b>du niveau en cours</b>.
+          </li>
+          <li>
+            Rien n'annonce la perte du niveau en pleine séance : une série manquée affiche
+            son statut, et l'utilisateur termine ses séries. Le verdict tombe au résumé.
+          </li>
+          <li>
+            Validation de la dernière série du dernier exercice → écran Résumé, et
+            consolidation des statistiques.
+          </li>
+          <li>Croix de sortie : confirmation explicite, progression abandonnée.</li>
+        </ul>
+
+        <h3 class="h h3">Résumé — verdict de niveau</h3>
+        <ul>
+          <li>
+            Bandeau pleine largeur en tête de résumé : « Niveau 4 validé » sur fond vert
+            néon, ou « Niveau 4 non validé » sur fond rose, encre sombre dans les deux
+            cas.
+          </li>
+          <li>
+            Sous-titre factuel : « Prochaine séance : niveau 5 » si validé, sinon « n
+            séries manquées — la prochaine séance repart du niveau 4 ».
+          </li>
+          <li>Puis les trois compteurs et la liste des séries, inchangés.</li>
+        </ul>
+
+        <h2 class="h h2">8. Statistiques</h2>
+        <p class="p">
+          Quatre visualisations, toutes alimentées par les
+          <code>SetResult</code> consolidés en fin de séance.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Bloc</th>
+              <th>Calcul</th>
+              <th>Rendu</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>KPI</td>
+              <td>
+                séances, niveaux validés, reps cumulées, taux de réussite ((réussies +
+                dépassées) / total)
+              </td>
+              <td>4 cartes, grille auto-fit 160 px</td>
+            </tr>
+            <tr>
+              <td>Progression</td>
+              <td>
+                deux axes, au choix : par exercice (reps effectuées vs objectif) ou par
+                grille (niveau atteint au fil des séances)
+              </td>
+              <td>
+                par exercice : courbe pleine = effectué, pointillé = objectif. Par grille
+                : courbe en escalier, un point par séance, vert si le niveau a été validé,
+                rose sinon ; bascule « Par exercice / Par grille »
+              </td>
+            </tr>
+            <tr>
+              <td>Niveaux</td>
+              <td>
+                pour la grille sélectionnée : nombre de tentatives par niveau et date de
+                validation
+              </td>
+              <td>
+                une ligne par niveau — libellé, barre proportionnelle au nombre de
+                tentatives, méta « 3 tentatives · validé le 11 août » ou « en cours »
+              </td>
+            </tr>
+            <tr>
+              <td>Répartition</td>
+              <td>comptes réussi / dépassé / échoué</td>
+              <td>3 barres, hauteur relative au max</td>
+            </tr>
+            <tr>
+              <td>Régularité</td>
+              <td>présence d'une séance par jour sur 35 jours</td>
+              <td>grille 7 colonnes, case néon si séance</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="p">
+          Les dépassements comptent comme des réussites dans le taux global :
+          <code>taux = (réussies + dépassées) / total</code>. Le statut « dépassé » reste
+          distingué partout ailleurs (pastilles, résumé, répartition, points de la courbe)
+          — il est agrégé au succès uniquement dans ce KPI.
+        </p>
+
+        <h2 class="h h2">9. Responsive</h2>
+        <ul>
+          <li>
+            Conteneurs fluides : 1040 px max pour Accueil et Stats, 760 px pour le
+            Constructeur, 720 px pour Détail et Résumé, 620 px pour la Séance.
+          </li>
+          <li>
+            Gouttières <code>clamp(16px, 3vw, 32px)</code> ; grilles en
+            <code>repeat(auto-fit, minmax(…, 1fr))</code> — aucune media query n'est
+            nécessaire.
+          </li>
+          <li>
+            La séance occupe <code>100vh</code> minimum et reste centrée sur grand écran :
+            elle ne s'étale pas en largeur.
+          </li>
+          <li>
+            Cible PWA : l'écran de séance est le seul qui justifie un verrouillage de
+            veille (<code>Screen Wake Lock</code>) et un retour haptique à la fin d'un
+            chrono. Non implémenté dans la maquette.
+          </li>
+        </ul>
+
+        <h2 class="h h2">10. Écarts connus de la maquette</h2>
+        <ul>
+          <li>
+            Données de démonstration en mémoire : grilles, historique de niveaux et KPI
+            initiaux sont codés en dur, rien n'est persisté.
+          </li>
+          <li>
+            Les niveaux de démonstration sont générés par montée de charge régulière ; en
+            vrai, chaque niveau est saisi librement dans le constructeur.
+          </li>
+          <li>
+            <code>currentLevel</code> est stocké sur la grille dans la maquette ; en
+            production, il se dérive de l'historique.
+          </li>
+          <li>
+            L'historique de progression n'est alimenté que pour trois exercices de
+            référence (pompes, tractions, squats bulgares).
+          </li>
+          <li>
+            La sortie de séance utilise une confirmation navigateur, à remplacer par votre
+            composant de dialogue.
+          </li>
+          <li>Pas d'authentification ni de gestion multi-utilisateur.</li>
+        </ul>
+
+        <h2 class="h h2">11. Décisions produit arbitrées</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Sujet</th>
+              <th>Décision</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Structure</td>
+              <td>
+                Une grille est une suite ordonnée de niveaux ; un niveau porte ses
+                exercices et ses séries. Pas de séance libre hors progression.
+              </td>
+            </tr>
+            <tr>
+              <td>Validation d'un niveau</td>
+              <td>
+                Tout ou rien strict : une seule série manquée invalide le niveau entier.
+              </td>
+            </tr>
+            <tr>
+              <td>Après un échec de niveau</td>
+              <td>
+                On rejoue le même niveau, à l'identique. Pas d'allègement automatique
+                proposé.
+              </td>
+            </tr>
+            <tr>
+              <td>Signal en séance</td>
+              <td>
+                Badge de niveau et progression sur le niveau en cours ; le verdict validé
+                / non validé n'apparaît qu'au résumé.
+              </td>
+            </tr>
+            <tr>
+              <td>Temps de repos</td>
+              <td>
+                Optionnel, paramétré au niveau de la grille (0 = désactivé), avec son
+                propre compte à rebours plein écran et un bouton pour le passer.
+              </td>
+            </tr>
+            <tr>
+              <td>Série échouée</td>
+              <td>Notée telle quelle, pas de reprise immédiate.</td>
+            </tr>
+            <tr>
+              <td>Axes de progression</td>
+              <td>
+                Les deux : par exercice (reps vs objectif) et par grille (niveau atteint
+                au fil des séances), plus une vue tentatives / dates de validation par
+                niveau.
+              </td>
+            </tr>
+            <tr>
+              <td>Dépassements</td>
+              <td>
+                Comptés comme des réussites dans le taux global, tout en restant un statut
+                distinct dans l'interface.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </doc-page>
+    </x-dc>
+  </body>
+</html>

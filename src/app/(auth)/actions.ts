@@ -33,7 +33,7 @@ async function siteUrl(): Promise<string> {
 function safeRedirectTo(value: FormDataEntryValue | null): string {
   const target = typeof value === 'string' ? value : ''
   // Uniquement des chemins internes : evite une redirection ouverte.
-  return target.startsWith('/') && !target.startsWith('//') ? target : '/dashboard'
+  return target.startsWith('/') && !target.startsWith('//') ? target : '/'
 }
 
 export async function signIn(_prev: AuthState, formData: FormData): Promise<AuthState> {

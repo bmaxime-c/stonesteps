@@ -9,14 +9,15 @@ beforeAll(() => {
 describe('isPublic', () => {
   it('laisse passer les routes ouvertes', async () => {
     const { isPublic } = await import('./proxy')
-    for (const path of ['/', '/login', '/signup', '/offline', '/auth/callback']) {
+    for (const path of ['/login', '/signup', '/offline', '/auth/callback']) {
       expect(isPublic(path)).toBe(true)
     }
   })
 
   it('protege les routes applicatives', async () => {
     const { isPublic } = await import('./proxy')
-    for (const path of ['/dashboard', '/dashboard/grilles', '/seance/123']) {
+    // La racine en fait partie : c'est l'accueil, qui liste les grilles.
+    for (const path of ['/', '/stats', '/grilles/abc', '/seance/123']) {
       expect(isPublic(path)).toBe(false)
     }
   })
