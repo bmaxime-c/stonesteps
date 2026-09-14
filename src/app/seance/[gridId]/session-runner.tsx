@@ -4,6 +4,7 @@ import { X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { setTarget, setUnit } from '@/lib/grids/model'
 import { isLevelValidated } from '@/lib/session/level'
 import { clearRun, loadRun, saveRun, type StoredRun } from '@/lib/session/local-store'
@@ -274,7 +275,14 @@ export function SessionRunner({ plan }: { plan: SessionPlan }) {
       )}
 
       {confirmingExit ? (
-        <ExitDialog onCancel={() => setConfirmingExit(false)} onConfirm={leave} />
+        <ConfirmDialog
+          title="Quitter la seance ?"
+          description="La progression de cette seance est abandonnee, et le niveau reste a repasser en entier."
+          confirmLabel="Quitter"
+          cancelLabel="Continuer la seance"
+          onCancel={() => setConfirmingExit(false)}
+          onConfirm={leave}
+        />
       ) : null}
     </main>
   )
@@ -292,54 +300,4 @@ function freshRun(gridId: string, levelId: string): StoredRun {
     timerStartedAt: null,
     sessionValidated: null,
   }
-}
-
-/**
- * Confirmation de sortie.
- *
- * Explicite, parce que la progression est perdue : rien n'est ecrit en base
- * avant la derniere serie, et le niveau restera a repasser entierement.
- */
-function ExitDialog({
-  onCancel,
-  onConfirm,
-}: {
-  onCancel: () => void
-  onConfirm: () => void
-}) {
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="exit-title"
-      className="fixed inset-0 z-20 flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm sm:items-center"
-    >
-      <div className="bg-card border-border w-full max-w-[420px] rounded-[20px] border p-5">
-        <h2 id="exit-title" className="text-lg font-bold">
-          Quitter la seance ?
-        </h2>
-        <p className="text-muted-foreground mt-2 text-sm">
-          La progression de cette seance est abandonnee, et le niveau reste a repasser en
-          entier.
-        </p>
-        <div className="mt-5 flex flex-col gap-2.5 sm:flex-row-reverse">
-          <button
-            type="button"
-            onClick={onConfirm}
-            className="bg-destructive text-destructive-foreground flex-1 rounded-full py-3 text-sm font-extrabold"
-          >
-            Quitter
-          </button>
-          <button
-            type="button"
-            onClick={onCancel}
-            autoFocus
-            className="border-border-strong flex-1 rounded-full border py-3 text-sm font-semibold"
-          >
-            Continuer la seance
-          </button>
-        </div>
-      </div>
-    </div>
-  )
 }

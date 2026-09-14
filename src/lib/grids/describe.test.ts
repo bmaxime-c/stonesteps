@@ -1,0 +1,112 @@
+import { describe, expect, it } from 'vitest'
+
+import {
+  describeLevelContent,
+  describeRest,
+  describeSets,
+  initials,
+  plural,
+  shortDate,
+} from './describe'
+import type { LevelSet } from './model'
+
+function set(over: Partial<LevelSet> = {}): LevelSet {
+  return {
+    id: 's',
+    position: 1,
+    targetReps: 10,
+    timerMode: 'none',
+    timerSeconds: null,
+    ...over,
+  }
+}
+
+describe('plural', () => {
+  it('accorde a partir de deux', () => {
+    expect(plural(0, 'serie')).toBe('0 serie')
+    expect(plural(1, 'serie')).toBe('1 serie')
+    expect(plural(2, 'serie')).toBe('2 series')
+  })
+
+  it('accepte un pluriel irregulier', () => {
+    expect(plural(3, 'niveau', 'niveaux')).toBe('3 niveaux')
+  })
+})
+
+describe('initials', () => {
+  it('prend l initiale des deux premiers mots', () => {
+    expect(initials('Push Day')).toBe('PD')
+    expect(initials('Pull & Core')).toBe('PC')
+  })
+
+  it('ecarte les mots d une seule lettre', () => {
+    // « & » ne doit pas devenir une initiale.
+    expect(initials('Legs & Skills')).toBe('LS')
+  })
+
+  it('retombe sur les deux premieres lettres d un mot unique', () => {
+    expect(initials('Gainage')).toBe('GA')
+  })
+
+  it('ignore les parentheses', () => {
+    expect(initials('(Test) Grille')).toBe('TG')
+  })
+
+  it('ne casse pas sur un nom vide', () => {
+    expect(initials('')).toBe('')
+  })
+})
+
+describe('describeSets', () => {
+  it('liste les repetitions serie par serie', () => {
+    expect(
+      describeSets([
+        set({ targetReps: 15 }),
+        set({ targetReps: 15 }),
+        set({ targetReps: 12 }),
+      ]),
+    ).toBe('3 series · 15/15/12 reps')
+  })
+
+  it('resume un maintien', () => {
+    const hold = set({ timerMode: 'minimal', timerSeconds: 30 })
+    expect(describeSets([hold, hold])).toBe('2 series · tenir 30s min')
+  })
+
+  it('resume une serie a finir en un temps donne', () => {
+    const strict = set({ timerMode: 'strict', timerSeconds: 30, targetReps: 10 })
+    expect(describeSets([strict])).toBe('1 serie · 10 reps en 30s max')
+  })
+
+  it('ne casse pas sur un exercice sans serie', () => {
+    expect(describeSets([])).toBe('Aucune serie')
+  })
+})
+
+describe('describeLevelContent', () => {
+  it('compte exercices et series, avec l accord', () => {
+    expect(describeLevelContent([{ sets: [set(), set()] }, { sets: [set()] }])).toBe(
+      '2 exercices · 3 series a ce niveau',
+    )
+    expect(describeLevelContent([{ sets: [set()] }])).toBe(
+      '1 exercice · 1 serie a ce niveau',
+    )
+  })
+})
+
+describe('describeRest', () => {
+  it('dit quand le repos est desactive', () => {
+    expect(describeRest(0)).toBe('sans repos')
+    expect(describeRest(60)).toBe('repos 60s')
+  })
+})
+
+describe('shortDate', () => {
+  it('rend un jour et un mois', () => {
+    expect(shortDate(new Date(2026, 7, 11, 12).toISOString())).toBe('11 aout')
+  })
+
+  it('ne casse pas sur une date invalide', () => {
+    expect(shortDate('pas une date')).toBe('')
+  })
+})
