@@ -1,8 +1,9 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 
+import { gridProgress } from '@/lib/grids/progress'
 import { loadGrid } from '@/lib/grids/queries'
-import { currentLevel, levelStates, validatedAt } from '@/lib/session/level'
+import { validatedAt } from '@/lib/session/level'
 import { loadLevelOutcomes } from '@/lib/session/queries'
 
 import { GridDetail } from './grid-detail'
@@ -12,20 +13,21 @@ export const metadata: Metadata = { title: 'Grille' }
 /**
  * Detail d'une grille : ce qu'on y lance.
  *
- * On y voit la version publiee, et rien d'autre. L'edition vit dans l'onglet
- * Grilles : on ne reecrit pas une grille depuis l'ecran qui sert a lancer une
- * seance.
+ * On y voit la version qu'on joue — la derniere publiee, ou celle ou le suivi
+ * a ete fige. L'edition vit dans l'onglet Grilles, et n'est offerte qu'au
+ * createur.
  */
 export default async function GridPage({ params }: PageProps<'/grilles/[id]'>) {
   const { id } = await params
 
   const grid = await loadGrid(id)
-  if (!grid?.published) notFound()
+  if (!grid) notFound()
 
-  const version = grid.published
   const outcomes = await loadLevelOutcomes(id)
-  const states = levelStates(version.levels, outcomes, version.carriedLevels)
-  const current = currentLevel(version.levels, outcomes, version.carriedLevels)
+  const progress = gridProgress(grid, outcomes)
+  if (!progress) notFound()
+
+  const { version, states, current } = progress
 
   return (
     <GridDetail
@@ -35,7 +37,12 @@ export default async function GridPage({ params }: PageProps<'/grilles/[id]'>) {
         accentColor: version.accentColor,
         restSeconds: version.restSeconds,
         version: version.version,
+        owned: grid.owned,
+        ownerName: grid.ownerName,
         hasDraft: grid.draft !== null,
+        isPublic: grid.isPublic,
+        frozen: grid.follow?.frozenAtVersion != null,
+        removedByOwner: grid.deletedAt !== null,
       }}
       currentLevelId={current?.id ?? null}
       levels={version.levels.map((level) => ({

@@ -7,6 +7,7 @@ import type { CatalogExercise } from '@/lib/grids/queries'
 
 import type {
   DeleteGridResult,
+  GridActionResult,
   PublishResult,
   SaveDraftInput,
   SaveDraftResult,
@@ -23,19 +24,20 @@ const save = vi.fn(async (input: SaveDraftInput): Promise<SaveDraftResult> => ({
   error: null,
   issues: [],
 }))
-const publish = vi.fn(async (): Promise<PublishResult> => ({
-  version: 2,
-  carriedLevels: 3,
+const publish = vi.fn(async (): Promise<PublishResult> => ({ version: 2, error: null }))
+const discard = vi.fn(async (): Promise<GridActionResult> => ({ error: null }))
+const visibility = vi.fn(async (): Promise<GridActionResult> => ({ error: null }))
+const remove = vi.fn(async (): Promise<DeleteGridResult> => ({
   error: null,
+  kept: false,
 }))
-const discard = vi.fn(async (): Promise<DeleteGridResult> => ({ error: null }))
-const remove = vi.fn(async (): Promise<DeleteGridResult> => ({ error: null }))
 
 vi.mock('./actions', () => ({
   saveDraft: (input: SaveDraftInput) => save(input),
   publishDraft: () => publish(),
   discardDraft: () => discard(),
   deleteGrid: () => remove(),
+  setGridVisibility: (gridId: string, isPublic: boolean) => visibility(gridId, isPublic),
 }))
 
 const catalog: CatalogExercise[] = [
@@ -52,6 +54,7 @@ beforeEach(() => {
   publish.mockClear()
   discard.mockClear()
   remove.mockClear()
+  visibility.mockClear()
 })
 
 type Options = {
@@ -59,6 +62,8 @@ type Options = {
   draftSaved?: boolean
   publishedVersion?: number | null
   nextVersion?: number
+  isPublic?: boolean
+  followerCount?: number
 }
 
 function setup({
@@ -66,6 +71,8 @@ function setup({
   draftSaved = false,
   publishedVersion = null,
   nextVersion = 1,
+  isPublic = false,
+  followerCount = 0,
 }: Options = {}) {
   return {
     user: userEvent.setup(),
@@ -77,6 +84,8 @@ function setup({
         draftSaved={draftSaved}
         publishedVersion={publishedVersion}
         nextVersion={nextVersion}
+        isPublic={isPublic}
+        followerCount={followerCount}
       />,
     ),
   }
@@ -335,5 +344,55 @@ describe('abandon et suppression', () => {
     expect(
       screen.queryByRole('button', { name: 'Supprimer cette grille' }),
     ).not.toBeInTheDocument()
+  })
+})
+
+describe('partage', () => {
+  it('ne se propose pas tant que rien n est publie', () => {
+    // Partager un brouillon ne donnerait rien a jouer a personne.
+    setup({ gridId: 'g1', draftSaved: true, publishedVersion: null })
+    expect(screen.queryByText('Partage')).not.toBeInTheDocument()
+  })
+
+  it('propose de rendre publique une grille privee', async () => {
+    const { user } = setup({ gridId: 'g1', publishedVersion: 1, isPublic: false })
+    expect(screen.getByText('Privée : toi seul la vois.')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Rendre publique' }))
+    expect(visibility).toHaveBeenCalledWith('g1', true)
+  })
+
+  it('propose de reprendre une grille publique', async () => {
+    const { user } = setup({ gridId: 'g1', publishedVersion: 2, isPublic: true })
+    await user.click(screen.getByRole('button', { name: 'Rendre privée' }))
+    expect(visibility).toHaveBeenCalledWith('g1', false)
+  })
+
+  it('annonce combien de personnes suivent la grille', () => {
+    setup({ gridId: 'g1', publishedVersion: 2, isPublic: true, followerCount: 3 })
+    expect(screen.getByText(/3 personnes la suivent/)).toBeInTheDocument()
+  })
+})
+
+describe('retrait plutot que suppression', () => {
+  it('parle de suppression quand personne ne suit', async () => {
+    const { user } = setup({ gridId: 'g1', publishedVersion: 1, followerCount: 0 })
+    await user.click(screen.getByRole('button', { name: 'Supprimer cette grille' }))
+    expect(
+      within(screen.getByRole('dialog')).getByText(
+        /Toutes ses versions et sa progression partent avec elle/,
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('parle de retrait quand la grille est suivie', async () => {
+    // Une grille suivie ne peut pas disparaitre sous les pieds de ses suiveurs.
+    const { user } = setup({ gridId: 'g1', publishedVersion: 1, followerCount: 2 })
+    await user.click(screen.getByRole('button', { name: 'Retirer cette grille' }))
+    expect(
+      within(screen.getByRole('dialog')).getByText(
+        /reste chez ceux qui la suivent, figée sur la dernière version publiée/,
+      ),
+    ).toBeInTheDocument()
   })
 })

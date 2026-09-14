@@ -49,6 +49,11 @@ Un niveau validé débloque le suivant : on ne saute jamais un niveau. Le niveau
 en cours d'une grille se **dérive** de l'historique — c'est le premier niveau
 sans séance validée. Ne pas le stocker en colonne.
 
+Le chrono a deux modes, à ne pas confondre :
+
+- `minimal` — il faut **tenir au moins** `timer_seconds` (gainage, descente lente) ;
+- `strict` — il faut **finir en au plus** `timer_seconds` (séries explosives).
+
 ## Versionnement des grilles
 
 Une grille est une **identité** qui porte des **versions** : au plus un
@@ -63,17 +68,32 @@ dernière version publiée.
   rebougé.
 - **Report de progression à la publication** : les niveaux de tête dont le
   contenu n'a pas changé et qui étaient déjà franchis restent acquis. Le reste
-  se rejoue. C'est `carried_levels`, figé une fois pour toutes au moment de
-  publier — un fait de l'événement de publication, pas une progression stockée.
-  Ni cadeau (on ne déverrouille pas un niveau dur en le réécrivant), ni
-  punition (corriger une faute de frappe n'efface pas des mois de progression).
+  se rejoue. Ni cadeau (on ne déverrouille pas un niveau dur en le réécrivant),
+  ni punition (corriger une faute de frappe n'efface pas des mois de
+  progression).
 - L'édition passe par l'onglet **Grilles**. On ne modifie jamais une grille
   depuis l'écran qui sert à lancer une séance.
 
-Le chrono a deux modes, à ne pas confondre :
+## Partage
 
-- `minimal` — il faut **tenir au moins** `timer_seconds` (gainage, descente lente) ;
-- `strict` — il faut **finir en au plus** `timer_seconds` (séries explosives).
+Une grille peut passer en **publique** : elle devient visible de tous, et
+chacun peut l'adopter. Elle apparaît alors chez lui, il y joue ses propres
+séances, et reçoit les versions que le créateur publie ensuite.
+
+- **Seul le créateur** voit ses brouillons, édite et publie. La RLS le
+  garantit, pas seulement l'interface.
+- Le **nom du créateur** apparaît sur toute grille qu'on n'a pas créée.
+- **Le report de progression se calcule par utilisateur.** La base ne garde que
+  le fait universel : `unchanged_prefix`, les niveaux de tête identiques à la
+  version précédente. Le report se reconstruit de proche en proche à la
+  lecture, borné par ce que _cet_ utilisateur avait franchi. Un report stocké
+  serait celui du créateur, et offrirait aux suiveurs des niveaux qu'ils n'ont
+  jamais faits.
+- **Retirer ne reprend rien.** Repasser une grille en privée ou la supprimer
+  fige les suivis existants sur la dernière version publiée : les suiveurs
+  gardent une grille jouable et leur progression, sans recevoir la suite. Une
+  grille suivie n'est jamais supprimée pour de bon, seulement retirée de chez
+  son créateur.
 
 ## Conventions
 
@@ -158,8 +178,10 @@ Ne pas anticiper une phase ultérieure sans que ce soit demandé.
 
 ## Hors périmètre
 
-Profil et réglages utilisateur, repos paramétrable par exercice, séance libre
-hors progression, allègement automatique après un niveau raté, partage de
-grilles, social et liste d'amis, export de données, écriture hors ligne. Ne pas
-les anticiper — mais ne pas bloquer la clé naturelle de `session_sets`, qui les
-prépare.
+Repos paramétrable par exercice, séance libre hors progression, allègement
+automatique après un niveau raté, social et liste d'amis, export de données,
+écriture hors ligne. Ne pas les anticiper — mais ne pas bloquer la clé
+naturelle de `session_sets`, qui les prépare.
+
+Le profil utilisateur et le partage de grilles y figuraient, hérités du
+handoff : les issues #28 et #29 les ont remis dans le périmètre.

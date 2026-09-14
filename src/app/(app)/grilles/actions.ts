@@ -2,15 +2,15 @@
 
 import { revalidatePath } from 'next/cache'
 
-import { carriedLevels } from '@/lib/grids/diff'
+import { unchangedPrefix } from '@/lib/grids/diff'
+import { latestPublished } from '@/lib/grids/model'
 import { loadGrid } from '@/lib/grids/queries'
 import { validateGrid } from '@/lib/grids/validation'
-import { reachedLevel } from '@/lib/session/level'
-import { loadLevelOutcomes } from '@/lib/session/queries'
 import { createClient } from '@/lib/supabase/server'
 
 import type {
   DeleteGridResult,
+  GridActionResult,
   PublishResult,
   SaveDraftInput,
   SaveDraftResult,
@@ -192,22 +192,19 @@ export async function saveDraft(input: SaveDraftInput): Promise<SaveDraftResult>
 /**
  * Publie le brouillon.
  *
- * La version passe de brouillon a publiee, et c'est elle que la seance jouera.
- * Le report de progression est calcule ici, une fois pour toutes : le plus
- * petit du prefixe de niveaux inchanges et de ce qui etait deja franchi. Ni
- * cadeau — on ne deverrouille pas un niveau dur en le reecrivant — ni punition
- * — corriger une faute de frappe n'efface pas des mois de progression.
+ * La version passe de brouillon a publiee, et c'est elle que la seance jouera
+ * — chez son createur comme chez ceux qui suivent la grille.
+ *
+ * On enregistre le prefixe de niveaux inchanges, et rien de plus : c'est un
+ * fait universel. Le report de progression, lui, depend de ce que chacun avait
+ * franchi, et se calcule a la lecture pour chaque utilisateur.
  */
 export async function publishDraft(gridId: string): Promise<PublishResult> {
   const supabase = await createClient()
 
   const grid = await loadGrid(gridId)
   if (!grid?.draft) {
-    return {
-      version: null,
-      carriedLevels: null,
-      error: "Cette grille n'a pas de brouillon.",
-    }
+    return { version: null, error: "Cette grille n'a pas de brouillon." }
   }
 
   const issues = validateGrid({
@@ -226,43 +223,33 @@ export async function publishDraft(gridId: string): Promise<PublishResult> {
   })
 
   if (issues.length > 0) {
-    return { version: null, carriedLevels: null, error: issues[0].message }
+    return { version: null, error: issues[0].message }
   }
 
-  const previous = grid.published
-  const outcomes = previous ? await loadLevelOutcomes(gridId) : []
-  const reached = previous
-    ? reachedLevel(previous.levels, outcomes, previous.carriedLevels)
-    : 1
-
-  const carried = carriedLevels(previous?.levels ?? [], grid.draft.levels, reached)
+  const prefix = unchangedPrefix(latestPublished(grid)?.levels ?? [], grid.draft.levels)
 
   const { error } = await supabase
     .from('grid_versions')
     .update({
       status: 'published',
       published_at: new Date().toISOString(),
-      carried_levels: carried,
+      unchanged_prefix: prefix,
     })
     .eq('id', grid.draft.id)
 
   if (error) {
-    return {
-      version: null,
-      carriedLevels: null,
-      error: "Le brouillon n'a pas pu être publié.",
-    }
+    return { version: null, error: "Le brouillon n'a pas pu être publié." }
   }
 
   revalidatePath('/')
   revalidatePath('/grilles')
   revalidatePath(`/grilles/${gridId}`)
 
-  return { version: grid.draft.version, carriedLevels: carried, error: null }
+  return { version: grid.draft.version, error: null }
 }
 
 /** Abandonne le brouillon et revient a la derniere version publiee. */
-export async function discardDraft(gridId: string): Promise<DeleteGridResult> {
+export async function discardDraft(gridId: string): Promise<GridActionResult> {
   const supabase = await createClient()
 
   const { error } = await supabase
@@ -279,19 +266,149 @@ export async function discardDraft(gridId: string): Promise<DeleteGridResult> {
 }
 
 /**
- * Suppression d'une grille.
+ * Passe une grille en public ou la repasse en prive.
  *
- * Emporte ses versions et sa progression. Les seances passees survivent :
- * leurs snapshots restent lisibles dans les statistiques, leurs cles
- * etrangeres passent a null.
+ * Retirer le partage ne reprend rien a ceux qui suivent deja : leur suivi est
+ * fige sur la derniere version publiee, ils gardent une grille jouable et leur
+ * historique, mais cessent de recevoir les versions suivantes. Repartager
+ * degele les suivis — ils reprennent le fil la ou la grille en est.
  */
-export async function deleteGrid(gridId: string): Promise<DeleteGridResult> {
+export async function setGridVisibility(
+  gridId: string,
+  isPublic: boolean,
+): Promise<GridActionResult> {
   const supabase = await createClient()
 
-  const { error } = await supabase.from('grids').delete().eq('id', gridId)
-  if (error) return { error: "La grille n'a pas pu être supprimée." }
+  const grid = await loadGrid(gridId)
+  if (!grid?.owned) return { error: "Cette grille n'est pas la tienne." }
+
+  if (!isPublic) {
+    const frozenAt = latestPublished(grid)?.version
+    if (frozenAt) {
+      const { error } = await supabase
+        .from('grid_followers')
+        .update({ frozen_at_version: frozenAt })
+        .eq('grid_id', gridId)
+        .is('frozen_at_version', null)
+
+      if (error) return { error: "Les suivis n'ont pas pu être figés." }
+    }
+  } else {
+    const { error } = await supabase
+      .from('grid_followers')
+      .update({ frozen_at_version: null })
+      .eq('grid_id', gridId)
+
+    if (error) return { error: "Les suivis n'ont pas pu être réactivés." }
+  }
+
+  const { error } = await supabase
+    .from('grids')
+    .update({ is_public: isPublic })
+    .eq('id', gridId)
+
+  if (error) return { error: "La visibilité n'a pas pu être changée." }
+
+  revalidatePath('/grilles')
+  revalidatePath('/grilles/decouvrir')
+  revalidatePath(`/grilles/${gridId}`)
+  return { error: null }
+}
+
+/** Adopte une grille publique : elle rejoint l'accueil, avec sa progression. */
+export async function followGrid(gridId: string): Promise<GridActionResult> {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) return { error: 'Session expirée. Reconnecte-toi.' }
+
+  const { error } = await supabase
+    .from('grid_followers')
+    .insert({ grid_id: gridId, user_id: user.id })
+
+  if (error) return { error: "Cette grille n'a pas pu être ajoutée." }
+
+  revalidatePath('/')
+  revalidatePath('/grilles')
+  revalidatePath('/grilles/decouvrir')
+  return { error: null }
+}
+
+/**
+ * Retire une grille suivie.
+ *
+ * Les seances deja jouees restent dans les statistiques : elles portent leurs
+ * snapshots, et ne dependent pas de la grille.
+ */
+export async function unfollowGrid(gridId: string): Promise<GridActionResult> {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) return { error: 'Session expirée. Reconnecte-toi.' }
+
+  const { error } = await supabase
+    .from('grid_followers')
+    .delete()
+    .eq('grid_id', gridId)
+    .eq('user_id', user.id)
+
+  if (error) return { error: "Cette grille n'a pas pu être retirée." }
 
   revalidatePath('/')
   revalidatePath('/grilles')
   return { error: null }
+}
+
+/**
+ * Suppression d'une grille.
+ *
+ * Sans suiveur, elle part pour de bon avec ses versions. Avec, on ne la
+ * supprime pas : une grille suivie ne peut pas disparaitre sous les pieds de
+ * ceux qui l'utilisent. Elle sort de chez son createur, les suivis se figent
+ * sur la derniere version publiee, et ceux qui la suivaient la gardent.
+ *
+ * Les seances passees survivent dans les deux cas : leurs snapshots restent
+ * lisibles dans les statistiques, leurs cles etrangeres passent a null.
+ */
+export async function deleteGrid(gridId: string): Promise<DeleteGridResult> {
+  const supabase = await createClient()
+
+  const grid = await loadGrid(gridId)
+  if (!grid?.owned) return { error: "Cette grille n'est pas la tienne.", kept: false }
+
+  if (grid.followerCount === 0) {
+    const { error } = await supabase.from('grids').delete().eq('id', gridId)
+    if (error) return { error: "La grille n'a pas pu être supprimée.", kept: false }
+
+    revalidatePath('/')
+    revalidatePath('/grilles')
+    return { error: null, kept: false }
+  }
+
+  const frozenAt = latestPublished(grid)?.version
+  if (frozenAt) {
+    await supabase
+      .from('grid_followers')
+      .update({ frozen_at_version: frozenAt })
+      .eq('grid_id', gridId)
+      .is('frozen_at_version', null)
+  }
+
+  const { error } = await supabase
+    .from('grids')
+    .update({ deleted_at: new Date().toISOString(), is_public: false })
+    .eq('id', gridId)
+
+  if (error) return { error: "La grille n'a pas pu être retirée.", kept: false }
+
+  revalidatePath('/')
+  revalidatePath('/grilles')
+  revalidatePath('/grilles/decouvrir')
+  return { error: null, kept: true }
 }

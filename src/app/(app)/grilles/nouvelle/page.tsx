@@ -20,6 +20,8 @@ export default async function NewGridPage() {
       draftSaved={false}
       publishedVersion={null}
       nextVersion={1}
+      isPublic={false}
+      followerCount={0}
     />
   )
 }
