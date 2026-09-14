@@ -41,6 +41,10 @@ format-check:
 build:
     npm run build
 
+# Regenere les icones PWA en PNG depuis le motif de scripts/build-icons.mjs.
+icons:
+    npm run icons
+
 # Copie une migration dans le presse-papier, prete a coller dans le SQL Editor.
 #   just sql               la plus recente
 #   just sql 20260905000006  une version precise

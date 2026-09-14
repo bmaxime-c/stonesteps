@@ -159,6 +159,7 @@ Avec [`just`](https://github.com/casey/just) si installé, sinon directement en 
 | `just format`    | `npm run format`                  | Prettier                                                    |
 | `just build`     | `npm run build`                   | build de production                                         |
 | `just types`     | —                                 | régénère `src/lib/database.types.ts` (CLI Supabase requise) |
+| `just icons`     | `npm run icons`                   | régénère les icônes PWA en PNG                              |
 | `just sql`       | `npm run migration:sql -- --clip` | copie une migration dans le presse-papier                   |
 | `just db-status` | `npm run db:status`               | migrations locales contre base distante                     |
 | `just db-push`   | `npm run db:push`                 | applique les migrations manquantes                          |
@@ -170,8 +171,12 @@ Avec [`just`](https://github.com/casey/just) si installé, sinon directement en 
 - Le service worker (`public/sw.js`) ne met en cache que la coquille de
   l'application — page hors ligne et manifeste — et ne s'active qu'en
   production. Aucun HTML authentifié n'est conservé.
-- Les icônes PWA sont en SVG. Leur conversion en PNG 192/512 est prévue en
-  phase 7 : le SVG passe sur Chrome mais l'installabilité n'est pas garantie
-  partout.
+- Les icônes PWA sont en **PNG 192 et 512**, en variante `any` (coins arrondis,
+  fond transparent) et `maskable` (pleine page, motif dans la zone sûre de
+  80 %). Le SVG reste la source vectorielle, et sert de repli aux navigateurs
+  qui l'acceptent. Les PNG sont générés par `scripts/build-icons.mjs`, sans
+  dépendance : `just icons` (ou `npm run icons`) après toute retouche du motif.
+- iOS reçoit la variante `maskable` comme `apple-touch-icon` : Safari compose
+  la transparence sur du noir et arrondit lui-même.
 - La séance survit à un rafraîchissement grâce à sa route propre
   (`/seance/[gridId]`) et à `sessionStorage`, pas à un cache réseau.

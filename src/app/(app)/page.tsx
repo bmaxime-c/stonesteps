@@ -45,7 +45,7 @@ export default async function HomePage() {
           }
         />
       ) : (
-        <ul className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4">
+        <ul className="grid grid-cols-[repeat(auto-fit,minmax(min(280px,100%),1fr))] gap-4">
           {grids.map((grid) => {
             const outcomes = outcomesByGrid.get(grid.id) ?? []
             const current = currentLevel(grid.levels, outcomes)

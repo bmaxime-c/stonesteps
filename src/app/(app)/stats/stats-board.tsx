@@ -57,7 +57,7 @@ export function StatsBoard({
     <main className="gutter mx-auto flex w-full max-w-[1040px] flex-col gap-5 pt-[clamp(20px,3vw,36px)] pb-[72px]">
       <h1 className="title-screen">Statistiques</h1>
 
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(160px,100%),1fr))] gap-3">
         <Kpi label="Séances" value={String(totals.sessionCount)} />
         <Kpi
           label="Niveaux validés"
@@ -71,7 +71,7 @@ export function StatsBoard({
         />
       </div>
 
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] items-start gap-4">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(320px,100%),1fr))] items-start gap-4">
         <Card>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2.5">
             <h2 className="text-[15px] font-bold">Progression</h2>
