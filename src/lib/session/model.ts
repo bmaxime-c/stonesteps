@@ -44,3 +44,22 @@ export type LevelOutcome = {
   validated: boolean
   startedAt: string
 }
+
+/**
+ * Ce que la seance envoie au serveur a la toute fin.
+ *
+ * Ces types vivent ici et non dans le fichier d'action : un module « use
+ * server » ne peut exporter que des fonctions asynchrones.
+ */
+export type ConsolidateInput = {
+  gridId: string
+  levelId: string
+  gridName: string
+  levelNumber: number
+  startedAt: string
+  validated: boolean
+  results: SetResult[]
+}
+
+export type ConsolidateResult =
+  { sessionId: string; error: null } | { sessionId: null; error: string }
