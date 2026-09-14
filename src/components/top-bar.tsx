@@ -9,18 +9,22 @@ import { cn } from '@/lib/utils'
 /**
  * Barre superieure collante, unique niveau de navigation persistante.
  *
- * Deux destinations seulement : Accueil et Stats. Detail de grille,
- * constructeur et bibliotheque sont des sous-ecrans d'Accueil, avec un retour
- * explicite plutot qu'un onglet. Seance et resume masquent cette barre
- * entierement — ils vivent hors du groupe de routes qui la monte.
+ * Trois destinations : Accueil, Grilles et Stats. « Grilles » est le menu
+ * d'edition : on ne modifie plus une grille depuis l'ecran qui sert a lancer
+ * une seance. C'est un ecart assume au handoff, qui n'en prevoyait que deux ;
+ * le constructeur et la bibliotheque restent des sous-ecrans, avec un retour
+ * explicite.
  *
- * L'icone de droite mene au compte, ou vit aussi la deconnexion. Elle n'est
- * pas une troisieme destination : c'est un reglage, pas un ecran ou l'on
- * travaille.
+ * Seance et resume masquent cette barre entierement — ils vivent hors du
+ * groupe de routes qui la monte.
+ *
+ * L'icone de droite mene au compte, ou vit aussi la deconnexion. Ce n'est pas
+ * une destination de plus : c'est un reglage, pas un ecran ou l'on travaille.
  */
 
 const TABS = [
   { href: '/', label: 'Accueil' },
+  { href: '/grilles', label: 'Grilles' },
   { href: '/stats', label: 'Stats' },
 ] as const
 

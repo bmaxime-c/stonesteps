@@ -45,6 +45,7 @@ export async function consolidateSession(
       grid_id: input.gridId,
       level_id: input.levelId,
       grid_name: input.gridName,
+      grid_version: input.gridVersion,
       level_number: input.levelNumber,
       started_at: input.startedAt,
       validated,

@@ -7,6 +7,7 @@ import {
   failedSetCount,
   isLevelValidated,
   levelStates,
+  reachedLevel,
   validatedAt,
 } from './level'
 
@@ -137,5 +138,53 @@ describe('date de validation', () => {
 
   it('renvoie null tant que le niveau n est pas valide', () => {
     expect(validatedAt('l1', [outcome('l1', false)])).toBeNull()
+  })
+})
+
+describe('niveaux reportes d une publication', () => {
+  it('compte les niveaux reportes comme franchis', () => {
+    // Les identifiants de niveau de l'ancienne version ont disparu : c'est le
+    // report qui porte ce qui avait ete gagne.
+    expect(currentLevel(levels, [], 2)).toEqual({ id: 'l3', position: 3 })
+  })
+
+  it('n en reporte aucun par defaut', () => {
+    expect(currentLevel(levels, [])).toEqual({ id: 'l1', position: 1 })
+  })
+
+  it('avance encore avec les seances jouees sur la nouvelle version', () => {
+    expect(currentLevel(levels, [outcome('l3', true)], 2)).toBeNull()
+  })
+
+  it('termine la grille quand tout est reporte', () => {
+    expect(currentLevel(levels, [], 3)).toBeNull()
+  })
+
+  it('marque les niveaux reportes comme valides dans la frise', () => {
+    const states = levelStates(levels, [], 2)
+    expect(states.get('l1')).toBe('validated')
+    expect(states.get('l2')).toBe('validated')
+    expect(states.get('l3')).toBe('current')
+  })
+})
+
+describe('position atteinte', () => {
+  it('vaut la position du niveau en cours', () => {
+    expect(reachedLevel(levels, [outcome('l1', true)])).toBe(2)
+  })
+
+  it('depasse la grille d un cran quand elle est terminee', () => {
+    // C'est ce qu'attend le calcul du report : les niveaux franchis sont ceux
+    // d'avant la position atteinte.
+    const history = [outcome('l1', true), outcome('l2', true), outcome('l3', true)]
+    expect(reachedLevel(levels, history)).toBe(4)
+  })
+
+  it('tient compte du report', () => {
+    expect(reachedLevel(levels, [], 2)).toBe(3)
+  })
+
+  it('vaut un sur une grille neuve', () => {
+    expect(reachedLevel(levels, [])).toBe(1)
   })
 })

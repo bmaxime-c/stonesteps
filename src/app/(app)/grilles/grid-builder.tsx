@@ -15,11 +15,11 @@ import {
   removeExercise,
   removeLevel,
   removeSet,
+  showsReps,
+  showsSeconds,
   stepReps,
   stepRest,
   stepSeconds,
-  showsReps,
-  showsSeconds,
   updateSet,
   type EditableGrid,
   type EditableSet,
@@ -27,41 +27,65 @@ import {
 import type { CatalogExercise } from '@/lib/grids/queries'
 import { cn } from '@/lib/utils'
 
-import { deleteGrid, saveGrid } from './actions'
+import { deleteGrid, discardDraft, publishDraft, saveDraft } from './actions'
 import { ExerciseLibrary } from './exercise-library'
 
 /**
  * Constructeur de grille.
  *
- * Il travaille sur un brouillon client du debut a la fin, et n'enregistre
- * qu'en une action : l'arbre entier part d'un coup. Toutes les regles
- * d'edition — pas de reglage, cycle des modes, duplication — vivent dans
- * `lib/grids/draft`, ou elles sont testees ; ce composant ne fait que les
- * appeler.
+ * Il ne connait qu'une seule ecriture : le brouillon. Rien ne part jamais
+ * directement dans une version publiee — « Enregistrer » range le travail,
+ * « Publier » le met en service et incremente le numero de version.
+ *
+ * « Publier » ne s'offre qu'apres un enregistrement et tant que rien n'a
+ * rebouge : publier un etat qu'on n'a pas enregistre reviendrait a publier
+ * quelque chose qu'on n'a pas relu.
+ *
+ * Toutes les regles d'edition — pas de reglage, cycle des modes, duplication —
+ * vivent dans `lib/grids/draft`, ou elles sont testees ; ce composant ne fait
+ * que les appeler.
  */
 export function GridBuilder({
   gridId,
   initial,
   catalog,
+  draftSaved,
+  publishedVersion,
+  nextVersion,
 }: {
   gridId: string | null
   initial: EditableGrid
   catalog: CatalogExercise[]
+  /** Un brouillon enregistre existe deja en base pour cette grille. */
+  draftSaved: boolean
+  /** Numero de la derniere version publiee, s'il y en a une. */
+  publishedVersion: number | null
+  /** Numero que portera la prochaine publication. */
+  nextVersion: number
 }) {
   const router = useRouter()
   const [grid, setGrid] = useState(initial)
   const [levelIndex, setLevelIndex] = useState(0)
   const [libraryOpen, setLibraryOpen] = useState(false)
-  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [confirming, setConfirming] = useState<'delete' | 'discard' | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [dirty, setDirty] = useState(false)
   const [pending, startTransition] = useTransition()
 
   const level = grid.levels[levelIndex]
+  const canPublish = Boolean(gridId) && draftSaved && !dirty
+
+  /** Toute modification salit le brouillon et retire « Publier ». */
+  function update(next: EditableGrid) {
+    setGrid(next)
+    setDirty(true)
+    setError(null)
+  }
 
   function save() {
     setError(null)
     startTransition(async () => {
-      const result = await saveGrid({
+      const result = await saveDraft({
         gridId,
         name: grid.name,
         accentColor: grid.accentColor,
@@ -83,7 +107,38 @@ export function GridBuilder({
         setError(result.error)
         return
       }
-      router.push(`/grilles/${result.gridId}`)
+
+      setDirty(false)
+      // Une grille qui vient de naitre change d'URL : le brouillon a un
+      // identifiant, et un rafraichissement doit le retrouver.
+      if (gridId) router.refresh()
+      else router.replace(`/grilles/${result.gridId}/modifier`)
+    })
+  }
+
+  function publish() {
+    if (!gridId) return
+    setError(null)
+    startTransition(async () => {
+      const result = await publishDraft(gridId)
+      if (result.error) {
+        setError(result.error)
+        return
+      }
+      router.push(`/grilles/${gridId}`)
+    })
+  }
+
+  function discard() {
+    if (!gridId) return
+    startTransition(async () => {
+      const result = await discardDraft(gridId)
+      setConfirming(null)
+      if (result.error) {
+        setError(result.error)
+        return
+      }
+      router.push('/grilles')
     })
   }
 
@@ -91,12 +146,12 @@ export function GridBuilder({
     if (!gridId) return
     startTransition(async () => {
       const result = await deleteGrid(gridId)
+      setConfirming(null)
       if (result.error) {
         setError(result.error)
-        setConfirmingDelete(false)
         return
       }
-      router.push('/')
+      router.push('/grilles')
     })
   }
 
@@ -107,8 +162,8 @@ export function GridBuilder({
         levelNumber={levelIndex + 1}
         onBack={() => setLibraryOpen(false)}
         onPick={(exercise) => {
-          setGrid((current) =>
-            addExercise(current, levelIndex, {
+          update(
+            addExercise(grid, levelIndex, {
               exerciseId: exercise.id,
               exerciseName: exercise.name,
             }),
@@ -122,13 +177,21 @@ export function GridBuilder({
   return (
     <main className="gutter mx-auto flex w-full max-w-[760px] flex-col gap-4 pt-[clamp(20px,3vw,36px)] pb-[72px]">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-[clamp(22px,3.4vw,28px)] font-bold tracking-[-0.02em]">
-          {gridId ? 'Modifier la grille' : 'Nouvelle grille'}
-        </h1>
-        <div className="flex shrink-0 gap-2">
+        <div>
+          <h1 className="text-[clamp(22px,3.4vw,28px)] font-bold tracking-[-0.02em]">
+            {publishedVersion ? 'Modifier la grille' : 'Nouvelle grille'}
+          </h1>
+          <p className="text-tertiary mt-0.5 text-[13px]">
+            {publishedVersion
+              ? `Version ${publishedVersion} publiée · brouillon en version ${nextVersion}`
+              : `Brouillon, version ${nextVersion} à publier`}
+          </p>
+        </div>
+
+        <div className="flex shrink-0 flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => router.push(gridId ? `/grilles/${gridId}` : '/')}
+            onClick={() => router.push(gridId ? `/grilles/${gridId}` : '/grilles')}
             className="border-border-strong text-muted-foreground rounded-full border px-4 py-2.5 text-sm font-semibold"
           >
             Annuler
@@ -137,10 +200,20 @@ export function GridBuilder({
             type="button"
             onClick={save}
             disabled={pending}
-            className="bg-primary text-primary-foreground rounded-full px-[18px] py-2.5 text-sm font-bold disabled:opacity-50"
+            className="border-border-strong text-foreground rounded-full border px-4 py-2.5 text-sm font-bold disabled:opacity-50"
           >
             {pending ? 'Un instant…' : 'Enregistrer'}
           </button>
+          {canPublish ? (
+            <button
+              type="button"
+              onClick={publish}
+              disabled={pending}
+              className="bg-primary text-primary-foreground rounded-full px-[18px] py-2.5 text-sm font-bold shadow-[var(--glow-action)] disabled:opacity-50"
+            >
+              Publier
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -150,9 +223,15 @@ export function GridBuilder({
         </p>
       ) : null}
 
+      {dirty && draftSaved ? (
+        <p className="bg-inset border-border text-muted-foreground rounded-[14px] border px-4 py-3 text-[13px]">
+          Modifications non enregistrées. Enregistre le brouillon pour pouvoir le publier.
+        </p>
+      ) : null}
+
       <input
         value={grid.name}
-        onChange={(event) => setGrid({ ...grid, name: event.target.value })}
+        onChange={(event) => update({ ...grid, name: event.target.value })}
         placeholder="Nom de la grille"
         aria-label="Nom de la grille"
         maxLength={60}
@@ -170,8 +249,8 @@ export function GridBuilder({
           label="repos"
           value={grid.restSeconds === 0 ? 'désactivé' : `${grid.restSeconds}s`}
           width="min-w-[78px]"
-          onDecrease={() => setGrid(stepRest(grid, -1))}
-          onIncrease={() => setGrid(stepRest(grid, 1))}
+          onDecrease={() => update(stepRest(grid, -1))}
+          onIncrease={() => update(stepRest(grid, 1))}
         />
       </div>
 
@@ -198,7 +277,7 @@ export function GridBuilder({
         <button
           type="button"
           onClick={() => {
-            setGrid(addLevel(grid))
+            update(addLevel(grid))
             setLevelIndex(grid.levels.length)
           }}
           className="border-border text-success flex h-9 items-center justify-center rounded-[12px] border-[1.5px] border-dashed px-3.5 text-[13px] font-bold"
@@ -213,7 +292,7 @@ export function GridBuilder({
           <button
             type="button"
             onClick={() => {
-              setGrid(removeLevel(grid, levelIndex))
+              update(removeLevel(grid, levelIndex))
               setLevelIndex(Math.max(0, levelIndex - 1))
             }}
             className="text-tertiary p-1 text-[13px] font-semibold"
@@ -228,7 +307,7 @@ export function GridBuilder({
       {levelIndex > 0 && level && level.exercises.length === 0 ? (
         <button
           type="button"
-          onClick={() => setGrid(duplicatePreviousLevel(grid, levelIndex))}
+          onClick={() => update(duplicatePreviousLevel(grid, levelIndex))}
           className="border-border text-muted-foreground self-start rounded-full border-[1.5px] border-dashed px-3.5 py-2.5 text-[13px] font-semibold"
         >
           Dupliquer le niveau précédent
@@ -254,7 +333,7 @@ export function GridBuilder({
             <button
               type="button"
               aria-label={`Retirer ${exercise.exerciseName}`}
-              onClick={() => setGrid(removeExercise(grid, levelIndex, exerciseIndex))}
+              onClick={() => update(removeExercise(grid, levelIndex, exerciseIndex))}
               className="bg-chip text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-full text-base"
             >
               ×
@@ -268,17 +347,17 @@ export function GridBuilder({
               index={setIndex}
               total={exercise.sets.length}
               onChange={(change) =>
-                setGrid(updateSet(grid, levelIndex, exerciseIndex, setIndex, change))
+                update(updateSet(grid, levelIndex, exerciseIndex, setIndex, change))
               }
               onRemove={() =>
-                setGrid(removeSet(grid, levelIndex, exerciseIndex, setIndex))
+                update(removeSet(grid, levelIndex, exerciseIndex, setIndex))
               }
             />
           ))}
 
           <button
             type="button"
-            onClick={() => setGrid(addSet(grid, levelIndex, exerciseIndex))}
+            onClick={() => update(addSet(grid, levelIndex, exerciseIndex))}
             className="border-border text-muted-foreground self-start rounded-full border-[1.5px] border-dashed px-3.5 py-2.5 text-[13px] font-semibold"
           >
             + Ajouter une série
@@ -301,22 +380,43 @@ export function GridBuilder({
       </button>
 
       {gridId ? (
-        <button
-          type="button"
-          onClick={() => setConfirmingDelete(true)}
-          className="text-fail self-center p-2 text-[13px] font-semibold"
-        >
-          Supprimer cette grille
-        </button>
+        <div className="flex flex-col items-center gap-1">
+          {draftSaved && publishedVersion ? (
+            <button
+              type="button"
+              onClick={() => setConfirming('discard')}
+              className="text-tertiary p-2 text-[13px] font-semibold"
+            >
+              Abandonner le brouillon
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => setConfirming('delete')}
+            className="text-fail p-2 text-[13px] font-semibold"
+          >
+            Supprimer cette grille
+          </button>
+        </div>
       ) : null}
 
-      {confirmingDelete ? (
+      {confirming === 'delete' ? (
         <ConfirmDialog
           title="Supprimer cette grille ?"
-          description="Ses niveaux et sa progression partent avec elle. Les séances déjà jouées restent dans les statistiques."
+          description="Toutes ses versions et sa progression partent avec elle. Les séances déjà jouées restent dans les statistiques."
           confirmLabel="Supprimer"
-          onCancel={() => setConfirmingDelete(false)}
+          onCancel={() => setConfirming(null)}
           onConfirm={remove}
+        />
+      ) : null}
+
+      {confirming === 'discard' ? (
+        <ConfirmDialog
+          title="Abandonner le brouillon ?"
+          description={`Les modifications non publiées sont perdues. La version ${publishedVersion} publiée reste en service.`}
+          confirmLabel="Abandonner"
+          onCancel={() => setConfirming(null)}
+          onConfirm={discard}
         />
       ) : null}
     </main>

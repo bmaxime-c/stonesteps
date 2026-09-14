@@ -42,12 +42,54 @@ export type Level = {
   exercises: LevelExercise[]
 }
 
-export type Grid = {
+export type GridVersionStatus = Database['public']['Enums']['grid_version_status']
+
+/**
+ * Une version de grille.
+ *
+ * Le nom, la couleur et le repos vivent ici et non sur la grille : ils font
+ * partie de ce qu'on publie. Renommer une grille demande donc de publier, et
+ * la promesse « jamais de sauvegarde directe » tient d'un bout a l'autre.
+ */
+export type GridVersion = {
   id: string
+  version: number
+  status: GridVersionStatus
   name: string
   accentColor: string
   restSeconds: number
+  /**
+   * Niveaux acquis d'office a la publication.
+   *
+   * Fige a la publication : les positions 1 a `carriedLevels` sont considerees
+   * validees sans avoir a etre rejouees, parce que leur contenu n'avait pas
+   * bouge et qu'elles etaient deja franchies.
+   */
+  carriedLevels: number
   levels: Level[]
+}
+
+/**
+ * Une grille : une identite, et ses versions.
+ *
+ * `published` est la derniere version publiee, la seule jouable. `draft` est
+ * le brouillon en cours, au plus un — c'est lui qu'ouvre le constructeur quand
+ * il existe.
+ */
+export type Grid = {
+  id: string
+  published: GridVersion | null
+  draft: GridVersion | null
+}
+
+/** Ce que le constructeur ouvre : le brouillon s'il existe, sinon le publie. */
+export function editableVersion(grid: Grid): GridVersion | null {
+  return grid.draft ?? grid.published
+}
+
+/** Ce que l'accueil et la seance affichent : uniquement ce qui est publie. */
+export function playableVersion(grid: Grid): GridVersion | null {
+  return grid.published
 }
 
 /**

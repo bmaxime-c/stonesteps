@@ -49,6 +49,7 @@ function plan(over: Partial<SessionPlan> = {}): SessionPlan {
   return {
     gridId: 'g1',
     gridName: 'Push Day',
+    gridVersion: 1,
     restSeconds: 0,
     levelId: 'l3',
     levelNumber: 3,
