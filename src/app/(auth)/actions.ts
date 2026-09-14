@@ -5,7 +5,6 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 
 import { createClient } from '@/lib/supabase/server'
-import { USERNAME_PATTERN, normalizeUsername } from '@/lib/username'
 
 import type { AuthState } from './auth-state'
 
@@ -59,21 +58,19 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
 export async function signUp(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const email = String(formData.get('email') ?? '').trim()
   const password = String(formData.get('password') ?? '')
-  const username = normalizeUsername(String(formData.get('username') ?? ''))
+  // Le nom affiche est facultatif : a defaut, le trigger d'inscription
+  // retombe sur la partie locale de l'adresse.
+  const displayName = String(formData.get('displayName') ?? '').trim()
 
-  if (!email || !password || !username) {
+  if (!email || !password) {
     return {
-      error: 'Adresse e-mail, pseudo et mot de passe sont requis.',
+      error: 'Adresse e-mail et mot de passe sont requis.',
       notice: null,
     }
   }
 
-  if (!USERNAME_PATTERN.test(username)) {
-    return {
-      error:
-        'Le pseudo doit faire 3 a 30 caracteres, en minuscules, chiffres, tiret ou underscore.',
-      notice: null,
-    }
+  if (displayName.length > 40) {
+    return { error: 'Le nom affiche ne depasse pas 40 caracteres.', notice: null }
   }
 
   const supabase = await createClient()
@@ -81,7 +78,7 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
     email,
     password,
     options: {
-      data: { username },
+      data: displayName ? { display_name: displayName } : undefined,
       emailRedirectTo: `${await siteUrl()}/auth/callback`,
     },
   })
