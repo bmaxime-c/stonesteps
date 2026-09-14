@@ -66,32 +66,73 @@ export type Database = {
           },
         ]
       }
-      grids: {
+      grid_versions: {
         Row: {
           accent_color: string
+          carried_levels: number
           created_at: string
+          grid_id: string
           id: string
           name: string
-          owner_id: string
+          published_at: string | null
           rest_seconds: number
+          status: Database['public']['Enums']['grid_version_status']
           updated_at: string
+          version: number
         }
         Insert: {
           accent_color?: string
+          carried_levels?: number
           created_at?: string
+          grid_id: string
           id?: string
           name: string
-          owner_id: string
+          published_at?: string | null
           rest_seconds?: number
+          status?: Database['public']['Enums']['grid_version_status']
           updated_at?: string
+          version: number
         }
         Update: {
           accent_color?: string
+          carried_levels?: number
           created_at?: string
+          grid_id?: string
           id?: string
           name?: string
-          owner_id?: string
+          published_at?: string | null
           rest_seconds?: number
+          status?: Database['public']['Enums']['grid_version_status']
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'grid_versions_grid_id_fkey'
+            columns: ['grid_id']
+            isOneToOne: false
+            referencedRelation: 'grids'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      grids: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
           updated_at?: string
         }
         Relationships: [
@@ -177,26 +218,26 @@ export type Database = {
       }
       levels: {
         Row: {
-          grid_id: string
+          grid_version_id: string
           id: string
           position: number
         }
         Insert: {
-          grid_id: string
+          grid_version_id: string
           id?: string
           position: number
         }
         Update: {
-          grid_id?: string
+          grid_version_id?: string
           id?: string
           position?: number
         }
         Relationships: [
           {
-            foreignKeyName: 'levels_grid_id_fkey'
-            columns: ['grid_id']
+            foreignKeyName: 'levels_grid_version_id_fkey'
+            columns: ['grid_version_id']
             isOneToOne: false
-            referencedRelation: 'grids'
+            referencedRelation: 'grid_versions'
             referencedColumns: ['id']
           },
         ]
@@ -281,6 +322,7 @@ export type Database = {
           completed_at: string | null
           grid_id: string | null
           grid_name: string
+          grid_version: number
           id: string
           level_id: string | null
           level_number: number
@@ -292,6 +334,7 @@ export type Database = {
           completed_at?: string | null
           grid_id?: string | null
           grid_name: string
+          grid_version?: number
           id?: string
           level_id?: string | null
           level_number: number
@@ -303,6 +346,7 @@ export type Database = {
           completed_at?: string | null
           grid_id?: string | null
           grid_name?: string
+          grid_version?: number
           id?: string
           level_id?: string | null
           level_number?: number
@@ -339,13 +383,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      current_level: { Args: { p_grid_id: string }; Returns: string }
       owns_grid: { Args: { g: string }; Returns: boolean }
+      owns_grid_version: { Args: { v: string }; Returns: boolean }
       owns_level: { Args: { l: string }; Returns: boolean }
       owns_level_exercise: { Args: { le: string }; Returns: boolean }
       owns_session: { Args: { s: string }; Returns: boolean }
     }
     Enums: {
+      grid_version_status: 'draft' | 'published'
       muscle_group: 'push' | 'pull' | 'legs' | 'core'
       set_status: 'success' | 'surpass' | 'fail'
       timer_mode: 'none' | 'minimal' | 'strict'
@@ -475,6 +520,7 @@ export const Constants = {
   },
   public: {
     Enums: {
+      grid_version_status: ['draft', 'published'],
       muscle_group: ['push', 'pull', 'legs', 'core'],
       set_status: ['success', 'surpass', 'fail'],
       timer_mode: ['none', 'minimal', 'strict'],
