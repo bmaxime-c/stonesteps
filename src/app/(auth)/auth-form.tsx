@@ -15,7 +15,7 @@ type AuthAction = (state: AuthState, formData: FormData) => Promise<AuthState>
 function SubmitButton({ label }: { label: string }) {
   const { pending } = useFormStatus()
   return (
-    <Button type="submit" className="w-full" disabled={pending}>
+    <Button type="submit" size="lg" className="w-full" disabled={pending}>
       {pending ? 'Un instant…' : label}
     </Button>
   )
@@ -78,8 +78,8 @@ export function AuthForm({
             pattern="[a-zA-Z0-9_\- ]{3,30}"
             required
           />
-          <p className="text-muted-foreground text-xs">
-            3 a 30 caracteres. Il servira a tes amis pour te retrouver.
+          <p className="text-tertiary text-xs">
+            3 a 30 caracteres. Il identifie ton compte.
           </p>
         </div>
       ) : null}

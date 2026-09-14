@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/septeo-design-system-2ace98ef-e1ae-409a-805f-bee83d08ff08/fonts/fonts.css">
+<link rel="stylesheet" href="_ds/septeo-design-system-2ace98ef-e1ae-409a-805f-bee83d08ff08/tokens/tokens.css">
+<link rel="stylesheet" href="_ds/septeo-design-system-2ace98ef-e1ae-409a-805f-bee83d08ff08/tokens/base.css">
+<link rel="stylesheet" href="_ds/septeo-design-system-2ace98ef-e1ae-409a-805f-bee83d08ff08/tokens/brand-classes.css">
+<link rel="stylesheet" href="_ds/septeo-design-system-2ace98ef-e1ae-409a-805f-bee83d08ff08/styles.css">
+<script src="_ds/septeo-design-system-2ace98ef-e1ae-409a-805f-bee83d08ff08/_ds_bundle.js"></script>
+<style>
+:root{
+--wash:#06120C;--bg-1:#0E1F16;--bg-2:#06120C;
+--fg-1:#E8FFF2;--fg-2:#9CC4AE;--fg-3:#6E9682;
+--accent:#00FF87;--accent-hover:#5BFFB1;--link:#00FF87;
+--border:#2A5340;--border-soft:#1D3A2A;
+--success:#00FF87;--danger:#FF2D6F;
+--teal-soft:#07301F;--teal-dark:#22E1FF;--orange-soft:#2B2A06;--orange-dark:#D4FF3F;
+--shadow-sm:0 1px 0 rgba(255,255,255,0.03);--shadow-md:0 10px 30px rgba(0,255,135,0.10);--shadow-lg:0 18px 48px rgba(0,0,0,0.5);
+}
+html,body{margin:0;background:#06120C}
+a{color:var(--link)}
+a:hover{color:var(--accent-hover)}
+input::placeholder{color:var(--fg-3)}
+</style>
+</helmet>
+<div style="min-height:100vh;box-sizing:border-box;font-family:var(--font-sans);background:{{ rootBg }}">
+<sc-if value="{{ showTabBar }}" hint-placeholder-val="{{ true }}">
+<div style="position:sticky;top:0;z-index:10;background:rgba(6,18,12,0.82);backdrop-filter:blur(14px);border-bottom:1px solid var(--border-soft)">
+<div style="max-width:1040px;margin:0 auto;padding:12px clamp(16px,3vw,32px);display:flex;align-items:center;justify-content:space-between;gap:16px">
+<div style="display:flex;align-items:center;gap:10px;min-width:0">
+<div style="width:30px;height:30px;border-radius:9px;background:var(--accent);color:#05170E;box-shadow:0 0 18px rgba(0,255,135,0.45);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0">CA</div>
+<div style="font-size:16px;font-weight:700;color:var(--fg-1);letter-spacing:-0.01em;white-space:nowrap">Suivi callisthénie</div>
+</div>
+<div style="display:flex;gap:6px;flex-shrink:0">
+<div onClick="{{ goHomeTab }}" style="padding:9px 16px;border-radius:999px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;background:{{ navHomeBg }};color:{{ navHomeFg }}">Accueil</div>
+<div onClick="{{ goStatsTab }}" style="padding:9px 16px;border-radius:999px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;background:{{ navStatsBg }};color:{{ navStatsFg }}">Stats</div>
+</div>
+</div>
+</div>
+</sc-if>
+<div>
+
+<sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+<div data-screen-label="Accueil" style="max-width:1040px;margin:0 auto;padding:clamp(20px,3vw,36px) clamp(16px,3vw,32px) 72px;display:flex;flex-direction:column;gap:22px;box-sizing:border-box">
+<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap">
+<div>
+<div style="font-size:14px;color:var(--fg-3);font-weight:500">Aujourd'hui</div>
+<div style="font-size:clamp(26px,4vw,34px);font-weight:700;color:var(--fg-1);letter-spacing:-0.02em;margin-top:2px">Mes grilles</div>
+</div>
+<div onClick="{{ newGrid }}" style="padding:12px 20px;border-radius:999px;background:var(--accent);color:#05170E;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 0 24px rgba(0,255,135,0.35);white-space:nowrap">Nouvelle grille</div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
+<sc-for list="{{ homeGrids }}" as="g" hint-placeholder-count="3">
+<div onClick="{{ g.open }}" style="background:var(--bg-1);border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:14px;box-shadow:var(--shadow-sm);border:1px solid var(--border-soft);cursor:pointer">
+<div style="display:flex;align-items:center;gap:16px">
+<div style="width:52px;height:52px;border-radius:16px;background:{{ g.accentColor }};display:flex;align-items:center;justify-content:center;color:#05170E;font-weight:800;font-size:17px;flex-shrink:0">{{ g.initials }}</div>
+<div style="flex:1;min-width:0">
+<div style="font-size:17px;font-weight:700;color:var(--fg-1)">{{ g.name }}</div>
+<div style="font-size:13px;color:var(--fg-3);margin-top:2px">{{ g.metaLabel }}</div>
+</div>
+<svg width="8" height="14" viewBox="0 0 8 14" style="flex-shrink:0"><path d="M1 1l6 6-6 6" stroke="var(--fg-3)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</div>
+<div style="display:flex;align-items:center;gap:10px">
+<div style="flex:1;height:6px;border-radius:3px;background:#081710;overflow:hidden">
+<div style="height:100%;border-radius:3px;background:{{ g.accentColor }};width:{{ g.progressPct }}%"></div>
+</div>
+<div style="font-size:12px;font-weight:700;color:var(--fg-2);white-space:nowrap">{{ g.levelLabel }}</div>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isGridDetail }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Détail grille" style="max-width:720px;margin:0 auto;padding:clamp(20px,3vw,36px) clamp(16px,3vw,32px) 72px;display:flex;flex-direction:column;gap:14px;box-sizing:border-box">
+<div style="display:flex;align-items:center;gap:12px">
+<div onClick="{{ backHome }}" style="width:36px;height:36px;border-radius:50%;background:var(--bg-1);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);cursor:pointer;flex-shrink:0">
+<svg width="9" height="16" viewBox="0 0 9 16"><path d="M8 1L1 8l7 7" stroke="var(--fg-1)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</div>
+<div style="flex:1;min-width:0">
+<div style="font-size:22px;font-weight:700;color:var(--fg-1)">{{ gridDetail.name }}</div>
+<div style="font-size:13px;color:var(--fg-3);margin-top:1px">{{ gridDetail.progressLabel }}</div>
+</div>
+<div onClick="{{ editSelectedGrid }}" style="padding:9px 16px;border-radius:999px;background:var(--bg-1);border:1px solid var(--border);color:var(--fg-2);font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0">Modifier</div>
+</div>
+<div style="display:flex;gap:6px;flex-wrap:wrap">
+<sc-for list="{{ gridDetail.levelChips }}" as="l" hint-placeholder-count="12">
+<div onClick="{{ l.select }}" style="min-width:38px;height:38px;padding:0 10px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;cursor:pointer;background:{{ l.bg }};color:{{ l.fg }};border:1.5px solid {{ l.border }}">{{ l.label }}</div>
+</sc-for>
+</div>
+<div style="font-size:13px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--fg-3);margin-top:6px">{{ gridDetail.levelTitle }}</div>
+<sc-for list="{{ gridDetail.exercises }}" as="ex" hint-placeholder-count="4">
+<div style="background:var(--bg-1);border-radius:16px;padding:16px;display:flex;align-items:center;gap:14px;border:1px solid var(--border-soft)">
+<div style="width:40px;height:40px;border-radius:12px;background:{{ gridDetail.accentColor }};display:flex;align-items:center;justify-content:center;color:#05170E;font-weight:800;font-size:13px;flex-shrink:0">{{ ex.initials }}</div>
+<div>
+<div style="font-size:15px;font-weight:600;color:var(--fg-1)">{{ ex.name }}</div>
+<div style="font-size:13px;color:var(--fg-3);margin-top:2px">{{ ex.setsLabel }}</div>
+</div>
+</div>
+</sc-for>
+<sc-if value="{{ gridDetail.showNote }}" hint-placeholder-val="{{ false }}">
+<div style="background:#081710;border:1px solid var(--border-soft);border-radius:16px;padding:14px 16px;font-size:13px;color:var(--fg-2);text-align:center">{{ gridDetail.note }}</div>
+</sc-if>
+<sc-if value="{{ gridDetail.showStart }}" hint-placeholder-val="{{ true }}">
+<div onClick="{{ startSessionFromGrid }}" style="margin-top:8px;background:var(--accent);color:#05170E;text-align:center;padding:18px;border-radius:999px;font-size:17px;font-weight:800;cursor:pointer;box-shadow:0 0 30px rgba(0,255,135,0.35)">{{ gridDetail.startLabel }}</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isBuilder }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Constructeur de grille" style="max-width:760px;margin:0 auto;padding:clamp(20px,3vw,36px) clamp(16px,3vw,32px) 72px;display:flex;flex-direction:column;gap:16px;box-sizing:border-box">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+<div style="font-size:clamp(22px,3.4vw,28px);font-weight:700;color:var(--fg-1);letter-spacing:-0.02em">{{ builder.title }}</div>
+<div style="display:flex;gap:8px;flex-shrink:0">
+<div onClick="{{ builder.cancel }}" style="padding:10px 16px;border-radius:999px;font-size:14px;font-weight:600;color:var(--fg-2);background:transparent;border:1px solid var(--border);cursor:pointer">Annuler</div>
+<div onClick="{{ builder.save }}" style="padding:10px 18px;border-radius:999px;font-size:14px;font-weight:700;color:#05170E;background:var(--accent);cursor:pointer">Enregistrer</div>
+</div>
+</div>
+<input value="{{ builder.name }}" onChange="{{ builder.onName }}" placeholder="Nom de la grille" style="width:100%;box-sizing:border-box;padding:14px 16px;border-radius:12px;border:1.5px solid var(--border);font-family:var(--font-sans);font-size:16px;color:var(--fg-1);background:var(--bg-1)">
+<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--bg-1);border:1px solid var(--border-soft);border-radius:16px;padding:14px 16px">
+<div style="flex:1;min-width:160px">
+<div style="font-size:14px;font-weight:700;color:var(--fg-1)">Repos entre les séries</div>
+<div style="font-size:12px;color:var(--fg-3);margin-top:2px">Optionnel — 0 pour enchaîner directement</div>
+</div>
+<div style="display:flex;align-items:center;gap:6px">
+<div onClick="{{ builder.decRest }}" style="width:34px;height:34px;border-radius:50%;background:#152B1F;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--fg-1);cursor:pointer;user-select:none">−</div>
+<div style="min-width:78px;text-align:center;font-size:14px;font-weight:700;color:var(--fg-1)">{{ builder.restLabel }}</div>
+<div onClick="{{ builder.incRest }}" style="width:34px;height:34px;border-radius:50%;background:#152B1F;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--fg-1);cursor:pointer;user-select:none">+</div>
+</div>
+</div>
+<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+<div style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--fg-3);margin-right:4px">Niveaux</div>
+<sc-for list="{{ builder.levelChips }}" as="l" hint-placeholder-count="6">
+<div onClick="{{ l.select }}" style="min-width:36px;height:36px;padding:0 10px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;cursor:pointer;background:{{ l.bg }};color:{{ l.fg }};border:1.5px solid {{ l.border }}">{{ l.label }}</div>
+</sc-for>
+<div onClick="{{ builder.addLevel }}" style="height:36px;padding:0 14px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;cursor:pointer;color:var(--accent);border:1.5px dashed var(--border)">+ Niveau</div>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+<div style="font-size:15px;font-weight:700;color:var(--fg-1)">{{ builder.levelTitle }}</div>
+<sc-if value="{{ builder.canRemoveLevel }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ builder.removeLevel }}" style="font-size:13px;font-weight:600;color:var(--fg-3);cursor:pointer;padding:4px">Supprimer ce niveau</div>
+</sc-if>
+</div>
+<sc-if value="{{ builder.showDuplicate }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ builder.duplicateLevel }}" style="align-self:flex-start;padding:9px 14px;border-radius:999px;border:1.5px dashed var(--border);font-size:13px;font-weight:600;color:var(--fg-2);cursor:pointer">Dupliquer le niveau précédent</div>
+</sc-if>
+<sc-for list="{{ builder.exercises }}" as="ex" hint-placeholder-count="2">
+<div style="background:var(--bg-1);border-radius:20px;padding:16px;border:1px solid var(--border-soft);display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:center;gap:12px">
+<div style="width:38px;height:38px;border-radius:12px;background:{{ ex.accentColor }};color:#05170E;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">{{ ex.initials }}</div>
+<div style="flex:1;min-width:0;font-size:16px;font-weight:700;color:var(--fg-1)">{{ ex.name }}</div>
+<div onClick="{{ ex.remove }}" style="width:32px;height:32px;border-radius:50%;background:#152B1F;color:var(--fg-2);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;flex-shrink:0">×</div>
+</div>
+<sc-for list="{{ ex.sets }}" as="st" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;border-radius:14px;background:#081710">
+<div style="font-size:12px;font-weight:700;color:var(--fg-3);min-width:54px">{{ st.label }}</div>
+<sc-if value="{{ st.showReps }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;align-items:center;gap:6px">
+<div onClick="{{ st.decReps }}" style="width:34px;height:34px;border-radius:50%;background:var(--bg-1);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--fg-1);cursor:pointer;user-select:none">−</div>
+<div style="min-width:62px;text-align:center;font-size:14px;font-weight:700;color:var(--fg-1)">{{ st.repsLabel }}</div>
+<div onClick="{{ st.incReps }}" style="width:34px;height:34px;border-radius:50%;background:var(--bg-1);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--fg-1);cursor:pointer;user-select:none">+</div>
+</div>
+</sc-if>
+<div onClick="{{ st.cycleMode }}" style="padding:8px 12px;border-radius:999px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;background:{{ st.modeBg }};color:{{ st.modeFg }}">{{ st.modeLabel }}</div>
+<sc-if value="{{ st.isTimed }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;align-items:center;gap:6px">
+<div onClick="{{ st.decSec }}" style="width:34px;height:34px;border-radius:50%;background:var(--bg-1);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--fg-1);cursor:pointer;user-select:none">−</div>
+<div style="min-width:42px;text-align:center;font-size:14px;font-weight:700;color:var(--fg-1)">{{ st.secondsLabel }}</div>
+<div onClick="{{ st.incSec }}" style="width:34px;height:34px;border-radius:50%;background:var(--bg-1);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--fg-1);cursor:pointer;user-select:none">+</div>
+</div>
+</sc-if>
+<div onClick="{{ st.remove }}" style="margin-left:auto;font-size:13px;font-weight:600;color:var(--fg-3);cursor:pointer;padding:6px">Retirer</div>
+</div>
+</sc-for>
+<div onClick="{{ ex.addSet }}" style="align-self:flex-start;padding:9px 14px;border-radius:999px;border:1.5px dashed var(--border);font-size:13px;font-weight:600;color:var(--fg-2);cursor:pointer">+ Ajouter une série</div>
+</div>
+</sc-for>
+<sc-if value="{{ builder.isEmpty }}" hint-placeholder-val="{{ false }}">
+<div style="text-align:center;font-size:14px;color:var(--fg-3);padding:8px">Aucun exercice dans ce niveau. Ajoutez-en depuis la bibliothèque.</div>
+</sc-if>
+<div onClick="{{ builder.openLibrary }}" style="padding:16px;border-radius:16px;border:1.5px dashed var(--border);text-align:center;font-size:15px;font-weight:700;color:var(--accent);background:var(--bg-1);cursor:pointer">+ Ajouter un exercice</div>
+<sc-if value="{{ builder.canDelete }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ builder.delete }}" style="align-self:center;font-size:13px;font-weight:600;color:var(--danger);cursor:pointer;padding:8px">Supprimer cette grille</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isLibrary }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Bibliothèque" style="max-width:900px;margin:0 auto;padding:clamp(20px,3vw,36px) clamp(16px,3vw,32px) 72px;display:flex;flex-direction:column;gap:20px;box-sizing:border-box">
+<div style="display:flex;align-items:center;gap:12px">
+<div onClick="{{ library.back }}" style="width:36px;height:36px;border-radius:50%;background:var(--bg-1);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);cursor:pointer;flex-shrink:0">
+<svg width="9" height="16" viewBox="0 0 9 16"><path d="M8 1L1 8l7 7" stroke="var(--fg-1)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</div>
+<div style="font-size:clamp(22px,3.4vw,28px);font-weight:700;color:var(--fg-1);letter-spacing:-0.02em">Bibliothèque d'exercices</div>
+</div>
+<sc-for list="{{ library.groups }}" as="g" hint-placeholder-count="4">
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--accent)">{{ g.group }}</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px">
+<sc-for list="{{ g.items }}" as="it" hint-placeholder-count="5">
+<div onClick="{{ it.add }}" style="background:var(--bg-1);border-radius:14px;padding:14px;border:1px solid var(--border-soft);display:flex;align-items:center;gap:12px;cursor:pointer">
+<div style="width:34px;height:34px;border-radius:10px;background:#152B1F;color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">{{ it.initials }}</div>
+<div style="flex:1;min-width:0;font-size:15px;font-weight:600;color:var(--fg-1)">{{ it.name }}</div>
+<div style="font-size:20px;color:var(--accent);font-weight:700;flex-shrink:0">+</div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSession }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Séance" style="min-height:100vh;max-width:620px;margin:0 auto;display:flex;flex-direction:column;color:#E8FFF2;box-sizing:border-box;padding:clamp(12px,2vw,24px) clamp(16px,4vw,32px) 48px">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0 16px">
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0">
+<div style="padding:5px 12px;border-radius:999px;background:rgba(0,255,135,0.16);color:#00FF87;font-size:12.5px;font-weight:800;white-space:nowrap">{{ sess.levelLabel }}</div>
+<div style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.04em;white-space:nowrap">Exercice {{ sess.exIdxLabel }} · Série {{ sess.setIdxLabel }}</div>
+</div>
+<div onClick="{{ exitSession }}" style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+<svg width="14" height="14" viewBox="0 0 14 14"><path d="M1 1l12 12M13 1L1 13" stroke="#fff" stroke-width="2" stroke-linecap="round"></path></svg>
+</div>
+</div>
+<div style="height:4px;border-radius:2px;background:rgba(255,255,255,0.12);overflow:hidden;margin-bottom:28px">
+<div style="height:100%;background:var(--accent);width:{{ sess.progressPct }}%"></div>
+</div>
+<div style="text-align:center;margin-bottom:12px">
+<div style="font-size:26px;font-weight:700;letter-spacing:-0.01em">{{ sess.exerciseName }}</div>
+</div>
+
+<sc-if value="{{ sess.isResting }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px">
+<div style="font-size:13px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#22E1FF">Repos</div>
+<div style="font-size:104px;font-weight:800;line-height:1;color:#22E1FF;text-shadow:0 0 40px rgba(34,225,255,0.45)">{{ sess.restLeft }}s</div>
+<div style="font-size:15px;color:rgba(255,255,255,0.55);text-align:center">Prochaine série : {{ sess.exerciseName }}</div>
+<div onClick="{{ sess.skipRest }}" style="width:100%;max-width:280px;background:transparent;border:1.5px solid rgba(255,255,255,0.25);color:#E8FFF2;text-align:center;padding:18px;border-radius:999px;font-size:18px;font-weight:700;cursor:pointer">Passer le repos</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ sess.isRepsMode }}" hint-placeholder-val="{{ true }}">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px">
+<div style="display:flex;align-items:center;gap:22px">
+<div onClick="{{ sess.decReps }}" style="width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:34px;cursor:pointer;user-select:none;flex-shrink:0">−</div>
+<div style="min-width:120px;text-align:center">
+<div style="font-size:88px;font-weight:800;line-height:1;color:{{ sess.statusColor }}">{{ sess.actualReps }}</div>
+<div style="font-size:15px;color:rgba(255,255,255,0.55);margin-top:6px">objectif {{ sess.targetReps }} reps</div>
+</div>
+<div onClick="{{ sess.incReps }}" style="width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:34px;cursor:pointer;user-select:none;flex-shrink:0">+</div>
+</div>
+<div style="padding:8px 22px;border-radius:999px;background:{{ sess.statusColor }};color:{{ sess.statusInk }};box-shadow:{{ sess.statusGlow }};font-size:15px;font-weight:800">{{ sess.statusLabel }}</div>
+</div>
+<div onClick="{{ sess.validateSet }}" style="margin-top:16px;background:var(--accent);color:#05170E;text-align:center;padding:20px;border-radius:999px;font-size:19px;font-weight:800;cursor:pointer;box-shadow:0 0 34px rgba(0,255,135,0.4)">Valider la série</div>
+</sc-if>
+
+<sc-if value="{{ sess.isHoldMode }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px">
+<div style="position:relative;width:220px;height:220px">
+<svg width="220" height="220" viewBox="0 0 220 220">
+<circle cx="110" cy="110" r="96" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="14"></circle>
+<circle cx="110" cy="110" r="96" fill="none" stroke="{{ sess.statusColor }}" stroke-width="14" stroke-linecap="round" stroke-dasharray="603" stroke-dashoffset="{{ sess.ringDashOffset }}" transform="rotate(-90 110 110)"></circle>
+</svg>
+<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">
+<div style="font-size:52px;font-weight:800;line-height:1;color:#fff">{{ sess.timerSec }}s</div>
+<div style="font-size:13px;color:rgba(255,255,255,0.55)">tenir {{ sess.targetSeconds }}s min</div>
+</div>
+</div>
+<div style="padding:8px 22px;border-radius:999px;background:{{ sess.statusColor }};color:{{ sess.statusInk }};box-shadow:{{ sess.statusGlow }};font-size:15px;font-weight:800">{{ sess.statusLabel }}</div>
+<sc-if value="{{ sess.timerRunning }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ sess.validateSet }}" style="width:100%;max-width:280px;background:#FF2D6F;color:#1A0009;text-align:center;padding:18px;border-radius:999px;font-size:18px;font-weight:800;cursor:pointer">Terminé</div>
+</sc-if>
+<sc-if value="{{ sess.timerNotStarted }}" hint-placeholder-val="{{ true }}">
+<div onClick="{{ sess.startTimer }}" style="width:100%;max-width:280px;background:var(--accent);color:#05170E;text-align:center;padding:18px;border-radius:999px;font-size:18px;font-weight:800;cursor:pointer;box-shadow:0 0 30px rgba(0,255,135,0.4)">Démarrer le chrono</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ sess.isMaxMode }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px">
+<div style="position:relative;width:220px;height:220px">
+<svg width="220" height="220" viewBox="0 0 220 220">
+<circle cx="110" cy="110" r="96" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="14"></circle>
+<circle cx="110" cy="110" r="96" fill="none" stroke="var(--accent)" stroke-width="14" stroke-linecap="round" stroke-dasharray="603" stroke-dashoffset="{{ sess.ringDashOffset }}" transform="rotate(-90 110 110)"></circle>
+</svg>
+<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0 28px;text-align:center">
+<div style="font-size:52px;font-weight:800;line-height:1;color:#fff">{{ sess.remainingSeconds }}s</div>
+<div style="font-size:13px;color:rgba(255,255,255,0.55)">{{ sess.targetReps }} reps en {{ sess.targetSeconds }}s max</div>
+</div>
+</div>
+<div style="padding:8px 22px;border-radius:999px;background:{{ sess.statusColor }};color:{{ sess.statusInk }};box-shadow:{{ sess.statusGlow }};font-size:15px;font-weight:800">{{ sess.statusLabel }}</div>
+<sc-if value="{{ sess.timerRunning }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ sess.validateSet }}" style="width:100%;max-width:280px;background:#00FF87;color:#05170E;text-align:center;padding:18px;border-radius:999px;font-size:18px;font-weight:800;cursor:pointer">Terminé</div>
+</sc-if>
+<sc-if value="{{ sess.timerNotStarted }}" hint-placeholder-val="{{ true }}">
+<div onClick="{{ sess.startTimer }}" style="width:100%;max-width:280px;background:var(--accent);color:#05170E;text-align:center;padding:18px;border-radius:999px;font-size:18px;font-weight:800;cursor:pointer;box-shadow:0 0 30px rgba(0,255,135,0.4)">Démarrer le chrono</div>
+</sc-if>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSummary }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Résumé" style="max-width:720px;margin:0 auto;padding:clamp(20px,3vw,36px) clamp(16px,3vw,32px) 72px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px">
+<div style="text-align:center">
+<div style="font-size:15px;color:var(--fg-3);font-weight:600">Séance terminée</div>
+<div style="font-size:26px;font-weight:800;color:var(--fg-1);margin-top:4px">{{ summary.gridName }}</div>
+</div>
+<div style="border-radius:20px;padding:22px 20px;text-align:center;background:{{ summary.verdictBg }};box-shadow:{{ summary.verdictGlow }}">
+<div style="font-size:24px;font-weight:800;color:{{ summary.verdictInk }};letter-spacing:-0.01em">{{ summary.verdictTitle }}</div>
+<div style="font-size:14px;font-weight:600;color:{{ summary.verdictInk }};opacity:0.75;margin-top:6px">{{ summary.verdictNote }}</div>
+</div>
+<div style="display:flex;gap:10px">
+<div style="flex:1;background:var(--bg-1);border-radius:16px;padding:14px;text-align:center;border:1px solid var(--border-soft)">
+<div style="font-size:22px;font-weight:800;color:#00FF87">{{ summary.successCount }}</div>
+<div style="font-size:12px;color:var(--fg-3);margin-top:2px">Réussies</div>
+</div>
+<div style="flex:1;background:var(--bg-1);border-radius:16px;padding:14px;text-align:center;border:1px solid var(--border-soft)">
+<div style="font-size:22px;font-weight:800;color:#D4FF3F">{{ summary.surpassCount }}</div>
+<div style="font-size:12px;color:var(--fg-3);margin-top:2px">Dépassées</div>
+</div>
+<div style="flex:1;background:var(--bg-1);border-radius:16px;padding:14px;text-align:center;border:1px solid var(--border-soft)">
+<div style="font-size:22px;font-weight:800;color:#FF2D6F">{{ summary.failCount }}</div>
+<div style="font-size:12px;color:var(--fg-3);margin-top:2px">Échouées</div>
+</div>
+</div>
+<sc-for list="{{ summary.results }}" as="r" hint-placeholder-count="6">
+<div style="background:var(--bg-1);border-radius:14px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border:1px solid var(--border-soft);gap:12px">
+<div style="min-width:0">
+<div style="font-size:14px;font-weight:700;color:var(--fg-1)">{{ r.exerciseName }}</div>
+<div style="font-size:12px;color:var(--fg-3);margin-top:1px">{{ r.setLabel }} · {{ r.compareLabel }}</div>
+</div>
+<div style="padding:5px 10px;border-radius:999px;background:{{ r.color }};color:#05170E;font-size:11px;font-weight:700;flex-shrink:0">{{ r.label }}</div>
+</div>
+</sc-for>
+<div onClick="{{ finishSummary }}" style="margin-top:8px;background:transparent;border:1.5px solid var(--border);color:var(--fg-1);text-align:center;padding:18px;border-radius:999px;font-size:17px;font-weight:700;cursor:pointer">Retour à l'accueil</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isStats }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Statistiques" style="max-width:1040px;margin:0 auto;padding:clamp(20px,3vw,36px) clamp(16px,3vw,32px) 72px;box-sizing:border-box;display:flex;flex-direction:column;gap:20px">
+<div style="font-size:clamp(26px,4vw,34px);font-weight:700;color:var(--fg-1);letter-spacing:-0.02em">Statistiques</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
+<div style="background:var(--bg-1);border-radius:16px;padding:16px;border:1px solid var(--border-soft)">
+<div style="font-size:12px;color:var(--fg-3);font-weight:600">Séances</div>
+<div style="font-size:26px;font-weight:800;color:var(--fg-1);margin-top:4px">{{ stats.kpi.sessions }}</div>
+</div>
+<div style="background:var(--bg-1);border-radius:16px;padding:16px;border:1px solid var(--border-soft)">
+<div style="font-size:12px;color:var(--fg-3);font-weight:600">Niveaux validés</div>
+<div style="font-size:26px;font-weight:800;color:var(--accent);margin-top:4px">{{ stats.kpi.levels }}</div>
+</div>
+<div style="background:var(--bg-1);border-radius:16px;padding:16px;border:1px solid var(--border-soft)">
+<div style="font-size:12px;color:var(--fg-3);font-weight:600">Reps cumulées</div>
+<div style="font-size:26px;font-weight:800;color:var(--fg-1);margin-top:4px">{{ stats.kpi.reps }}</div>
+</div>
+<div style="background:var(--bg-1);border-radius:16px;padding:16px;border:1px solid var(--border-soft)">
+<div style="font-size:12px;color:var(--fg-3);font-weight:600">Taux de réussite</div>
+<div style="font-size:26px;font-weight:800;color:var(--fg-1);margin-top:4px">{{ stats.kpi.successRate }}%</div>
+</div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;align-items:start">
+<div style="background:var(--bg-1);border-radius:20px;padding:18px;border:1px solid var(--border-soft)">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+<div style="font-size:15px;font-weight:700;color:var(--fg-1)">{{ stats.progressionTitle }}</div>
+<div style="display:flex;gap:4px;background:#081710;border-radius:999px;padding:3px">
+<sc-for list="{{ stats.modeChips }}" as="m" hint-placeholder-count="2">
+<div onClick="{{ m.select }}" style="padding:6px 12px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;background:{{ m.bg }};color:{{ m.fg }}">{{ m.name }}</div>
+</sc-for>
+</div>
+</div>
+<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+<sc-for list="{{ stats.filterChips }}" as="c" hint-placeholder-count="3">
+<div onClick="{{ c.select }}" style="padding:7px 12px;border-radius:999px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;background:{{ c.bg }};color:{{ c.fg }}">{{ c.name }}</div>
+</sc-for>
+</div>
+<svg viewBox="{{ stats.chart.viewBox }}" width="100%" height="130">
+<path d="{{ stats.chart.targetPath }}" fill="none" stroke="var(--border)" stroke-width="2" stroke-dasharray="4 4"></path>
+<path d="{{ stats.chart.actualPath }}" fill="none" stroke="var(--accent)" stroke-width="3"></path>
+<sc-for list="{{ stats.chart.dots }}" as="d" hint-placeholder-count="6">
+<circle cx="{{ d.cx }}" cy="{{ d.cy }}" r="4.5" fill="{{ d.color }}"></circle>
+</sc-for>
+</svg>
+<div style="font-size:12px;color:var(--fg-3);margin-top:6px">{{ stats.chart.caption }}</div>
+</div>
+<div style="background:var(--bg-1);border-radius:20px;padding:18px;border:1px solid var(--border-soft)">
+<div style="font-size:15px;font-weight:700;color:var(--fg-1);margin-bottom:4px">{{ stats.levelsTitle }}</div>
+<div style="font-size:12px;color:var(--fg-3);margin-bottom:14px">Tentatives et date de validation, niveau par niveau</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<sc-for list="{{ stats.levelRows }}" as="l" hint-placeholder-count="5">
+<div style="display:flex;align-items:center;gap:10px">
+<div style="font-size:12px;font-weight:700;color:var(--fg-2);min-width:62px">{{ l.label }}</div>
+<div style="flex:1;height:10px;border-radius:5px;background:#081710;overflow:hidden">
+<div style="height:100%;border-radius:5px;background:{{ l.color }};width:{{ l.pct }}%"></div>
+</div>
+<div style="font-size:11.5px;color:var(--fg-3);min-width:132px;text-align:right">{{ l.meta }}</div>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="background:var(--bg-1);border-radius:20px;padding:18px;border:1px solid var(--border-soft)">
+<div style="font-size:15px;font-weight:700;color:var(--fg-1);margin-bottom:14px">Réussite / dépassement / échec</div>
+<div style="display:flex;align-items:flex-end;gap:20px;height:120px">
+<sc-for list="{{ stats.dist }}" as="b" hint-placeholder-count="3">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;justify-content:flex-end;height:100%">
+<div style="font-size:12px;font-weight:700;color:var(--fg-1)">{{ b.count }}</div>
+<div style="width:100%;max-width:44px;border-radius:8px 8px 0 0;background:{{ b.color }};height:{{ b.heightPx }}px"></div>
+<div style="font-size:11px;color:var(--fg-3)">{{ b.label }}</div>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="background:var(--bg-1);border-radius:20px;padding:18px;border:1px solid var(--border-soft)">
+<div style="font-size:15px;font-weight:700;color:var(--fg-1);margin-bottom:14px">Régularité (5 dernières semaines)</div>
+<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px">
+<sc-for list="{{ stats.calendar }}" as="d" hint-placeholder-count="35">
+<div style="aspect-ratio:1;border-radius:6px;background:{{ d.color }}"></div>
+</sc-for>
+</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+</div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const STATUS_META = {
+  success: { color: '#00FF87', label: 'Réussi', ink: '#05170E' },
+  fail: { color: '#FF2D6F', label: 'Échoué', ink: '#1A0009' },
+  surpass: { color: '#D4FF3F', label: 'Dépassé', ink: '#1A1C00' },
+  ready: { color: 'rgba(255,255,255,0.14)', label: 'Prêt', ink: '#E8FFF2' },
+  progress: { color: '#22E1FF', label: 'En cours', ink: '#00181F' },
+};
+
+function compareStatus(actual, target) {
+  if (actual > target) return 'surpass';
+  if (actual === target) return 'success';
+  return 'fail';
+}
+
+function initials(name) {
+  const words = name.replace(/[()]/g, '').split(/\s+/).filter(w => w.length > 1);
+  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+  return (words[0] || name).slice(0, 2).toUpperCase();
+}
+
+function describeSets(sets) {
+  const t = sets[0].timed;
+  if (t && t.mode === 'hold') return `${sets.length} série${sets.length > 1 ? 's' : ''} · tenir ${t.seconds}s min`;
+  if (t && t.mode === 'max') return `${sets.length} série${sets.length > 1 ? 's' : ''} · ${sets[0].reps} reps en ${t.seconds}s max`;
+  return `${sets.length} série${sets.length > 1 ? 's' : ''} · ${sets.map(s => s.reps).join('/')} reps`;
+}
+
+// Une grille est une suite de niveaux ; chaque niveau reprend les memes
+// exercices avec une charge qui monte d'un cran.
+function buildLevels(base, count) {
+  const levels = [];
+  for (let l = 0; l < count; l++) {
+    levels.push({
+      exercises: base.map(ex => {
+        const sets = [];
+        for (let i = 0; i < ex.sets; i++) {
+          const reps = Math.max(1, ex.reps + l * (ex.repStep || 0) - (i === ex.sets - 1 ? (ex.dropLast || 0) : 0));
+          if (ex.mode) sets.push({ reps, timed: { mode: ex.mode, seconds: Math.max(5, ex.seconds + l * (ex.secStep || 0)) } });
+          else sets.push({ reps, timed: null });
+        }
+        return { name: ex.name, sets };
+      }),
+    });
+  }
+  return levels;
+}
+
+const GRIDS = [
+  { id: 'g1', name: 'Push Day', accentColor: '#00FF87', restSeconds: 60, currentLevel: 3, levels: buildLevels([
+    { name: 'Pompes', sets: 3, reps: 10, repStep: 1, dropLast: 2 },
+    { name: 'Dips', sets: 2, reps: 6, repStep: 1 },
+    { name: 'Planche (gainage)', sets: 2, reps: 1, mode: 'hold', seconds: 20, secStep: 5 },
+    { name: 'Pompes sautées', sets: 1, reps: 8, repStep: 1, mode: 'max', seconds: 40, secStep: -1 },
+  ], 12) },
+  { id: 'g2', name: 'Pull & Core', accentColor: '#22E1FF', restSeconds: 90, currentLevel: 1, levels: buildLevels([
+    { name: 'Tractions', sets: 3, reps: 5, repStep: 1, dropLast: 1 },
+    { name: 'Rowing australien', sets: 2, reps: 10, repStep: 1 },
+    { name: 'Relevés de jambes', sets: 2, reps: 10, repStep: 1 },
+    { name: 'Gainage L-sit', sets: 2, reps: 1, mode: 'hold', seconds: 15, secStep: 5 },
+  ], 10) },
+  { id: 'g3', name: 'Legs & Skills', accentColor: '#D4FF3F', restSeconds: 0, currentLevel: 0, levels: buildLevels([
+    { name: 'Squats bulgares', sets: 3, reps: 10, repStep: 2, dropLast: 2 },
+    { name: 'Fentes sautées', sets: 1, reps: 12, repStep: 1, mode: 'max', seconds: 40, secStep: -1 },
+    { name: 'Nordic curl', sets: 2, reps: 4, repStep: 1 },
+    { name: 'Poirier freestanding', sets: 1, reps: 1, mode: 'hold', seconds: 20, secStep: 5 },
+  ], 8) },
+];
+
+const EXERCISE_FILTERS = ['Pompes', 'Tractions', 'Squats bulgares'];
+const GRID_COLORS = ['#00FF87', '#22E1FF', '#D4FF3F', '#FF3DF0'];
+const EXERCISE_LIBRARY = [
+  { group: 'Poussée', items: ['Pompes', 'Pompes inclinées', 'Pompes sautées', 'Dips', 'Pompes piquées'] },
+  { group: 'Tirage', items: ['Tractions', 'Tractions supination', 'Rowing australien', 'Tractions négatives'] },
+  { group: 'Jambes', items: ['Squats', 'Squats bulgares', 'Fentes sautées', 'Nordic curl', 'Mollets debout'] },
+  { group: 'Gainage & skills', items: ['Planche (gainage)', 'Gainage L-sit', 'Relevés de jambes', 'Poirier freestanding', 'Hollow body'] },
+];
+
+// Une entree par seance : le niveau tente, et s'il a ete valide.
+const LEVEL_HIST = {
+  'Push Day': [
+    { date: '07 juil.', level: 1, validated: true },
+    { date: '14 juil.', level: 2, validated: false },
+    { date: '21 juil.', level: 2, validated: true },
+    { date: '28 juil.', level: 3, validated: false },
+    { date: '04 août', level: 3, validated: false },
+    { date: '11 août', level: 3, validated: true },
+    { date: '18 août', level: 4, validated: false },
+    { date: '25 août', level: 4, validated: false },
+  ],
+  'Pull & Core': [
+    { date: '21 juil.', level: 1, validated: true },
+    { date: '04 août', level: 2, validated: false },
+    { date: '18 août', level: 2, validated: false },
+  ],
+  'Legs & Skills': [
+    { date: '08 sept.', level: 1, validated: false },
+  ],
+};
+
+const SESSION_DAYS_AGO = [2, 3, 6, 8, 9, 13, 15, 16, 20, 22, 23, 27, 29, 30, 34];
+
+const POMPES_HIST = [
+  { date: '14 juil.', actual: 12, target: 12 }, { date: '21 juil.', actual: 13, target: 12 },
+  { date: '28 juil.', actual: 12, target: 13 }, { date: '04 août', actual: 14, target: 13 },
+  { date: '11 août', actual: 14, target: 14 }, { date: '18 août', actual: 16, target: 14 },
+  { date: '25 août', actual: 15, target: 15 }, { date: '01 sept.', actual: 17, target: 15 },
+];
+const TRACTIONS_HIST = [
+  { date: '21 juil.', actual: 6, target: 6 }, { date: '04 août', actual: 6, target: 7 },
+  { date: '18 août', actual: 8, target: 7 }, { date: '01 sept.', actual: 8, target: 8 },
+];
+const SQUATS_HIST = [
+  { date: '28 juil.', actual: 10, target: 10 }, { date: '11 août', actual: 11, target: 10 },
+  { date: '25 août', actual: 12, target: 11 }, { date: '08 sept.', actual: 14, target: 12 },
+];
+
+function chartScale(values, n) {
+  const W = 280, H = 110, padX = 14, padY = 16;
+  const max = Math.max(...values), min = Math.min(0, Math.min(...values));
+  const range = (max - min) || 1;
+  return {
+    W, H, viewBox: `0 0 ${W} ${H}`,
+    xAt: i => (n <= 1 ? W / 2 : padX + (W - 2 * padX) * (i / (n - 1))),
+    yAt: v => H - padY - (H - 2 * padY) * ((v - min) / range),
+  };
+}
+
+function buildLineChart(points) {
+  if (!points.length) return { viewBox: '0 0 280 110', actualPath: '', targetPath: '', dots: [], caption: '' };
+  const vals = [];
+  points.forEach(p => { vals.push(p.actual, p.target); });
+  const sc = chartScale(vals, points.length);
+  let actualPath = '', targetPath = '';
+  const dots = [];
+  points.forEach((p, i) => {
+    const x = sc.xAt(i), y = sc.yAt(p.actual), ty = sc.yAt(p.target);
+    actualPath += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1) + ' ';
+    targetPath += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + ty.toFixed(1) + ' ';
+    const st = compareStatus(p.actual, p.target);
+    dots.push({ cx: x.toFixed(1), cy: y.toFixed(1), color: STATUS_META[st].color });
+  });
+  const last = points[points.length - 1];
+  return { viewBox: sc.viewBox, actualPath: actualPath.trim(), targetPath: targetPath.trim(), dots, caption: `Dernière séance : ${last.actual} reps (objectif ${last.target})` };
+}
+
+// Niveau atteint au fil des seances : une marche par validation, un point
+// rose pour chaque seance qui n'a pas valide le niveau.
+function buildLevelChart(points, totalLevels) {
+  if (!points.length) return { viewBox: '0 0 280 110', actualPath: '', targetPath: '', dots: [], caption: '' };
+  const vals = points.map(p => p.level);
+  const sc = chartScale(vals, points.length);
+  let actualPath = '';
+  const dots = [];
+  points.forEach((p, i) => {
+    const x = sc.xAt(i), y = sc.yAt(p.level);
+    if (i === 0) actualPath += `M${x.toFixed(1)},${y.toFixed(1)} `;
+    else {
+      const prevY = sc.yAt(points[i - 1].level);
+      actualPath += `L${x.toFixed(1)},${prevY.toFixed(1)} L${x.toFixed(1)},${y.toFixed(1)} `;
+    }
+    dots.push({ cx: x.toFixed(1), cy: y.toFixed(1), color: p.validated ? STATUS_META.success.color : STATUS_META.fail.color });
+  });
+  const last = points[points.length - 1];
+  const reached = last.validated ? last.level + 1 : last.level;
+  return { viewBox: sc.viewBox, actualPath: actualPath.trim(), targetPath: '', dots, caption: `Niveau en cours : ${Math.min(reached, totalLevels)} / ${totalLevels} · ${points.length} séance${points.length > 1 ? 's' : ''}` };
+}
+
+class Component extends DCLogic {
+  state = {
+    screen: 'home',
+    grids: JSON.parse(JSON.stringify(GRIDS)),
+    draft: null,
+    draftLevelIdx: 0,
+    selectedGridId: null,
+    selectedLevelIdx: null,
+    session: null,
+    statsFilter: 'Pompes',
+    statsMode: 'exercise',
+    statsGridFilter: 'Push Day',
+    levelHist: JSON.parse(JSON.stringify(LEVEL_HIST)),
+    exerciseHist: { Pompes: [...POMPES_HIST], Tractions: [...TRACTIONS_HIST], 'Squats bulgares': [...SQUATS_HIST] },
+    sessionDaysAgo: [...SESSION_DAYS_AGO],
+    kpi: { sessions: 12, reps: 3860, success: 118, fail: 34, surpass: 46, levels: 4 },
+  };
+
+  stopTimers() {
+    if (this._interval) { clearInterval(this._interval); this._interval = null; }
+    if (this._restInterval) { clearInterval(this._restInterval); this._restInterval = null; }
+  }
+
+  componentWillUnmount() { this.stopTimers(); }
+
+  grid(id) { return this.state.grids.find(g => g.id === id); }
+
+  startRest(seconds) {
+    if (this._restInterval) clearInterval(this._restInterval);
+    this.setState(s => ({ session: { ...s.session, resting: true, restLeft: seconds } }));
+    this._restInterval = setInterval(() => {
+      this.setState(s => {
+        if (!s.session || !s.session.resting) return null;
+        const left = s.session.restLeft - 1;
+        if (left <= 0) { clearInterval(this._restInterval); this._restInterval = null; return { session: { ...s.session, resting: false, restLeft: 0 } }; }
+        return { session: { ...s.session, restLeft: left } };
+      });
+    }, 1000);
+  }
+
+  skipRest() {
+    if (this._restInterval) { clearInterval(this._restInterval); this._restInterval = null; }
+    this.setState(s => ({ session: { ...s.session, resting: false, restLeft: 0 } }));
+  }
+
+  openGrid(id) {
+    const g = this.grid(id);
+    this.setState({ selectedGridId: id, selectedLevelIdx: g ? g.currentLevel : 0, screen: 'gridDetail' });
+  }
+  backHome() { this.setState({ screen: 'home', selectedGridId: null, selectedLevelIdx: null }); }
+  goStats() { this.setState({ screen: 'stats' }); }
+  goHomeTab() { this.stopTimers(); this.setState({ screen: 'home', selectedGridId: null, selectedLevelIdx: null, session: null }); }
+
+  startSession() {
+    const g = this.grid(this.state.selectedGridId);
+    if (!g) return;
+    const levelIdx = g.currentLevel;
+    const level = g.levels[levelIdx];
+    if (!level || !level.exercises.length) return;
+    const firstSet = level.exercises[0].sets[0];
+    this.setState({ screen: 'session', session: { gridId: g.id, levelIdx, exIdx: 0, setIdx: 0, actualReps: firstSet.reps, timerSec: 0, timerRunning: false, results: [] } });
+  }
+
+  exitSession() {
+    if (window.confirm('Quitter la séance en cours ? La progression sera perdue et le niveau restera à repasser.')) {
+      this.stopTimers();
+      this.setState({ screen: 'home', session: null, selectedGridId: null, selectedLevelIdx: null });
+    }
+  }
+
+  incReps(d) { this.setState(s => ({ session: { ...s.session, actualReps: Math.max(0, s.session.actualReps + d) } })); }
+
+  startTimer() {
+    if (this._interval) clearInterval(this._interval);
+    this.setState(s => ({ session: { ...s.session, timerRunning: true } }));
+    this._interval = setInterval(() => this.tick(), 1000);
+  }
+
+  currentLevelOf(session) { return this.grid(session.gridId).levels[session.levelIdx]; }
+
+  tick() {
+    this.setState(s => {
+      if (!s.session) return null;
+      const set = this.currentLevelOf(s.session).exercises[s.session.exIdx].sets[s.session.setIdx];
+      const next = s.session.timerSec + 1;
+      if (set.timed && set.timed.mode === 'max' && next >= set.timed.seconds) {
+        clearInterval(this._interval); this._interval = null;
+        setTimeout(() => this.validateSet(true), 0);
+        return { session: { ...s.session, timerSec: set.timed.seconds, timerRunning: false } };
+      }
+      return { session: { ...s.session, timerSec: next } };
+    });
+  }
+
+  validateSet(forcedTimeout) {
+    if (this._interval) { clearInterval(this._interval); this._interval = null; }
+    const s = this.state.session;
+    if (!s) return;
+    const g = this.grid(s.gridId);
+    const level = g.levels[s.levelIdx];
+    const exercise = level.exercises[s.exIdx];
+    const set = exercise.sets[s.setIdx];
+    let status, actual, target, unit;
+    if (!set.timed) {
+      target = set.reps; actual = s.actualReps; unit = 'reps';
+      status = compareStatus(actual, target);
+    } else if (set.timed.mode === 'hold') {
+      target = set.timed.seconds; actual = s.timerSec; unit = 's';
+      status = compareStatus(actual, target);
+    } else {
+      target = set.timed.seconds; actual = forcedTimeout ? target : s.timerSec; unit = 's';
+      status = forcedTimeout ? 'fail' : (actual <= target * 0.5 ? 'surpass' : 'success');
+    }
+    const compareLabel = unit === 'reps' ? `${actual} reps / objectif ${target} reps` : `${actual}s / objectif ${target}s`;
+    const result = { exerciseName: exercise.name, setLabel: `Série ${s.setIdx + 1}/${exercise.sets.length}`, actual, target, unit, status, compareLabel, color: STATUS_META[status].color, label: STATUS_META[status].label };
+    const results = [...s.results, result];
+
+    if (!set.timed && EXERCISE_FILTERS.includes(exercise.name)) {
+      this.setState(st => ({ exerciseHist: { ...st.exerciseHist, [exercise.name]: [...st.exerciseHist[exercise.name], { date: "Aujourd'hui", actual, target }] } }));
+    }
+
+    let nextExIdx = s.exIdx, nextSetIdx = s.setIdx + 1;
+    if (nextSetIdx >= exercise.sets.length) { nextExIdx += 1; nextSetIdx = 0; }
+    if (nextExIdx >= level.exercises.length) {
+      const validated = results.every(r => r.status !== 'fail');
+      this.finalizeSession(results, g, s.levelIdx, validated);
+      this.setState({ screen: 'summary', session: { ...s, results, gridName: g.name, validated, levelNumber: s.levelIdx + 1, totalLevels: g.levels.length } });
+      return;
+    }
+    const nextSet = level.exercises[nextExIdx].sets[nextSetIdx];
+    this.setState({ session: { ...s, exIdx: nextExIdx, setIdx: nextSetIdx, actualReps: nextSet.reps, timerSec: 0, timerRunning: false, resting: false, restLeft: 0, results } });
+    if (g.restSeconds > 0) this.startRest(g.restSeconds);
+  }
+
+  // Tout ou rien : le niveau n'est valide que si aucune serie n'a echoue.
+  finalizeSession(results, g, levelIdx, validated) {
+    const success = results.filter(r => r.status === 'success').length;
+    const fail = results.filter(r => r.status === 'fail').length;
+    const surpass = results.filter(r => r.status === 'surpass').length;
+    const reps = results.filter(r => r.unit === 'reps').reduce((a, r) => a + r.actual, 0);
+    const isLast = levelIdx >= g.levels.length - 1;
+    this.setState(st => ({
+      kpi: {
+        sessions: st.kpi.sessions + 1, reps: st.kpi.reps + reps,
+        success: st.kpi.success + success, fail: st.kpi.fail + fail, surpass: st.kpi.surpass + surpass,
+        levels: st.kpi.levels + (validated ? 1 : 0),
+      },
+      sessionDaysAgo: st.sessionDaysAgo.includes(0) ? st.sessionDaysAgo : [0, ...st.sessionDaysAgo],
+      levelHist: { ...st.levelHist, [g.name]: [...(st.levelHist[g.name] || []), { date: "Auj.", level: levelIdx + 1, validated }] },
+      grids: st.grids.map(x => (x.id === g.id && validated && !isLast ? { ...x, currentLevel: levelIdx + 1 } : x)),
+    }));
+  }
+
+  updateDraft(mut) {
+    const d = JSON.parse(JSON.stringify(this.state.draft));
+    mut(d);
+    this.setState({ draft: d });
+  }
+
+  newGrid() {
+    const color = GRID_COLORS[this.state.grids.length % GRID_COLORS.length];
+    this.setState({ draft: { id: 'g' + Date.now(), name: '', accentColor: color, restSeconds: 0, currentLevel: 0, levels: [{ exercises: [] }] }, draftIsNew: true, draftLevelIdx: 0, screen: 'builder' });
+  }
+
+  editGrid(id) {
+    const g = this.grid(id);
+    if (!g) return;
+    this.setState({ draft: JSON.parse(JSON.stringify(g)), draftIsNew: false, draftLevelIdx: g.currentLevel, screen: 'builder' });
+  }
+
+  setDraftName(v) { this.updateDraft(d => { d.name = v; }); }
+  openLibrary() { this.setState({ screen: 'library' }); }
+
+  addLevel() {
+    const d = JSON.parse(JSON.stringify(this.state.draft));
+    d.levels.push({ exercises: [] });
+    this.setState({ draft: d, draftLevelIdx: d.levels.length - 1 });
+  }
+
+  duplicateLevel() {
+    const i = this.state.draftLevelIdx;
+    this.updateDraft(d => { d.levels[i] = JSON.parse(JSON.stringify(d.levels[i - 1])); });
+  }
+
+  removeLevel() {
+    const i = this.state.draftLevelIdx;
+    const d = JSON.parse(JSON.stringify(this.state.draft));
+    if (d.levels.length <= 1) return;
+    d.levels.splice(i, 1);
+    if (d.currentLevel >= d.levels.length) d.currentLevel = d.levels.length - 1;
+    this.setState({ draft: d, draftLevelIdx: Math.max(0, i - 1) });
+  }
+
+  draftLevel(d) { return d.levels[this.state.draftLevelIdx]; }
+
+  addExercise(name) {
+    this.updateDraft(d => { this.draftLevel(d).exercises.push({ name, sets: [{ reps: 10, timed: null }] }); });
+    this.setState({ screen: 'builder' });
+  }
+  removeExercise(i) { this.updateDraft(d => { this.draftLevel(d).exercises.splice(i, 1); }); }
+  addSet(i) {
+    this.updateDraft(d => {
+      const ex = this.draftLevel(d).exercises[i];
+      const last = ex.sets[ex.sets.length - 1] || { reps: 10, timed: null };
+      ex.sets.push(JSON.parse(JSON.stringify(last)));
+    });
+  }
+  removeSet(i, j) {
+    this.updateDraft(d => {
+      const ex = this.draftLevel(d).exercises[i];
+      ex.sets.splice(j, 1);
+      if (!ex.sets.length) ex.sets.push({ reps: 10, timed: null });
+    });
+  }
+  bumpReps(i, j, delta) { this.updateDraft(d => { const s = this.draftLevel(d).exercises[i].sets[j]; s.reps = Math.max(1, s.reps + delta); }); }
+  bumpSeconds(i, j, delta) { this.updateDraft(d => { const s = this.draftLevel(d).exercises[i].sets[j]; if (s.timed) s.timed.seconds = Math.max(5, s.timed.seconds + delta); }); }
+  cycleMode(i, j) {
+    this.updateDraft(d => {
+      const s = this.draftLevel(d).exercises[i].sets[j];
+      if (!s.timed) s.timed = { mode: 'hold', seconds: 30 };
+      else if (s.timed.mode === 'hold') s.timed = { mode: 'max', seconds: 30 };
+      else s.timed = null;
+    });
+  }
+
+  saveDraft() {
+    const d = this.state.draft;
+    if (!d) return;
+    const grid = { ...d, name: (d.name || '').trim() || 'Grille sans nom' };
+    const hasContent = grid.levels.some(l => l.exercises.length);
+    this.setState(st => ({
+      grids: st.grids.some(g => g.id === grid.id) ? st.grids.map(g => (g.id === grid.id ? grid : g)) : [...st.grids, grid],
+      draft: null,
+      selectedGridId: grid.id,
+      selectedLevelIdx: grid.currentLevel,
+      screen: hasContent ? 'gridDetail' : 'home',
+    }));
+  }
+
+  cancelDraft() { this.setState({ draft: null, screen: 'home' }); }
+
+  deleteDraftGrid() {
+    if (!this.state.draft || !window.confirm('Supprimer cette grille et toute sa progression ?')) return;
+    const id = this.state.draft.id;
+    this.setState(st => ({ grids: st.grids.filter(g => g.id !== id), draft: null, selectedGridId: null, selectedLevelIdx: null, screen: 'home' }));
+  }
+
+  levelChipStyle(kind) {
+    if (kind === 'validated') return { bg: 'var(--accent)', fg: '#05170E', border: 'var(--accent)' };
+    if (kind === 'current') return { bg: 'transparent', fg: 'var(--accent)', border: 'var(--accent)' };
+    if (kind === 'selected') return { bg: '#152B1F', fg: 'var(--fg-1)', border: 'var(--border)' };
+    return { bg: '#081710', fg: 'var(--fg-3)', border: 'var(--border-soft)' };
+  }
+
+  getBuilderVals() {
+    const d = this.state.draft;
+    if (!d) return { title: '', name: '', exercises: [], levelChips: [], canDelete: false };
+    const li = Math.min(this.state.draftLevelIdx, d.levels.length - 1);
+    const level = d.levels[li];
+    return {
+      title: this.state.draftIsNew ? 'Nouvelle grille' : 'Modifier la grille',
+      name: d.name,
+      accentColor: d.accentColor,
+      canDelete: !this.state.draftIsNew,
+      isEmpty: level.exercises.length === 0,
+      levelTitle: `Niveau ${li + 1} sur ${d.levels.length}`,
+      canRemoveLevel: d.levels.length > 1,
+      showDuplicate: li > 0 && level.exercises.length === 0,
+      addLevel: () => this.addLevel(),
+      removeLevel: () => this.removeLevel(),
+      duplicateLevel: () => this.duplicateLevel(),
+      levelChips: d.levels.map((lv, i) => {
+        const st = this.levelChipStyle(i === li ? 'selected' : 'locked');
+        return { label: String(i + 1), bg: st.bg, fg: st.fg, border: st.border, select: () => this.setState({ draftLevelIdx: i }) };
+      }),
+      restLabel: (d.restSeconds || 0) > 0 ? `${d.restSeconds}s` : 'désactivé',
+      incRest: () => this.updateDraft(x => { x.restSeconds = Math.min(300, (x.restSeconds || 0) + 15); }),
+      decRest: () => this.updateDraft(x => { x.restSeconds = Math.max(0, (x.restSeconds || 0) - 15); }),
+      onName: (e) => this.setDraftName(e.target.value),
+      save: () => this.saveDraft(),
+      cancel: () => this.cancelDraft(),
+      delete: () => this.deleteDraftGrid(),
+      openLibrary: () => this.openLibrary(),
+      exercises: level.exercises.map((ex, i) => ({
+        name: ex.name,
+        initials: initials(ex.name),
+        accentColor: d.accentColor,
+        remove: () => this.removeExercise(i),
+        addSet: () => this.addSet(i),
+        sets: ex.sets.map((s, j) => ({
+          label: `Série ${j + 1}`,
+          repsLabel: `${s.reps} reps`,
+          isTimed: !!s.timed,
+          showReps: !(s.timed && s.timed.mode === 'hold'),
+          secondsLabel: s.timed ? `${s.timed.seconds}s` : '',
+          modeLabel: !s.timed ? 'Sans chrono' : (s.timed.mode === 'hold' ? 'Tenir au moins' : 'Faire en max'),
+          modeBg: !s.timed ? 'var(--wash)' : (s.timed.mode === 'hold' ? 'var(--teal-soft)' : 'var(--orange-soft)'),
+          modeFg: !s.timed ? 'var(--fg-2)' : (s.timed.mode === 'hold' ? 'var(--teal-dark)' : 'var(--orange-dark)'),
+          incReps: () => this.bumpReps(i, j, 1),
+          decReps: () => this.bumpReps(i, j, -1),
+          incSec: () => this.bumpSeconds(i, j, 5),
+          decSec: () => this.bumpSeconds(i, j, -5),
+          cycleMode: () => this.cycleMode(i, j),
+          remove: () => this.removeSet(i, j),
+        })),
+      })),
+    };
+  }
+
+  getLibraryVals() {
+    return {
+      back: () => this.setState({ screen: 'builder' }),
+      groups: EXERCISE_LIBRARY.map(g => ({
+        group: g.group,
+        items: g.items.map(name => ({ name, initials: initials(name), add: () => this.addExercise(name) })),
+      })),
+    };
+  }
+
+  finishSummary() { this.stopTimers(); this.setState({ screen: 'home', session: null, selectedGridId: null, selectedLevelIdx: null }); }
+  setStatsFilter(name) { this.setState({ statsFilter: name }); }
+
+  getHomeVals() {
+    return this.state.grids.map(g => {
+      const level = g.levels[g.currentLevel] || { exercises: [] };
+      const ex = level.exercises.length;
+      const sets = level.exercises.reduce((a, e) => a + e.sets.length, 0);
+      return {
+        id: g.id, name: g.name, accentColor: g.accentColor, initials: initials(g.name),
+        metaLabel: `${ex} exercice${ex > 1 ? 's' : ''} · ${sets} série${sets > 1 ? 's' : ''} à ce niveau`,
+        levelLabel: `Niveau ${g.currentLevel + 1}/${g.levels.length}`,
+        progressPct: Math.round((g.currentLevel / g.levels.length) * 100),
+        open: () => this.openGrid(g.id),
+      };
+    });
+  }
+
+  getGridDetailVals() {
+    const g = this.grid(this.state.selectedGridId);
+    if (!g) return { name: '', accentColor: '#00FF87', exercises: [], levelChips: [] };
+    const li = this.state.selectedLevelIdx == null ? g.currentLevel : this.state.selectedLevelIdx;
+    const level = g.levels[li] || { exercises: [] };
+    const hist = this.state.levelHist[g.name] || [];
+    const validatedEntry = hist.find(h => h.level === li + 1 && h.validated);
+    const isCurrent = li === g.currentLevel;
+    const isValidated = li < g.currentLevel;
+    let note = '';
+    if (isValidated) note = validatedEntry ? `Niveau validé le ${validatedEntry.date}.` : 'Niveau déjà validé.';
+    else if (!isCurrent) note = `Niveau verrouillé — validez d'abord le niveau ${g.currentLevel + 1}.`;
+    return {
+      name: g.name,
+      accentColor: g.accentColor,
+      progressLabel: `Niveau ${g.currentLevel + 1} sur ${g.levels.length} · repos ${g.restSeconds > 0 ? g.restSeconds + 's' : 'désactivé'}`,
+      levelTitle: `Niveau ${li + 1}`,
+      levelChips: g.levels.map((lv, i) => {
+        const kind = i < g.currentLevel ? 'validated' : (i === g.currentLevel ? 'current' : 'locked');
+        const st = this.levelChipStyle(i === li && kind === 'locked' ? 'selected' : kind);
+        return { label: String(i + 1), bg: st.bg, fg: st.fg, border: i === li ? 'var(--fg-1)' : st.border, select: () => this.setState({ selectedLevelIdx: i }) };
+      }),
+      exercises: level.exercises.map(ex => ({ name: ex.name, initials: initials(ex.name), setsLabel: describeSets(ex.sets) })),
+      showNote: !isCurrent,
+      note,
+      showStart: isCurrent && level.exercises.length > 0,
+      startLabel: `Commencer le niveau ${g.currentLevel + 1}`,
+    };
+  }
+
+  getSessionVals() {
+    const s = this.state.session;
+    if (!s) return {};
+    const g = this.grid(s.gridId);
+    const level = g.levels[s.levelIdx];
+    const exercise = level.exercises[s.exIdx];
+    const set = exercise.sets[s.setIdx];
+    const totalSets = level.exercises.reduce((a, e) => a + e.sets.length, 0);
+    const doneSets = level.exercises.slice(0, s.exIdx).reduce((a, e) => a + e.sets.length, 0) + s.setIdx;
+    const progressPct = Math.round((doneSets / totalSets) * 100);
+    const resting = !!s.resting;
+    const isRepsMode = !set.timed && !resting;
+    const isHoldMode = !!set.timed && set.timed.mode === 'hold' && !resting;
+    const isMaxMode = !!set.timed && set.timed.mode === 'max' && !resting;
+    const circumference = 603;
+    let statusKey = 'ready';
+    if (!set.timed) {
+      statusKey = compareStatus(s.actualReps, set.reps);
+    } else if (set.timed.mode === 'hold') {
+      statusKey = (s.timerSec === 0 && !s.timerRunning) ? 'ready' : compareStatus(s.timerSec, set.timed.seconds);
+    } else {
+      statusKey = s.timerRunning ? 'progress' : 'ready';
+    }
+    const targetSeconds = set.timed ? set.timed.seconds : null;
+    const ringProgress = targetSeconds ? Math.min(1, s.timerSec / targetSeconds) : 0;
+    const remainingSeconds = isMaxMode ? Math.max(0, targetSeconds - s.timerSec) : null;
+    return {
+      exerciseName: exercise.name,
+      levelLabel: `Niveau ${s.levelIdx + 1}/${g.levels.length}`,
+      exIdxLabel: `${s.exIdx + 1}/${level.exercises.length}`,
+      setIdxLabel: `${s.setIdx + 1}/${exercise.sets.length}`,
+      progressPct, isRepsMode, isHoldMode, isMaxMode,
+      isResting: resting, restLeft: s.restLeft || 0,
+      skipRest: () => this.skipRest(),
+      actualReps: s.actualReps, targetReps: set.reps,
+      statusColor: STATUS_META[statusKey].color,
+      statusLabel: STATUS_META[statusKey].label,
+      statusInk: STATUS_META[statusKey].ink,
+      statusGlow: statusKey === 'ready' ? 'none' : `0 0 26px ${STATUS_META[statusKey].color}66`,
+      timerSec: s.timerSec, targetSeconds, timerRunning: s.timerRunning, timerNotStarted: !s.timerRunning,
+      remainingSeconds,
+      ringDashOffset: Math.round(circumference * (1 - ringProgress)),
+      incReps: () => this.incReps(1),
+      decReps: () => this.incReps(-1),
+      startTimer: () => this.startTimer(),
+      validateSet: () => this.validateSet(false),
+    };
+  }
+
+  getSummaryVals() {
+    const s = this.state.session;
+    if (!s || !s.results) return { gridName: '', successCount: 0, failCount: 0, surpassCount: 0, results: [], verdictTitle: '', verdictNote: '' };
+    const failCount = s.results.filter(r => r.status === 'fail').length;
+    const validated = !!s.validated;
+    const isLast = s.levelNumber >= s.totalLevels;
+    return {
+      gridName: s.gridName,
+      verdictTitle: validated ? `Niveau ${s.levelNumber} validé` : `Niveau ${s.levelNumber} non validé`,
+      verdictNote: validated
+        ? (isLast ? 'Dernier niveau de la grille. Bravo.' : `Prochaine séance : niveau ${s.levelNumber + 1}.`)
+        : `${failCount} série${failCount > 1 ? 's' : ''} manquée${failCount > 1 ? 's' : ''} — la prochaine séance repart du niveau ${s.levelNumber}.`,
+      verdictBg: validated ? '#00FF87' : '#FF2D6F',
+      verdictInk: validated ? '#05170E' : '#1A0009',
+      verdictGlow: validated ? '0 0 34px rgba(0,255,135,0.35)' : '0 0 34px rgba(255,45,111,0.3)',
+      successCount: s.results.filter(r => r.status === 'success').length,
+      failCount,
+      surpassCount: s.results.filter(r => r.status === 'surpass').length,
+      results: s.results,
+    };
+  }
+
+  getStatsVals() {
+    const byGrid = this.state.statsMode === 'grid';
+    const gridName = this.state.statsGridFilter;
+    const gridObj = this.state.grids.find(g => g.name === gridName);
+    const totalLevels = gridObj ? gridObj.levels.length : 0;
+    const hist = this.state.levelHist[gridName] || [];
+    const chart = byGrid
+      ? buildLevelChart(hist, totalLevels)
+      : buildLineChart(this.state.exerciseHist[this.state.statsFilter] || []);
+    const kpi = this.state.kpi;
+    const total = kpi.success + kpi.fail + kpi.surpass;
+    const successRate = total ? Math.round(((kpi.success + kpi.surpass) / total) * 100) : 0;
+    const maxCount = Math.max(kpi.success, kpi.fail, kpi.surpass, 1);
+    const dist = [
+      { label: 'Réussies', count: kpi.success, color: STATUS_META.success.color, heightPx: Math.max(6, Math.round((kpi.success / maxCount) * 90)) },
+      { label: 'Dépassées', count: kpi.surpass, color: STATUS_META.surpass.color, heightPx: Math.max(6, Math.round((kpi.surpass / maxCount) * 90)) },
+      { label: 'Échouées', count: kpi.fail, color: STATUS_META.fail.color, heightPx: Math.max(6, Math.round((kpi.fail / maxCount) * 90)) },
+    ];
+    const calendar = [];
+    for (let i = 0; i < 35; i++) {
+      const daysAgo = 34 - i;
+      calendar.push({ color: this.state.sessionDaysAgo.includes(daysAgo) ? '#00FF87' : '#152B1F' });
+    }
+    const attempted = hist.length ? Math.max(...hist.map(h => h.level)) : 1;
+    const maxAttempts = hist.length ? Math.max(...hist.map(h => hist.filter(x => x.level === h.level).length)) : 1;
+    const levelRows = [];
+    for (let lv = 1; lv <= attempted; lv++) {
+      const entries = hist.filter(h => h.level === lv);
+      const done = entries.find(h => h.validated);
+      levelRows.push({
+        label: `Niveau ${lv}`,
+        pct: Math.round((entries.length / maxAttempts) * 100),
+        color: done ? STATUS_META.success.color : '#22E1FF',
+        meta: `${entries.length} tentative${entries.length > 1 ? 's' : ''} · ${done ? 'validé le ' + done.date : 'en cours'}`,
+      });
+    }
+    const names = byGrid ? this.state.grids.map(g => g.name) : EXERCISE_FILTERS;
+    const active = byGrid ? gridName : this.state.statsFilter;
+    const filterChips = names.map(name => ({
+      name,
+      bg: name === active ? '#00FF87' : '#152B1F',
+      fg: name === active ? '#05170E' : 'var(--fg-2)',
+      select: () => (byGrid ? this.setState({ statsGridFilter: name }) : this.setStatsFilter(name)),
+    }));
+    const modeChips = [
+      { name: 'Par exercice', bg: byGrid ? 'transparent' : '#152B1F', fg: byGrid ? 'var(--fg-3)' : 'var(--fg-1)', select: () => this.setState({ statsMode: 'exercise' }) },
+      { name: 'Par grille', bg: byGrid ? '#152B1F' : 'transparent', fg: byGrid ? 'var(--fg-1)' : 'var(--fg-3)', select: () => this.setState({ statsMode: 'grid' }) },
+    ];
+    return {
+      kpi: { ...kpi, successRate }, chart, dist, calendar, filterChips, modeChips, levelRows,
+      levelsTitle: `Niveaux — ${gridName}`,
+      progressionTitle: byGrid ? 'Niveau atteint au fil des séances' : 'Progression par exercice',
+    };
+  }
+
+  renderVals() {
+    const screen = this.state.screen;
+    return {
+      screen, isHome: screen === 'home', isGridDetail: screen === 'gridDetail', isSession: screen === 'session',
+      isSummary: screen === 'summary', isStats: screen === 'stats',
+      isBuilder: screen === 'builder', isLibrary: screen === 'library',
+      builder: this.getBuilderVals(),
+      library: this.getLibraryVals(),
+      newGrid: () => this.newGrid(),
+      editSelectedGrid: () => this.editGrid(this.state.selectedGridId),
+      rootBg: screen === 'session' ? '#050D09' : 'var(--wash)',
+      showTabBar: screen !== 'session' && screen !== 'summary',
+      navHomeBg: screen === 'stats' ? 'transparent' : 'var(--accent)',
+      navHomeFg: screen === 'stats' ? 'var(--fg-2)' : '#05170E',
+      navStatsBg: screen === 'stats' ? 'var(--accent)' : 'transparent',
+      navStatsFg: screen === 'stats' ? '#05170E' : 'var(--fg-2)',
+      goHomeTab: () => this.goHomeTab(),
+      goStatsTab: () => this.goStats(),
+      homeGrids: this.getHomeVals(),
+      gridDetail: this.getGridDetailVals(),
+      backHome: () => this.backHome(),
+      startSessionFromGrid: () => this.startSession(),
+      sess: this.getSessionVals(),
+      exitSession: () => this.exitSession(),
+      summary: this.getSummaryVals(),
+      finishSummary: () => this.finishSummary(),
+      stats: this.getStatsVals(),
+    };
+  }
+}
+
+</script>
+</body>
+</html>

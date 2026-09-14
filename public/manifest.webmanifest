@@ -3,12 +3,12 @@
   "short_name": "StoneSteps",
   "description": "Progression en callisthenie par niveaux : construis ta grille, valide tes seances, suis ta progression.",
   "lang": "fr",
-  "start_url": "/dashboard",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
+  "background_color": "#06120C",
+  "theme_color": "#06120C",
   "icons": [
     {
       "src": "/icons/icon.svg",

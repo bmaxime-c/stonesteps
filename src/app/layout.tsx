@@ -1,20 +1,16 @@
 import type { Metadata, Viewport } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { DM_Sans } from 'next/font/google'
 
 import { ServiceWorkerRegister } from '@/components/service-worker-register'
-import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
 
 import './globals.css'
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+// Famille unique, sans-serif geometrique : c'est celle de la maquette.
+const dmSans = DM_Sans({
+  variable: '--font-dm-sans',
   subsets: ['latin'],
-})
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
+  display: 'swap',
 })
 
 export const metadata: Metadata = {
@@ -33,12 +29,8 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  // Deux valeurs : la barre du navigateur suit le theme au lieu de rester
-  // sombre sur une page claire.
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#fafaf9' },
-    { media: '(prefers-color-scheme: dark)', color: '#0c0a09' },
-  ],
+  // Theme unique sombre : une seule valeur, celle du fond de page.
+  themeColor: '#06120C',
   // L'app est utilisee en salle, telephone en main : on evite le zoom
   // accidentel entre deux series sans bloquer l'accessibilite.
   initialScale: 1,
@@ -48,19 +40,13 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
-    <html
-      lang="fr"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-      // next-themes ecrit la classe de theme avant l'hydratation : la
-      // divergence est attendue et sans consequence.
-      suppressHydrationWarning
-    >
+    // `dark` est pose en dur : l'app n'a pas de mode clair, mais les
+    // primitives shadcn portent des variantes `dark:` qu'il faut activer.
+    <html lang="fr" className={`dark ${dmSans.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
-        <ThemeProvider>
-          {children}
-          <Toaster />
-          <ServiceWorkerRegister />
-        </ThemeProvider>
+        {children}
+        <Toaster />
+        <ServiceWorkerRegister />
       </body>
     </html>
   )

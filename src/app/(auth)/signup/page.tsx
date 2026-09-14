@@ -2,14 +2,6 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/server'
 
 import { signUp } from '../actions'
@@ -23,27 +15,25 @@ export default async function SignUpPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (user) redirect('/dashboard')
+  if (user) redirect('/')
 
   return (
-    <main className="flex flex-1 items-center justify-center p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Creer un compte</CardTitle>
-          <CardDescription>
-            Construis ta grille de niveaux et suis tes seances.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <AuthForm action={signUp} mode="signup" />
-        </CardContent>
-        <CardFooter className="text-muted-foreground text-sm">
-          Deja inscrit ?&nbsp;
-          <Link href="/login" className="text-foreground underline underline-offset-4">
-            Se connecter
-          </Link>
-        </CardFooter>
-      </Card>
-    </main>
+    <section className="bg-card border-border flex flex-col gap-5 rounded-[20px] border p-6">
+      <div>
+        <h1 className="text-lg font-bold">Creer un compte</h1>
+        <p className="text-muted-foreground mt-1 text-sm">
+          Construis ta grille de niveaux et suis tes seances.
+        </p>
+      </div>
+
+      <AuthForm action={signUp} mode="signup" />
+
+      <p className="text-muted-foreground text-sm">
+        Deja inscrit ?{' '}
+        <Link href="/login" className="text-primary font-semibold">
+          Se connecter
+        </Link>
+      </p>
+    </section>
   )
 }
