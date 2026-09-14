@@ -5,9 +5,13 @@ import { useEffect } from 'react'
 /**
  * Enregistre le service worker.
  *
- * Phase 1 : il ne met en cache que la coquille de l'application, pour que le
- * lancement fonctionne sans reseau. La mise en cache des donnees de seance et
- * la file de synchronisation arrivent en phase 3, la ou elles servent.
+ * En production uniquement : en developpement, un worker actif servirait une
+ * coquille perimee a chaque rechargement et masquerait les modifications.
+ *
+ * Le worker ne met en cache que la coquille — page hors ligne et manifeste.
+ * La seance, elle, survit a un rafraichissement par `sessionStorage` et par sa
+ * route propre, pas par un cache reseau : du HTML authentifie mis en cache
+ * resterait lisible apres une deconnexion.
  */
 export function ServiceWorkerRegister() {
   useEffect(() => {

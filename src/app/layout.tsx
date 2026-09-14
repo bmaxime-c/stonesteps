@@ -21,6 +21,17 @@ export const metadata: Metadata = {
   description:
     'Progression en callisthénie par niveaux : construis ta grille, valide tes séances, suis ta progression.',
   manifest: '/manifest.webmanifest',
+  icons: {
+    icon: [
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+      { url: '/icons/icon.svg', type: 'image/svg+xml' },
+    ],
+    // iOS compose la transparence sur du noir et arrondit lui-meme : on lui
+    // donne la variante pleine page, opaque, plutot que celle aux coins
+    // decoupes.
+    apple: [{ url: '/icons/icon-maskable-192.png', sizes: '192x192' }],
+  },
   appleWebApp: {
     capable: true,
     title: 'StoneSteps',

@@ -66,7 +66,7 @@ export function ExerciseLibrary({
               {GROUP_LABELS[group]}
             </h2>
 
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-2.5">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(min(240px,100%),1fr))] gap-2.5">
               {items.map((exercise) => (
                 <button
                   key={exercise.id}
