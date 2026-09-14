@@ -28,7 +28,7 @@ function result(
     levelSetId: `ls${nextIndex}`,
     setIndex: nextIndex,
     exerciseName,
-    setLabel: 'Serie 1/1',
+    setLabel: 'Série 1/1',
     unit,
     targetValue,
     actualValue,

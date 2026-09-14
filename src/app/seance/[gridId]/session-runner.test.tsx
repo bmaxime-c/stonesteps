@@ -69,33 +69,33 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-const validateButton = () => screen.getByRole('button', { name: 'Valider la serie' })
+const validateButton = () => screen.getByRole('button', { name: 'Valider la série' })
 
 describe('parcours d une seance sans chrono', () => {
   it('annonce le niveau, l exercice et la serie en cours', () => {
     render(<SessionRunner plan={plan()} />)
     expect(screen.getByText('Niveau 3/12')).toBeInTheDocument()
     expect(screen.getByText(/Exercice 1\/1/)).toBeInTheDocument()
-    expect(screen.getByText(/Serie 1\/2/)).toBeInTheDocument()
+    expect(screen.getByText(/Série 1\/2/)).toBeInTheDocument()
   })
 
   it('initialise le compteur a l objectif, pas a zero', () => {
     render(<SessionRunner plan={plan()} />)
     expect(screen.getByText('10')).toBeInTheDocument()
     expect(screen.getByText('objectif 10 reps')).toBeInTheDocument()
-    expect(screen.getByText('Reussi')).toBeInTheDocument()
+    expect(screen.getByText('Réussi')).toBeInTheDocument()
   })
 
   it('fait evoluer le statut en direct pendant le reglage', async () => {
     const user = userEvent.setup()
     render(<SessionRunner plan={plan()} />)
 
-    await user.click(screen.getByRole('button', { name: 'Ajouter une repetition' }))
-    expect(screen.getByText('Depasse')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Ajouter une répétition' }))
+    expect(screen.getByText('Dépassé')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Retirer une repetition' }))
-    await user.click(screen.getByRole('button', { name: 'Retirer une repetition' }))
-    expect(screen.getByText('Echoue')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Retirer une répétition' }))
+    await user.click(screen.getByRole('button', { name: 'Retirer une répétition' }))
+    expect(screen.getByText('Échoué')).toBeInTheDocument()
   })
 
   it('valide le niveau quand toutes les series sont reussies', async () => {
@@ -105,8 +105,8 @@ describe('parcours d une seance sans chrono', () => {
     await user.click(validateButton())
     await user.click(validateButton())
 
-    expect(await screen.findByText('Niveau 3 valide')).toBeInTheDocument()
-    expect(screen.getByText('Prochaine seance : niveau 4')).toBeInTheDocument()
+    expect(await screen.findByText('Niveau 3 validé')).toBeInTheDocument()
+    expect(screen.getByText('Prochaine séance : niveau 4')).toBeInTheDocument()
   })
 
   it('invalide le niveau des qu une seule serie est manquee', async () => {
@@ -115,12 +115,12 @@ describe('parcours d une seance sans chrono', () => {
 
     // Premiere serie a l'objectif, seconde une repetition en dessous.
     await user.click(validateButton())
-    await user.click(screen.getByRole('button', { name: 'Retirer une repetition' }))
+    await user.click(screen.getByRole('button', { name: 'Retirer une répétition' }))
     await user.click(validateButton())
 
-    expect(await screen.findByText('Niveau 3 non valide')).toBeInTheDocument()
+    expect(await screen.findByText('Niveau 3 non validé')).toBeInTheDocument()
     expect(
-      screen.getByText(/1 serie manquee — la prochaine seance repart du niveau 3/),
+      screen.getByText(/1 série manquée — la prochaine séance repart du niveau 3/),
     ).toBeInTheDocument()
   })
 
@@ -140,7 +140,7 @@ describe('parcours d une seance sans chrono', () => {
     expect(input.results).toHaveLength(2)
     expect(input.results[0]).toMatchObject({
       exerciseName: 'Pompes',
-      setLabel: 'Serie 1/2',
+      setLabel: 'Série 1/2',
       unit: 'reps',
       targetValue: 10,
       actualValue: 10,
@@ -155,8 +155,8 @@ describe('parcours d une seance sans chrono', () => {
     await user.click(validateButton())
     await user.click(validateButton())
 
-    expect(await screen.findByText('Serie 1/2 · 10 / 10 reps')).toBeInTheDocument()
-    expect(screen.getByText('Serie 2/2 · 10 / 10 reps')).toBeInTheDocument()
+    expect(await screen.findByText('Série 1/2 · 10 / 10 reps')).toBeInTheDocument()
+    expect(screen.getByText('Série 2/2 · 10 / 10 reps')).toBeInTheDocument()
   })
 })
 
@@ -168,7 +168,7 @@ describe('repos', () => {
     await user.click(validateButton())
 
     expect(screen.getByText('Repos')).toBeInTheDocument()
-    expect(screen.getByText('Prochaine serie : Pompes · Serie 2/2')).toBeInTheDocument()
+    expect(screen.getByText('Prochaine série : Pompes · Série 2/2')).toBeInTheDocument()
   })
 
   it('se passe a la demande et rend la main sur la serie suivante', async () => {
@@ -178,7 +178,7 @@ describe('repos', () => {
     await user.click(validateButton())
     await user.click(screen.getByRole('button', { name: 'Passer le repos' }))
 
-    expect(screen.getByText(/Serie 2\/2/)).toBeInTheDocument()
+    expect(screen.getByText(/Série 2\/2/)).toBeInTheDocument()
     expect(screen.queryByText('Repos')).not.toBeInTheDocument()
   })
 
@@ -190,7 +190,7 @@ describe('repos', () => {
     await user.click(screen.getByRole('button', { name: 'Passer le repos' }))
     await user.click(validateButton())
 
-    expect(await screen.findByText('Niveau 3 valide')).toBeInTheDocument()
+    expect(await screen.findByText('Niveau 3 validé')).toBeInTheDocument()
     expect(screen.queryByText('Repos')).not.toBeInTheDocument()
   })
 
@@ -200,7 +200,7 @@ describe('repos', () => {
 
     await user.click(validateButton())
     expect(screen.queryByText('Repos')).not.toBeInTheDocument()
-    expect(screen.getByText(/Serie 2\/2/)).toBeInTheDocument()
+    expect(screen.getByText(/Série 2\/2/)).toBeInTheDocument()
   })
 })
 
@@ -225,9 +225,9 @@ describe('serie strict', () => {
     render(<SessionRunner plan={strictPlan()} />)
 
     expect(screen.getByText('En cours')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Demarrer le chrono' }))
+    await user.click(screen.getByRole('button', { name: 'Démarrer le chrono' }))
     expect(screen.getByText('En cours')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Termine' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Terminé' })).toBeInTheDocument()
   })
 
   it('se clot automatiquement en echec quand le compte a rebours atteint zero', async () => {
@@ -237,15 +237,15 @@ describe('serie strict', () => {
     render(<SessionRunner plan={strictPlan()} />)
 
     act(() => {
-      fireEvent.click(screen.getByRole('button', { name: 'Demarrer le chrono' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Démarrer le chrono' }))
     })
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(40_000)
     })
 
-    expect(screen.getByText('Niveau 3 non valide')).toBeInTheDocument()
-    expect(screen.getByText('Serie 1/1 · 40s / 40s')).toBeInTheDocument()
+    expect(screen.getByText('Niveau 3 non validé')).toBeInTheDocument()
+    expect(screen.getByText('Série 1/1 · 40s / 40s')).toBeInTheDocument()
   })
 })
 
@@ -254,10 +254,10 @@ describe('sortie de seance', () => {
     const user = userEvent.setup()
     render(<SessionRunner plan={plan()} />)
 
-    await user.click(screen.getByRole('button', { name: 'Quitter la seance' }))
+    await user.click(screen.getByRole('button', { name: 'Quitter la séance' }))
     expect(screen.getByRole('dialog')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Continuer la seance' }))
+    await user.click(screen.getByRole('button', { name: 'Continuer la séance' }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(push).not.toHaveBeenCalled()
   })
@@ -269,7 +269,7 @@ describe('sortie de seance', () => {
     await user.click(validateButton())
     expect(runningTimerCount()).toBeGreaterThan(0)
 
-    await user.click(screen.getByRole('button', { name: 'Quitter la seance' }))
+    await user.click(screen.getByRole('button', { name: 'Quitter la séance' }))
     await user.click(screen.getByRole('button', { name: 'Quitter' }))
 
     expect(runningTimerCount()).toBe(0)
@@ -290,7 +290,7 @@ describe('reprise apres rafraichissement', () => {
     unmount()
 
     render(<SessionRunner plan={plan()} />)
-    expect(await screen.findByText(/Serie 2\/2/)).toBeInTheDocument()
+    expect(await screen.findByText(/Série 2\/2/)).toBeInTheDocument()
   })
 
   it('ignore un etat enregistre pour un autre niveau', async () => {
@@ -306,6 +306,6 @@ describe('reprise apres rafraichissement', () => {
     // Le niveau a ete valide entre-temps : la seance suivante porte sur un
     // autre niveau, l'etat conserve ne la concerne plus.
     render(<SessionRunner plan={plan({ levelId: 'l4', levelNumber: 4 })} />)
-    expect(await screen.findByText(/Serie 1\/2/)).toBeInTheDocument()
+    expect(await screen.findByText(/Série 1\/2/)).toBeInTheDocument()
   })
 })

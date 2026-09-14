@@ -75,7 +75,7 @@ function RepsControl({
       <div className="flex flex-1 flex-col items-center justify-center gap-[26px]">
         <div className="flex items-center gap-[22px]">
           <StepButton
-            label="Retirer une repetition"
+            label="Retirer une répétition"
             onClick={() => setReps((r) => Math.max(0, r - 1))}
           >
             &minus;
@@ -89,7 +89,7 @@ function RepsControl({
           </div>
 
           <StepButton
-            label="Ajouter une repetition"
+            label="Ajouter une répétition"
             onClick={() => setReps((r) => r + 1)}
           >
             +
@@ -104,7 +104,7 @@ function RepsControl({
         onClick={() => onValidate(reps, true)}
         className="bg-primary text-primary-foreground mt-4 w-full rounded-full py-5 text-[19px] font-extrabold shadow-[0_0_34px_rgb(0_255_135/0.4)]"
       >
-        Valider la serie
+        Valider la série
       </button>
     </>
   )
@@ -228,7 +228,7 @@ function TimedControl({
           onClick={() => onValidate(view.elapsed, true)}
           className="bg-primary text-primary-foreground w-full max-w-[280px] rounded-full py-[18px] text-lg font-extrabold"
         >
-          Termine
+          Terminé
         </button>
       ) : (
         <button
@@ -236,7 +236,7 @@ function TimedControl({
           onClick={onStartTimer}
           className="bg-primary text-primary-foreground w-full max-w-[280px] rounded-full py-[18px] text-lg font-extrabold shadow-[0_0_30px_rgb(0_255_135/0.4)]"
         >
-          Demarrer le chrono
+          Démarrer le chrono
         </button>
       )}
     </div>

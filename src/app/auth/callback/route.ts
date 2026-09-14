@@ -44,6 +44,6 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.redirect(
-    `${origin}/login?error=${encodeURIComponent('Lien de connexion invalide ou expire.')}`,
+    `${origin}/login?error=${encodeURIComponent('Lien de connexion invalide ou expiré.')}`,
   )
 }

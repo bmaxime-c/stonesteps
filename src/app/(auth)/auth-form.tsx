@@ -69,7 +69,7 @@ export function AuthForm({
 
       {isSignUp ? (
         <div className="space-y-2">
-          <Label htmlFor="displayName">Nom affiche</Label>
+          <Label htmlFor="displayName">Nom affiché</Label>
           <Input
             id="displayName"
             name="displayName"
@@ -78,7 +78,7 @@ export function AuthForm({
             maxLength={40}
           />
           <p className="text-tertiary text-xs">
-            Facultatif. A defaut, ton adresse e-mail en tient lieu.
+            Facultatif. À défaut, ton adresse e-mail en tient lieu.
           </p>
         </div>
       ) : null}
@@ -95,7 +95,7 @@ export function AuthForm({
         />
       </div>
 
-      <SubmitButton label={isSignUp ? 'Creer mon compte' : 'Se connecter'} />
+      <SubmitButton label={isSignUp ? 'Créer mon compte' : 'Se connecter'} />
     </form>
   )
 }

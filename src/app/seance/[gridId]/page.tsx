@@ -8,7 +8,7 @@ import { buildSteps } from '@/lib/session/steps'
 
 import { SessionRunner } from './session-runner'
 
-export const metadata: Metadata = { title: 'Seance' }
+export const metadata: Metadata = { title: 'Séance' }
 
 /**
  * Seance sur le niveau en cours d'une grille.

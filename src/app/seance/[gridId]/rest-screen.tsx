@@ -32,7 +32,7 @@ export function RestScreen({
       </p>
 
       <p className="text-muted-foreground text-center text-[15px]">
-        Prochaine serie : {nextExerciseName} · {nextSetLabel}
+        Prochaine série : {nextExerciseName} · {nextSetLabel}
       </p>
 
       <button

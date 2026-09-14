@@ -64,8 +64,16 @@ Le chrono a deux modes, à ne pas confondre :
 - Les helpers RLS sont en `security definer` pour éviter les récursions entre
   policies ; `auth.uid()` est toujours enveloppé dans un sous-select.
 - Le schéma est relationnel. Ne pas stocker les niveaux dans un blob JSONB.
-- Commentaires et messages d'interface en français, code et identifiants en
-  anglais. Le SQL est en ASCII (pas d'accents dans les migrations).
+- Français à l'interface, anglais dans le code. Trois registres, à ne pas
+  confondre :
+  - **chaînes affichées** — français correct, **accents compris**. C'est ce que
+    lit l'utilisateur ; « Valider la serie » n'est pas acceptable.
+  - **commentaires, noms de tests, messages d'erreur de programmation** —
+    français mais en **ASCII**. Ils ne sortent jamais de l'éditeur, et
+    l'ASCII évite les surprises d'encodage sur ce poste.
+  - **code et identifiants** — anglais, ASCII.
+- Le SQL reste en ASCII, sauf les chaînes affichées qu'il sème en base : les
+  noms d'exercices du catalogue gardent leurs accents.
 - Migrations : jamais modifier une migration déjà poussée, en ajouter une.
 - Les règles métier vivent dans `src/lib/**`, pures et testées. Un composant ne
   calcule pas de statut.

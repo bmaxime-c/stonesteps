@@ -10,9 +10,9 @@ export const metadata: Metadata = { title: 'Hors ligne' }
 export default function OfflinePage() {
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
-      <h1 className="text-2xl font-semibold">Pas de reseau</h1>
+      <h1 className="text-2xl font-semibold">Pas de réseau</h1>
       <p className="text-muted-foreground max-w-sm text-balance">
-        StoneSteps n&apos;arrive pas a joindre le serveur. Reessaie une fois la connexion
+        StoneSteps n&apos;arrive pas à joindre le serveur. Réessaie une fois la connexion
         revenue.
       </p>
     </main>

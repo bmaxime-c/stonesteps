@@ -95,3 +95,52 @@ export async function loadGrid(gridId: string): Promise<Grid | null> {
   if (error || !data) return null
   return toGrid(data as unknown as GridRow)
 }
+
+/**
+ * Toutes les grilles de l'utilisateur, arbre compris.
+ *
+ * L'accueil a besoin du contenu du niveau en cours de chaque grille — nombre
+ * d'exercices et de series — donc de l'arbre entier. A l'echelle d'un
+ * utilisateur qui suit quelques grilles, une requete suffit ; la decouper
+ * reviendrait a multiplier les allers-retours pour rien.
+ */
+export async function loadGrids(): Promise<Grid[]> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('grids')
+    .select(GRID_SELECT)
+    .order('created_at', { ascending: true })
+
+  if (error || !data) return []
+  return (data as unknown as GridRow[]).map(toGrid)
+}
+
+export type CatalogExercise = {
+  id: string
+  name: string
+  muscleGroup: 'push' | 'pull' | 'legs' | 'core'
+}
+
+/**
+ * Catalogue d'exercices : les integres, plus ceux de l'utilisateur.
+ *
+ * La RLS decide ce qui remonte — lecture ouverte quand `owner_id` est null,
+ * ses propres exercices sinon.
+ */
+export async function loadExerciseCatalog(): Promise<CatalogExercise[]> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('exercises')
+    .select('id, name, muscle_group')
+    .order('created_at', { ascending: true })
+
+  if (error || !data) return []
+
+  return data.map((row) => ({
+    id: row.id,
+    name: row.name,
+    muscleGroup: row.muscle_group,
+  }))
+}

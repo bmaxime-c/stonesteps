@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     template: '%s · StoneSteps',
   },
   description:
-    'Progression en callisthenie par niveaux : construis ta grille, valide tes seances, suis ta progression.',
+    'Progression en callisthénie par niveaux : construis ta grille, valide tes séances, suis ta progression.',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,

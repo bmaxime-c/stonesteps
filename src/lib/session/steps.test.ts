@@ -71,7 +71,7 @@ describe('buildSteps', () => {
 
 describe('setLabel', () => {
   it('numerote la serie dans son exercice', () => {
-    expect(setLabel({ setNumber: 2, setCount: 3 })).toBe('Serie 2/3')
+    expect(setLabel({ setNumber: 2, setCount: 3 })).toBe('Série 2/3')
   })
 })
 

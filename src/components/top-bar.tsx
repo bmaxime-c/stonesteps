@@ -60,8 +60,8 @@ export function TopBar() {
           <form action={signOut}>
             <button
               type="submit"
-              aria-label="Se deconnecter"
-              title="Se deconnecter"
+              aria-label="Se déconnecter"
+              title="Se déconnecter"
               className="text-muted-foreground hover:text-foreground hover:bg-chip focus-visible:ring-ring/50 flex size-9 items-center justify-center rounded-full transition-colors outline-none focus-visible:ring-3"
             >
               <LogOut className="size-4" />
