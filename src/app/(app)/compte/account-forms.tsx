@@ -26,7 +26,7 @@ function SubmitButton({ label }: { label: string }) {
 }
 
 /** Retour d'action, sous le formulaire qui l'a produit. */
-function Feedback({ state }: { state: AccountState }) {
+export function Feedback({ state }: { state: AccountState }) {
   if (state.error) {
     return (
       <p
