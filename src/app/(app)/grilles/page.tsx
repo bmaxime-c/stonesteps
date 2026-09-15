@@ -8,7 +8,7 @@ import { editableVersion, latestPublished, playableVersion } from '@/lib/grids/m
 import type { Grid } from '@/lib/grids/model'
 import { loadMyGrids } from '@/lib/grids/queries'
 
-import { RemoveGridButton } from './follow-buttons'
+import { DuplicateGridButton, RemoveGridButton } from './follow-buttons'
 
 export const metadata: Metadata = { title: 'Mes grilles' }
 
@@ -167,7 +167,10 @@ function FollowedRow({ grid }: { grid: Grid }) {
         </p>
       </Link>
 
-      <RemoveGridButton gridId={grid.id} />
+      <div className="flex shrink-0 flex-wrap justify-end gap-2">
+        <DuplicateGridButton gridId={grid.id} />
+        <RemoveGridButton gridId={grid.id} />
+      </div>
     </div>
   )
 }

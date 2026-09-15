@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  copyName,
   describeLevelContent,
   describeRest,
   describeSets,
@@ -108,5 +109,24 @@ describe('shortDate', () => {
 
   it('ne casse pas sur une date invalide', () => {
     expect(shortDate('pas une date')).toBe('')
+  })
+})
+
+describe('copyName', () => {
+  it('ajoute un suffixe explicite', () => {
+    expect(copyName('Push Day')).toBe('Push Day (copie)')
+  })
+
+  it('numerote la copie d une copie', () => {
+    expect(copyName('Push Day (copie)')).toBe('Push Day (copie 2)')
+    expect(copyName('Push Day (copie 2)')).toBe('Push Day (copie 3)')
+  })
+
+  it('ne confond pas une parenthese quelconque avec un suffixe', () => {
+    expect(copyName('Planche (gainage)')).toBe('Planche (gainage) (copie)')
+  })
+
+  it('ignore les blancs de bordure', () => {
+    expect(copyName('  Push Day  ')).toBe('Push Day (copie)')
   })
 })

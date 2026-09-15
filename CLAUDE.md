@@ -94,6 +94,10 @@ séances, et reçoit les versions que le créateur publie ensuite.
   gardent une grille jouable et leur progression, sans recevoir la suite. Une
   grille suivie n'est jamais supprimée pour de bon, seulement retirée de chez
   son créateur.
+- **Dupliquer coupe le lien.** Adopter et dupliquer ne font pas la même chose :
+  adopter garde le lien — le créateur publie, on reçoit — quand dupliquer le
+  coupe. La copie appartient à celui qui duplique, sous un nouveau nom, en
+  version 1 publiée et privée, sans progression ni historique repris.
 
 ## Conventions
 

@@ -3,14 +3,15 @@
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 
-import { followGrid, unfollowGrid } from './actions'
+import { duplicateGrid, followGrid, unfollowGrid } from './actions'
 
 /**
- * Adopter ou retirer une grille publiee par quelqu'un d'autre.
+ * Ce qu'on peut faire d'une grille publiee par quelqu'un d'autre : l'adopter,
+ * la retirer, ou la dupliquer.
  *
- * Deux boutons plutot qu'une bascule : ce ne sont pas deux etats d'un meme
- * reglage, ce sont deux gestes qui ne se font pas au meme endroit — on adopte
- * depuis « Decouvrir », on retire depuis « Mes grilles ».
+ * Adopter et dupliquer ne sont pas deux facons de faire la meme chose. Adopter
+ * garde le lien : le createur publie, on recoit. Dupliquer le coupe — la copie
+ * est a soi, et diverge des la premiere modification.
  */
 
 function useGridAction(action: (gridId: string) => Promise<{ error: string | null }>) {
@@ -63,6 +64,42 @@ export function RemoveGridButton({ gridId }: { gridId: string }) {
         className="border-border-strong text-muted-foreground rounded-full border px-4 py-2.5 text-sm font-semibold whitespace-nowrap disabled:opacity-50"
       >
         {pending ? 'Un instant…' : 'Retirer'}
+      </button>
+      {error ? <p className="text-fail text-[11px] font-semibold">{error}</p> : null}
+    </div>
+  )
+}
+
+/**
+ * Duplique la grille vers son propre profil.
+ *
+ * On atterrit sur la copie : c'est desormais la sienne, et il n'y a pas de
+ * raison de rester devant l'originale.
+ */
+export function DuplicateGridButton({ gridId }: { gridId: string }) {
+  const router = useRouter()
+  const [error, setError] = useState<string | null>(null)
+  const [pending, startTransition] = useTransition()
+
+  return (
+    <div className="flex shrink-0 flex-col items-end gap-1">
+      <button
+        type="button"
+        onClick={() => {
+          setError(null)
+          startTransition(async () => {
+            const result = await duplicateGrid(gridId)
+            if (result.error) {
+              setError(result.error)
+              return
+            }
+            router.push(`/grilles/${result.gridId}`)
+          })
+        }}
+        disabled={pending}
+        className="border-border-strong text-muted-foreground rounded-full border px-4 py-2.5 text-sm font-semibold whitespace-nowrap disabled:opacity-50"
+      >
+        {pending ? 'Un instant…' : 'Dupliquer'}
       </button>
       {error ? <p className="text-fail text-[11px] font-semibold">{error}</p> : null}
     </div>
