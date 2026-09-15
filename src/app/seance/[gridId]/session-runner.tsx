@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { ConfirmDialog } from '@/components/confirm-dialog'
+import type { TimerCuePreferences } from '@/lib/account/preferences'
 import { setTarget, setUnit } from '@/lib/grids/model'
 import { isLevelValidated } from '@/lib/session/level'
 import { clearRun, loadRun, saveRun, type StoredRun } from '@/lib/session/local-store'
@@ -14,6 +15,7 @@ import { progressRatio, setLabel, type SetStep } from '@/lib/session/steps'
 import { restView } from '@/lib/session/timer'
 import { startDelay, stopAllTimers, stopDelay } from '@/lib/session/timers'
 import { useNow } from '@/lib/session/use-now'
+import { useTimerCues } from '@/lib/session/use-timer-cues'
 import { useWakeLock, vibrate } from '@/lib/session/use-wake-lock'
 
 import { consolidateSession } from './actions'
@@ -40,7 +42,13 @@ export type SessionPlan = {
  * fin. Entre les deux, l'etat vit dans sessionStorage pour survivre a un
  * rafraichissement, et la route porte la grille pour ne pas perdre le contexte.
  */
-export function SessionRunner({ plan }: { plan: SessionPlan }) {
+export function SessionRunner({
+  plan,
+  cues,
+}: {
+  plan: SessionPlan
+  cues: TimerCuePreferences
+}) {
   const router = useRouter()
   const { steps, levelId, gridId } = plan
 
@@ -73,13 +81,16 @@ export function SessionRunner({ plan }: { plan: SessionPlan }) {
     run.stage === 'rest' || (run.stage === 'set' && run.timerStartedAt !== null)
   const now = useNow(timing)
 
+  const { emit, blinking, release } = useTimerCues(cues)
+
   useWakeLock(run.stage !== 'summary')
 
   const leave = useCallback(() => {
+    release()
     stopAllTimers()
     clearRun(gridId)
     router.push('/')
-  }, [gridId, router])
+  }, [gridId, release, router])
 
   const persist = useCallback(
     async (results: SetResult[]) => {
@@ -272,6 +283,8 @@ export function SessionRunner({ plan }: { plan: SessionPlan }) {
           step={step}
           timerStartedAt={run.timerStartedAt}
           now={now}
+          warningPercent={cues.warningPercent}
+          onCue={emit}
           onStartTimer={() => setRun({ ...run, timerStartedAt: Date.now() })}
           onValidate={validate}
         />
@@ -285,6 +298,16 @@ export function SessionRunner({ plan }: { plan: SessionPlan }) {
           cancelLabel="Continuer la séance"
           onCancel={() => setConfirmingExit(false)}
           onConfirm={leave}
+        />
+      ) : null}
+
+      {/* Clignotement plein ecran : c'est le repere qu'on attrape du coin de
+          l'oeil, telephone pose a un metre. Il ne capte aucun evenement, pour
+          ne pas avaler un tap au moment ou il passe. */}
+      {blinking ? (
+        <div
+          aria-hidden="true"
+          className="bg-success pointer-events-none fixed inset-0 z-30 opacity-80"
         />
       ) : null}
     </main>
