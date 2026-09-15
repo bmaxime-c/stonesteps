@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { LevelOutcome, SetStatus } from './model'
 import {
+  carryForVersions,
   countByStatus,
   currentLevel,
   failedSetCount,
@@ -186,5 +187,60 @@ describe('position atteinte', () => {
 
   it('vaut un sur une grille neuve', () => {
     expect(reachedLevel(levels, [])).toBe(1)
+  })
+})
+
+describe('report reconstruit version par version', () => {
+  const v = (prefix: number, ids: string[]) => ({
+    unchangedPrefix: prefix,
+    levels: ids.map((id, index) => ({ id, position: index + 1 })),
+  })
+
+  it('ne reporte rien sur une premiere version', () => {
+    expect(carryForVersions([v(0, ['a1', 'a2', 'a3'])], [])).toBe(0)
+  })
+
+  it('reporte ce qui etait franchi quand rien n a change', () => {
+    // Deux niveaux valides sur la v1, prefixe intact : la v2 les reprend.
+    const history = [outcome('a1', true), outcome('a2', true)]
+    expect(
+      carryForVersions([v(0, ['a1', 'a2', 'a3']), v(3, ['b1', 'b2', 'b3'])], history),
+    ).toBe(2)
+  })
+
+  it('borne le report par le prefixe inchange', () => {
+    const history = [outcome('a1', true), outcome('a2', true)]
+    // Le niveau 2 a change : seul le premier survit.
+    expect(
+      carryForVersions([v(0, ['a1', 'a2', 'a3']), v(1, ['b1', 'b2', 'b3'])], history),
+    ).toBe(1)
+  })
+
+  it('ne reporte rien a qui n a rien joue', () => {
+    // C'est tout l'interet du calcul par utilisateur : un suiveur qui arrive
+    // sur la v2 n'herite pas de la progression du createur.
+    expect(carryForVersions([v(0, ['a1', 'a2']), v(2, ['b1', 'b2'])], [])).toBe(0)
+  })
+
+  it('cumule sur trois versions', () => {
+    const history = [outcome('a1', true), outcome('a2', true), outcome('b3', true)]
+    const versions = [
+      v(0, ['a1', 'a2', 'a3']),
+      v(3, ['b1', 'b2', 'b3']),
+      v(3, ['c1', 'c2', 'c3']),
+    ]
+    // v1 : deux niveaux franchis. v2 : report 2, puis b3 valide, position 4.
+    // v3 : report min(3, 3) = 3.
+    expect(carryForVersions(versions, history)).toBe(3)
+  })
+
+  it('redescend quand une version reecrit le debut', () => {
+    const history = [outcome('a1', true), outcome('a2', true), outcome('a3', true)]
+    const versions = [v(0, ['a1', 'a2', 'a3']), v(0, ['b1', 'b2', 'b3'])]
+    expect(carryForVersions(versions, history)).toBe(0)
+  })
+
+  it('rend zero sans aucune version', () => {
+    expect(carryForVersions([], [])).toBe(0)
   })
 })

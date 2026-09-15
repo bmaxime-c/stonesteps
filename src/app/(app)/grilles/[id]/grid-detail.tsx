@@ -36,7 +36,14 @@ export function GridDetail({
     accentColor: string
     restSeconds: number
     version: number
+    owned: boolean
+    ownerName: string | null
     hasDraft: boolean
+    isPublic: boolean
+    /** Le suivi a ete fige : plus aucune version ne sera recue. */
+    frozen: boolean
+    /** Le createur a retire la grille de chez lui. */
+    removedByOwner: boolean
   }
   currentLevelId: string | null
   levels: DetailLevel[]
@@ -68,6 +75,13 @@ export function GridDetail({
                 : 'Tous les niveaux sont validés'}{' '}
             · {describeRest(grid.restSeconds)}
           </p>
+          {/* Le nom du createur n'apparait que sur une grille adoptee : sur la
+              sienne, il n'apprend rien. */}
+          {!grid.owned ? (
+            <p className="text-tertiary mt-0.5 truncate text-[12px]">
+              de {grid.ownerName ?? 'un autre utilisateur'}
+            </p>
+          ) : null}
         </div>
 
         {/* Pas de lien vers le constructeur : cet ecran sert a lancer une
@@ -77,13 +91,29 @@ export function GridDetail({
           <span className="bg-chip text-muted-foreground rounded-full px-3 py-1.5 text-xs font-bold whitespace-nowrap">
             Version {grid.version}
           </span>
-          {grid.hasDraft ? (
+          {grid.owned && grid.hasDraft ? (
             <span className="text-tertiary text-[11px] font-semibold whitespace-nowrap">
               brouillon en cours
             </span>
           ) : null}
+          {grid.owned && grid.isPublic ? (
+            <span className="text-success text-[11px] font-semibold whitespace-nowrap">
+              publique
+            </span>
+          ) : null}
         </div>
       </div>
+
+      {/* Une grille dont le createur a retire le partage reste jouable, mais
+          ne recevra plus rien. Le dire evite de laisser croire qu'elle suit
+          encore son auteur. */}
+      {grid.frozen ? (
+        <p className="bg-inset border-border text-muted-foreground rounded-[16px] border px-4 py-3.5 text-[13px]">
+          {grid.removedByOwner
+            ? 'Son créateur a retiré cette grille. Tu la gardes telle quelle, avec ta progression, mais elle ne recevra plus de nouvelle version.'
+            : 'Son créateur ne partage plus cette grille. Tu la gardes telle quelle, avec ta progression, mais elle ne recevra plus de nouvelle version.'}
+        </p>
+      ) : null}
 
       {levels.length > 0 ? (
         <>

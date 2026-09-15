@@ -12,7 +12,12 @@ const grid = {
   accentColor: '#00FF87',
   restSeconds: 60,
   version: 3,
+  owned: true,
+  ownerName: 'Maxime',
   hasDraft: false,
+  isPublic: false,
+  frozen: false,
+  removedByOwner: false,
 }
 
 function set(over: Partial<LevelSet> = {}): LevelSet {
@@ -122,5 +127,56 @@ describe('ce qu on peut lancer', () => {
       screen.getByText("Niveau verrouillé — validez d'abord le niveau 2"),
     ).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /Commencer/ })).not.toBeInTheDocument()
+  })
+})
+
+describe('grille adoptee', () => {
+  const shared = {
+    ...grid,
+    owned: false,
+    ownerName: 'Camille',
+  }
+
+  it('annonce son createur', () => {
+    render(<GridDetail grid={shared} currentLevelId="l2" levels={levels} />)
+    expect(screen.getByText('de Camille')).toBeInTheDocument()
+  })
+
+  it('ne l annonce pas sur sa propre grille', () => {
+    render(<GridDetail grid={grid} currentLevelId="l2" levels={levels} />)
+    expect(screen.queryByText(/^de /)).not.toBeInTheDocument()
+  })
+
+  it('dit quand le createur ne partage plus', () => {
+    render(
+      <GridDetail
+        grid={{ ...shared, frozen: true }}
+        currentLevelId="l2"
+        levels={levels}
+      />,
+    )
+    expect(
+      screen.getByText(
+        /ne partage plus cette grille.*ne recevra plus de nouvelle version/,
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('dit quand le createur a retire la grille', () => {
+    render(
+      <GridDetail
+        grid={{ ...shared, frozen: true, removedByOwner: true }}
+        currentLevelId="l2"
+        levels={levels}
+      />,
+    )
+    expect(screen.getByText(/a retiré cette grille/)).toBeInTheDocument()
+  })
+
+  it('ne dit rien quand le suivi est a jour', () => {
+    render(<GridDetail grid={shared} currentLevelId="l2" levels={levels} />)
+    expect(
+      screen.queryByText(/ne recevra plus de nouvelle version/),
+    ).not.toBeInTheDocument()
   })
 })

@@ -59,37 +59,92 @@ export type GridVersion = {
   accentColor: string
   restSeconds: number
   /**
-   * Niveaux acquis d'office a la publication.
+   * Nombre de niveaux de tete identiques a la version precedente.
    *
-   * Fige a la publication : les positions 1 a `carriedLevels` sont considerees
-   * validees sans avoir a etre rejouees, parce que leur contenu n'avait pas
-   * bouge et qu'elles etaient deja franchies.
+   * Fait universel, fige a la publication : il ne dit rien de ce qu'un
+   * utilisateur donne avait franchi. Le report de progression se calcule pour
+   * chacun, a la lecture, en bornant ce prefixe par ses propres seances — sans
+   * quoi un suiveur heriterait de la progression du createur.
    */
-  carriedLevels: number
+  unchangedPrefix: number
   levels: Level[]
 }
 
+/** Suivi d'une grille par l'utilisateur courant. */
+export type GridFollow = {
+  /**
+   * Null : le suivi recoit chaque nouvelle version publiee.
+   * Renseigne : le partage a ete retire, le suivi reste fige sur ce numero.
+   */
+  frozenAtVersion: number | null
+}
+
 /**
- * Une grille : une identite, et ses versions.
+ * Une grille : une identite, ses versions, et ce que l'utilisateur courant en
+ * a.
  *
- * `published` est la derniere version publiee, la seule jouable. `draft` est
- * le brouillon en cours, au plus un — c'est lui qu'ouvre le constructeur quand
- * il existe.
+ * `publishedVersions` porte toutes les versions publiees, dans l'ordre : le
+ * report de progression se calcule de proche en proche, et la derniere ne
+ * suffit pas. `draft` n'est renseigne que pour le createur — un brouillon ne
+ * sort jamais de chez son auteur.
  */
 export type Grid = {
   id: string
-  published: GridVersion | null
+  ownerId: string
+  /** Nom affiche du createur, quand il est lisible. */
+  ownerName: string | null
+  isPublic: boolean
+  /** Renseigne sur une grille supprimee par son createur mais encore suivie. */
+  deletedAt: string | null
+  owned: boolean
+  publishedVersions: GridVersion[]
   draft: GridVersion | null
+  follow: GridFollow | null
+  /**
+   * Nombre de suiveurs.
+   *
+   * N'a de sens que sur une grille dont on est le createur : ailleurs, la RLS
+   * ne laisse voir que son propre suivi, et le compte vaut 0 ou 1.
+   */
+  followerCount: number
+}
+
+/** Derniere version publiee, sans tenir compte d'un eventuel gel. */
+export function latestPublished(grid: Grid): GridVersion | null {
+  return grid.publishedVersions[grid.publishedVersions.length - 1] ?? null
+}
+
+/**
+ * Ce que l'accueil et la seance jouent.
+ *
+ * La derniere version publiee, sauf pour un suivi gele : le createur a retire
+ * le partage, et le suiveur garde ce qu'il avait sans recevoir la suite.
+ */
+export function playableVersion(grid: Grid): GridVersion | null {
+  const frozen = grid.follow?.frozenAtVersion
+  if (frozen == null) return latestPublished(grid)
+  return grid.publishedVersions.find((version) => version.version === frozen) ?? null
+}
+
+/**
+ * Versions qui comptent pour la progression de l'utilisateur courant.
+ *
+ * Jusqu'a celle qu'il joue, comprise : au-dela, il n'a rien vu passer.
+ */
+export function progressionVersions(grid: Grid): GridVersion[] {
+  const playable = playableVersion(grid)
+  if (!playable) return []
+  return grid.publishedVersions.filter((version) => version.version <= playable.version)
 }
 
 /** Ce que le constructeur ouvre : le brouillon s'il existe, sinon le publie. */
 export function editableVersion(grid: Grid): GridVersion | null {
-  return grid.draft ?? grid.published
+  return grid.draft ?? latestPublished(grid)
 }
 
-/** Ce que l'accueil et la seance affichent : uniquement ce qui est publie. */
-export function playableVersion(grid: Grid): GridVersion | null {
-  return grid.published
+/** Une grille dont le createur a retire le partage ne recoit plus de version. */
+export function isFrozen(grid: Grid): boolean {
+  return grid.follow?.frozenAtVersion != null
 }
 
 /**

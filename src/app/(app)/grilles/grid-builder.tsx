@@ -27,7 +27,13 @@ import {
 import type { CatalogExercise } from '@/lib/grids/queries'
 import { cn } from '@/lib/utils'
 
-import { deleteGrid, discardDraft, publishDraft, saveDraft } from './actions'
+import {
+  deleteGrid,
+  discardDraft,
+  publishDraft,
+  saveDraft,
+  setGridVisibility,
+} from './actions'
 import { ExerciseLibrary } from './exercise-library'
 
 /**
@@ -52,6 +58,8 @@ export function GridBuilder({
   draftSaved,
   publishedVersion,
   nextVersion,
+  isPublic,
+  followerCount,
 }: {
   gridId: string | null
   initial: EditableGrid
@@ -62,6 +70,9 @@ export function GridBuilder({
   publishedVersion: number | null
   /** Numero que portera la prochaine publication. */
   nextVersion: number
+  isPublic: boolean
+  /** Nombre de personnes qui suivent cette grille. */
+  followerCount: number
 }) {
   const router = useRouter()
   const [grid, setGrid] = useState(initial)
@@ -139,6 +150,19 @@ export function GridBuilder({
         return
       }
       router.push('/grilles')
+    })
+  }
+
+  function toggleVisibility() {
+    if (!gridId) return
+    setError(null)
+    startTransition(async () => {
+      const result = await setGridVisibility(gridId, !isPublic)
+      if (result.error) {
+        setError(result.error)
+        return
+      }
+      router.refresh()
     })
   }
 
@@ -253,6 +277,40 @@ export function GridBuilder({
           onIncrease={() => update(stepRest(grid, 1))}
         />
       </div>
+
+      {/* Le partage ne s'offre qu'une fois la grille publiee : partager un
+          brouillon ne donnerait rien a jouer a personne. Il s'applique tout de
+          suite, sans passer par le brouillon — ce n'est pas du contenu, c'est
+          un reglage de la grille. */}
+      {gridId && publishedVersion ? (
+        <div className="bg-card border-border flex flex-wrap items-center gap-3 rounded-[16px] border px-4 py-3.5">
+          <div className="min-w-[160px] flex-1">
+            <p className="text-sm font-bold">Partage</p>
+            <p className="text-tertiary mt-0.5 text-xs">
+              {isPublic
+                ? 'Publique : visible de tous, et adoptable. Chaque publication est propagée à ceux qui la suivent.'
+                : 'Privée : toi seul la vois.'}
+              {followerCount > 0
+                ? ` ${followerCount > 1 ? `${followerCount} personnes la suivent` : '1 personne la suit'}.`
+                : ''}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={toggleVisibility}
+            disabled={pending}
+            aria-pressed={isPublic}
+            className={cn(
+              'rounded-full px-4 py-2.5 text-sm font-bold whitespace-nowrap disabled:opacity-50',
+              isPublic
+                ? 'border-border-strong text-muted-foreground border'
+                : 'bg-primary text-primary-foreground',
+            )}
+          >
+            {isPublic ? 'Rendre privée' : 'Rendre publique'}
+          </button>
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-tertiary mr-1 text-xs font-bold tracking-[0.06em] uppercase">
@@ -395,16 +453,22 @@ export function GridBuilder({
             onClick={() => setConfirming('delete')}
             className="text-fail p-2 text-[13px] font-semibold"
           >
-            Supprimer cette grille
+            {followerCount > 0 ? 'Retirer cette grille' : 'Supprimer cette grille'}
           </button>
         </div>
       ) : null}
 
       {confirming === 'delete' ? (
         <ConfirmDialog
-          title="Supprimer cette grille ?"
-          description="Toutes ses versions et sa progression partent avec elle. Les séances déjà jouées restent dans les statistiques."
-          confirmLabel="Supprimer"
+          title={
+            followerCount > 0 ? 'Retirer cette grille ?' : 'Supprimer cette grille ?'
+          }
+          description={
+            followerCount > 0
+              ? 'Elle sort de chez toi, mais reste chez ceux qui la suivent, figée sur la dernière version publiée. Une grille suivie ne peut pas disparaître sous leurs pieds.'
+              : 'Toutes ses versions et sa progression partent avec elle. Les séances déjà jouées restent dans les statistiques.'
+          }
+          confirmLabel={followerCount > 0 ? 'Retirer' : 'Supprimer'}
           onCancel={() => setConfirming(null)}
           onConfirm={remove}
         />

@@ -130,3 +130,37 @@ export function validatedAt(
 
   return dates[0] ?? null
 }
+
+/**
+ * Report de progression sur la derniere version, pour un utilisateur donne.
+ *
+ * Le report ne peut pas se stocker : le prefixe de niveaux inchanges vaut pour
+ * tout le monde, mais jusqu'ou chacun etait monte ne vaut que pour lui. Une
+ * grille suivie par plusieurs personnes aurait autant de reports que de
+ * suiveurs.
+ *
+ * On le reconstruit donc de proche en proche, version par version : a chaque
+ * publication, le report vaut le plus petit du prefixe inchange et de ce que
+ * l'utilisateur avait franchi ; ses seances sur la nouvelle version font
+ * ensuite avancer la position atteinte.
+ *
+ * `versions` est dans l'ordre croissant, de la premiere publiee a celle qui
+ * est jouee.
+ */
+export function carryForVersions(
+  versions: {
+    levels: Pick<Level, 'id' | 'position'>[]
+    unchangedPrefix: number
+  }[],
+  outcomes: Pick<LevelOutcome, 'levelId' | 'validated'>[],
+): number {
+  let reached = 1
+  let carry = 0
+
+  for (const version of versions) {
+    carry = Math.max(0, Math.min(version.unchangedPrefix, reached - 1))
+    reached = reachedLevel(version.levels, outcomes, carry)
+  }
+
+  return carry
+}

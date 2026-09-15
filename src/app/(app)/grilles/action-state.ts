@@ -37,7 +37,16 @@ export type SaveDraftResult =
   | { gridId: null; error: string; issues: GridIssue[] }
 
 export type PublishResult =
-  | { version: number; carriedLevels: number; error: null }
-  | { version: null; carriedLevels: null; error: string }
+  { version: number; error: null } | { version: null; error: string }
 
-export type DeleteGridResult = { error: string | null }
+/** Retour minimal d'une action qui reussit ou explique pourquoi elle echoue. */
+export type GridActionResult = { error: string | null }
+
+export type DeleteGridResult = {
+  error: string | null
+  /**
+   * Vrai quand la grille a ete retiree plutot que supprimee : elle avait des
+   * suiveurs, et reste chez eux, figee.
+   */
+  kept: boolean
+}

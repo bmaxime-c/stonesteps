@@ -40,7 +40,7 @@ describe('creation', () => {
       id: 'v1',
       version: 2,
       status: 'published',
-      carriedLevels: 0,
+      unchangedPrefix: 0,
       name: 'Push Day',
       accentColor: '#22E1FF',
       restSeconds: 90,
