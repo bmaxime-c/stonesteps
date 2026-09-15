@@ -26,7 +26,11 @@ const save = vi.fn(async (input: SaveDraftInput): Promise<SaveDraftResult> => ({
 }))
 const publish = vi.fn(async (): Promise<PublishResult> => ({ version: 2, error: null }))
 const discard = vi.fn(async (): Promise<GridActionResult> => ({ error: null }))
-const visibility = vi.fn(async (): Promise<GridActionResult> => ({ error: null }))
+const visibility = vi.fn(
+  async (_gridId: string, _isPublic: boolean): Promise<GridActionResult> => ({
+    error: null,
+  }),
+)
 const remove = vi.fn(async (): Promise<DeleteGridResult> => ({
   error: null,
   kept: false,

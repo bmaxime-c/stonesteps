@@ -66,10 +66,45 @@ export type Database = {
           },
         ]
       }
+      grid_followers: {
+        Row: {
+          created_at: string
+          frozen_at_version: number | null
+          grid_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          frozen_at_version?: number | null
+          grid_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          frozen_at_version?: number | null
+          grid_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'grid_followers_grid_id_fkey'
+            columns: ['grid_id']
+            isOneToOne: false
+            referencedRelation: 'grids'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'grid_followers_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       grid_versions: {
         Row: {
           accent_color: string
-          carried_levels: number
           created_at: string
           grid_id: string
           id: string
@@ -77,12 +112,12 @@ export type Database = {
           published_at: string | null
           rest_seconds: number
           status: Database['public']['Enums']['grid_version_status']
+          unchanged_prefix: number
           updated_at: string
           version: number
         }
         Insert: {
           accent_color?: string
-          carried_levels?: number
           created_at?: string
           grid_id: string
           id?: string
@@ -90,12 +125,12 @@ export type Database = {
           published_at?: string | null
           rest_seconds?: number
           status?: Database['public']['Enums']['grid_version_status']
+          unchanged_prefix?: number
           updated_at?: string
           version: number
         }
         Update: {
           accent_color?: string
-          carried_levels?: number
           created_at?: string
           grid_id?: string
           id?: string
@@ -103,6 +138,7 @@ export type Database = {
           published_at?: string | null
           rest_seconds?: number
           status?: Database['public']['Enums']['grid_version_status']
+          unchanged_prefix?: number
           updated_at?: string
           version?: number
         }
@@ -119,19 +155,25 @@ export type Database = {
       grids: {
         Row: {
           created_at: string
+          deleted_at: string | null
           id: string
+          is_public: boolean
           owner_id: string
           updated_at: string
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           id?: string
+          is_public?: boolean
           owner_id: string
           updated_at?: string
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           id?: string
+          is_public?: boolean
           owner_id?: string
           updated_at?: string
         }
@@ -383,11 +425,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_read_grid: { Args: { g: string }; Returns: boolean }
+      can_read_grid_version: { Args: { v: string }; Returns: boolean }
+      can_read_level: { Args: { l: string }; Returns: boolean }
+      can_read_level_exercise: { Args: { le: string }; Returns: boolean }
       owns_grid: { Args: { g: string }; Returns: boolean }
       owns_grid_version: { Args: { v: string }; Returns: boolean }
       owns_level: { Args: { l: string }; Returns: boolean }
       owns_level_exercise: { Args: { le: string }; Returns: boolean }
       owns_session: { Args: { s: string }; Returns: boolean }
+      shares_a_grid_with_me: { Args: { p: string }; Returns: boolean }
     }
     Enums: {
       grid_version_status: 'draft' | 'published'
