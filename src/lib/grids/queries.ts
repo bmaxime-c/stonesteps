@@ -1,5 +1,6 @@
 import 'server-only'
 
+import { logSupabaseError } from '@/lib/supabase/log'
 import { createClient } from '@/lib/supabase/server'
 
 import type { Grid, GridVersion, GridVersionStatus } from './model'
@@ -30,9 +31,16 @@ const VERSION_SELECT = `
   )
 `
 
+/**
+ * La relation vers `profiles` est nommee par sa cle etrangere.
+ *
+ * `grid_followers` reference a la fois `grids` et `profiles`, ce qui ouvre un
+ * second chemin entre les deux tables. Sans le nom de la contrainte, PostgREST
+ * ne sait pas lequel prendre et rejette la requete entiere.
+ */
 const GRID_SELECT = `
   id, owner_id, is_public, deleted_at, created_at,
-  profiles ( display_name ),
+  profiles!grids_owner_id_fkey ( display_name ),
   grid_followers ( user_id, frozen_at_version ),
   grid_versions ( ${VERSION_SELECT} )
 `
@@ -152,7 +160,10 @@ export async function loadGrid(gridId: string): Promise<Grid | null> {
     supabase.from('grids').select(GRID_SELECT).eq('id', gridId).maybeSingle(),
   ])
 
-  if (error || !data) return null
+  if (error || !data) {
+    logSupabaseError('loadGrid', error)
+    return null
+  }
   return toGrid(data as unknown as GridRow, userId)
 }
 
@@ -170,7 +181,10 @@ export async function loadMyGrids(): Promise<Grid[]> {
     supabase.from('grids').select(GRID_SELECT).order('created_at', { ascending: true }),
   ])
 
-  if (error || !data) return []
+  if (error || !data) {
+    logSupabaseError('loadMyGrids', error)
+    return []
+  }
 
   return (
     (data as unknown as GridRow[])
@@ -200,7 +214,10 @@ export async function loadPublicGrids(): Promise<Grid[]> {
       .order('created_at', { ascending: false }),
   ])
 
-  if (error || !data) return []
+  if (error || !data) {
+    logSupabaseError('loadPublicGrids', error)
+    return []
+  }
 
   return (data as unknown as GridRow[])
     .map((row) => toGrid(row, userId))

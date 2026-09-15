@@ -7,6 +7,7 @@ import { unchangedPrefix } from '@/lib/grids/diff'
 import { latestPublished, playableVersion } from '@/lib/grids/model'
 import { loadGrid } from '@/lib/grids/queries'
 import { validateGrid } from '@/lib/grids/validation'
+import { logSupabaseError } from '@/lib/supabase/log'
 import { createClient } from '@/lib/supabase/server'
 
 import type {
@@ -140,6 +141,7 @@ export async function saveDraft(input: SaveDraftInput): Promise<SaveDraftResult>
       .single()
 
     if (error || !data) {
+      logSupabaseError('saveDraft/grids.insert', error)
       return { gridId: null, error: "La grille n'a pas pu être créée.", issues: [] }
     }
     gridId = data.id
