@@ -7,7 +7,7 @@ import { initials, plural } from '@/lib/grids/describe'
 import { latestPublished } from '@/lib/grids/model'
 import { loadPublicGrids } from '@/lib/grids/queries'
 
-import { AddGridButton } from '../follow-buttons'
+import { AddGridButton, DuplicateGridButton } from '../follow-buttons'
 
 export const metadata: Metadata = { title: 'Découvrir' }
 
@@ -71,7 +71,10 @@ export default async function DiscoverPage() {
                   </p>
                 </div>
 
-                <AddGridButton gridId={grid.id} />
+                <div className="flex shrink-0 flex-wrap justify-end gap-2">
+                  <DuplicateGridButton gridId={grid.id} />
+                  <AddGridButton gridId={grid.id} />
+                </div>
               </li>
             )
           })}

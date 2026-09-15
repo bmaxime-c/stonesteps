@@ -2,14 +2,16 @@
 
 import { revalidatePath } from 'next/cache'
 
+import { copyName } from '@/lib/grids/describe'
 import { unchangedPrefix } from '@/lib/grids/diff'
-import { latestPublished } from '@/lib/grids/model'
+import { latestPublished, playableVersion } from '@/lib/grids/model'
 import { loadGrid } from '@/lib/grids/queries'
 import { validateGrid } from '@/lib/grids/validation'
 import { createClient } from '@/lib/supabase/server'
 
 import type {
   DeleteGridResult,
+  DuplicateResult,
   GridActionResult,
   PublishResult,
   SaveDraftInput,
@@ -411,4 +413,97 @@ export async function deleteGrid(gridId: string): Promise<DeleteGridResult> {
   revalidatePath('/grilles')
   revalidatePath('/grilles/decouvrir')
   return { error: null, kept: true }
+}
+
+/**
+ * Duplique une grille dans son propre profil.
+ *
+ * La copie appartient a celui qui duplique : nouveau nom, version 1 publiee,
+ * privee. Elle ne garde aucun lien avec l'originale — ni les versions
+ * precedentes, ni la progression, ni les publications a venir. C'est bien le
+ * point : on duplique pour diverger, pas pour suivre.
+ *
+ * Version 1 deja publiee, et non brouillon : une copie est faite pour etre
+ * jouee tout de suite. Un brouillon obligerait a passer par une publication
+ * pour une grille qu'on n'a pas ecrite.
+ *
+ * On copie ce que l'utilisateur voit — la version jouable, donc celle du gel
+ * si son suivi a ete fige — et non la derniere version du createur, qu'il n'a
+ * peut-etre jamais eue sous les yeux.
+ */
+export async function duplicateGrid(gridId: string): Promise<DuplicateResult> {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) return { gridId: null, error: 'Session expirée. Reconnecte-toi.' }
+
+  const source = await loadGrid(gridId)
+  const version = source ? playableVersion(source) : null
+  if (!source || !version) {
+    return { gridId: null, error: "Cette grille n'est pas consultable." }
+  }
+
+  const { data: created, error: gridError } = await supabase
+    .from('grids')
+    .insert({ owner_id: user.id, is_public: false })
+    .select('id')
+    .single()
+
+  if (gridError || !created) {
+    return { gridId: null, error: "La copie n'a pas pu être créée." }
+  }
+
+  const { data: copy, error: versionError } = await supabase
+    .from('grid_versions')
+    .insert({
+      grid_id: created.id,
+      version: 1,
+      status: 'published',
+      published_at: new Date().toISOString(),
+      // Rien a reporter : la copie repart de zero pour son nouveau
+      // proprietaire, quelle que soit la progression de l'original.
+      unchanged_prefix: 0,
+      name: copyName(version.name),
+      accent_color: version.accentColor,
+      rest_seconds: version.restSeconds,
+    })
+    .select('id')
+    .single()
+
+  if (versionError || !copy) {
+    await supabase.from('grids').delete().eq('id', created.id)
+    return { gridId: null, error: "La copie n'a pas pu être créée." }
+  }
+
+  const treeError = await writeTree(
+    supabase,
+    copy.id,
+    version.levels.map((level) => ({
+      exercises: level.exercises.map((exercise) => ({
+        exerciseId: exercise.exerciseId,
+        exerciseName: exercise.exerciseName,
+        sets: exercise.sets.map((set) => ({
+          targetReps: set.targetReps,
+          timerMode: set.timerMode,
+          timerSeconds: set.timerSeconds,
+        })),
+      })),
+    })),
+  )
+
+  if (treeError) {
+    // Une grille a moitie copiee ne vaut rien : on la retire plutot que de la
+    // laisser trainer dans la liste de son nouveau proprietaire.
+    await supabase.from('grids').delete().eq('id', created.id)
+    return { gridId: null, error: treeError }
+  }
+
+  revalidatePath('/')
+  revalidatePath('/grilles')
+  revalidatePath('/grilles/decouvrir')
+
+  return { gridId: created.id, error: null }
 }

@@ -88,3 +88,21 @@ export function shortDate(iso: string): string {
   if (Number.isNaN(date.getTime())) return ''
   return `${date.getDate()} ${MONTHS[date.getMonth()]}`
 }
+
+/**
+ * Nom d'une grille dupliquee.
+ *
+ * Suffixe explicite plutot qu'un nom identique : deux grilles homonymes dans
+ * la meme liste ne se distinguent plus, et l'issue demande « un nouveau nom ».
+ * Dupliquer une copie numerote, plutot que d'empiler les suffixes.
+ */
+export function copyName(name: string): string {
+  const trimmed = name.trim()
+  const match = trimmed.match(/^(.*) \(copie(?: (\d+))?\)$/)
+
+  if (!match) return `${trimmed} (copie)`
+
+  const base = match[1]
+  const rank = match[2] ? Number(match[2]) : 1
+  return `${base} (copie ${rank + 1})`
+}

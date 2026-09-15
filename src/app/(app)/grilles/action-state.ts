@@ -50,3 +50,6 @@ export type DeleteGridResult = {
    */
   kept: boolean
 }
+
+export type DuplicateResult =
+  { gridId: string; error: null } | { gridId: null; error: string }
