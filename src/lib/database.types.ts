@@ -289,18 +289,30 @@ export type Database = {
           created_at: string
           display_name: string | null
           id: string
+          timer_blink: boolean
+          timer_flash: boolean
+          timer_sound: boolean
+          timer_warning_percent: number
           updated_at: string
         }
         Insert: {
           created_at?: string
           display_name?: string | null
           id: string
+          timer_blink?: boolean
+          timer_flash?: boolean
+          timer_sound?: boolean
+          timer_warning_percent?: number
           updated_at?: string
         }
         Update: {
           created_at?: string
           display_name?: string | null
           id?: string
+          timer_blink?: boolean
+          timer_flash?: boolean
+          timer_sound?: boolean
+          timer_warning_percent?: number
           updated_at?: string
         }
         Relationships: []
