@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
 
+import { loadTimerCues } from '@/lib/account/queries'
 import { gridProgress } from '@/lib/grids/progress'
 import { loadGrid } from '@/lib/grids/queries'
 import { loadLevelOutcomes } from '@/lib/session/queries'
@@ -45,8 +46,11 @@ export default async function SeancePage({ params }: PageProps<'/seance/[gridId]
   const steps = level ? buildSteps(level) : []
   if (steps.length === 0) redirect('/')
 
+  const cues = await loadTimerCues()
+
   return (
     <SessionRunner
+      cues={cues}
       plan={{
         gridId: grid.id,
         gridName: progress.version.name,

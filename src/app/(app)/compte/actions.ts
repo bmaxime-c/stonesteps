@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 
+import { isValidWarningPercent } from '@/lib/account/preferences'
 import { validateDisplayName, validatePasswordChange } from '@/lib/account/validation'
 import { createClient } from '@/lib/supabase/server'
 
@@ -97,4 +98,45 @@ export async function updatePassword(
   }
 
   return { error: null, notice: 'Mot de passe changé.' }
+}
+
+/**
+ * Enregistre les reperes du chrono.
+ *
+ * Les trois canaux arrivent en cases a cocher : absentes du FormData quand
+ * elles sont decochees, d'ou la lecture par presence plutot que par valeur.
+ */
+export async function updateTimerCues(
+  _prev: AccountState,
+  formData: FormData,
+): Promise<AccountState> {
+  const warningPercent = Number(formData.get('warningPercent'))
+
+  if (!isValidWarningPercent(warningPercent)) {
+    return { error: "La fenêtre d'annonce est hors bornes.", notice: null }
+  }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) return { error: 'Session expirée. Reconnecte-toi.', notice: null }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      timer_sound: formData.get('sound') !== null,
+      timer_blink: formData.get('blink') !== null,
+      timer_flash: formData.get('flash') !== null,
+      timer_warning_percent: warningPercent,
+    })
+    .eq('id', user.id)
+
+  if (error) {
+    return { error: "Les repères n'ont pas pu être enregistrés.", notice: null }
+  }
+
+  revalidatePath('/compte')
+  return { error: null, notice: 'Repères enregistrés.' }
 }

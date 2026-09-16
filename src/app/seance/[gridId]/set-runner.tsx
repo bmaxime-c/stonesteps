@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { STATUS_LABEL, STATUS_STROKE, STATUS_TEXT } from '@/components/status-pill'
 import type { LevelSet } from '@/lib/grids/model'
 import { setTarget } from '@/lib/grids/model'
+import { cueSchedule, cuesBetween, type Cue } from '@/lib/session/cues'
 import type { SetStatus } from '@/lib/session/model'
 import { setStatus } from '@/lib/session/status'
 import type { SetStep } from '@/lib/session/steps'
@@ -25,6 +26,8 @@ export function SetRunner({
   step,
   timerStartedAt,
   now,
+  warningPercent,
+  onCue,
   onStartTimer,
   onValidate,
 }: {
@@ -32,6 +35,9 @@ export function SetRunner({
   /** Null tant que le chrono n'a pas ete demarre. */
   timerStartedAt: number | null
   now: number
+  /** Fenetre d'annonce de la fin, en pourcentage de la duree visee. */
+  warningPercent: number
+  onCue: (cue: Cue) => void
   onStartTimer: () => void
   onValidate: (actualValue: number, completed: boolean) => void
 }) {
@@ -45,6 +51,8 @@ export function SetRunner({
       set={step.set}
       timerStartedAt={timerStartedAt}
       now={now}
+      warningPercent={warningPercent}
+      onCue={onCue}
       onStartTimer={onStartTimer}
       onValidate={onValidate}
     />
@@ -153,12 +161,16 @@ function TimedControl({
   set,
   timerStartedAt,
   now,
+  warningPercent,
+  onCue,
   onStartTimer,
   onValidate,
 }: {
   set: LevelSet
   timerStartedAt: number | null
   now: number
+  warningPercent: number
+  onCue: (cue: Cue) => void
   onStartTimer: () => void
   onValidate: (actualValue: number, completed: boolean) => void
 }) {
@@ -187,6 +199,21 @@ function TimedControl({
       vibrate(80)
     }
   }, [set.timerMode, target, elapsed])
+
+  // Les reperes se deduisent de l'ecoule, ils ne sont pas programmes un par un :
+  // a chaque tick on demande ce qui a ete franchi depuis le precedent. Un
+  // onglet parti en arriere-plan puis revenu ne rattrape donc pas la serie de
+  // bips qu'il a manquee.
+  const schedule = useMemo(
+    () => cueSchedule(set.timerMode, target, warningPercent),
+    [set.timerMode, target, warningPercent],
+  )
+  const cuedUntil = useRef(0)
+  useEffect(() => {
+    if (!schedule || timerStartedAt === null) return
+    for (const cue of cuesBetween(schedule, cuedUntil.current, elapsed)) onCue(cue)
+    cuedUntil.current = elapsed
+  }, [elapsed, onCue, schedule, timerStartedAt])
 
   const strokeKey = status ?? 'progress'
 
@@ -243,7 +270,13 @@ function TimedControl({
       ) : (
         <button
           type="button"
-          onClick={onStartTimer}
+          onClick={() => {
+            // Le repere de depart est aussi ce qui ouvre le contexte audio :
+            // les navigateurs ne l'autorisent que dans un geste utilisateur, et
+            // ce tap est le seul qu'on ait avant la fin de la serie.
+            onCue('start')
+            onStartTimer()
+          }}
           className="bg-primary text-primary-foreground w-full max-w-[280px] rounded-full py-[18px] text-lg font-extrabold shadow-[0_0_30px_rgb(0_255_135/0.4)]"
         >
           Démarrer le chrono

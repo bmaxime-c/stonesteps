@@ -3,10 +3,12 @@ import { redirect } from 'next/navigation'
 
 import { signOut } from '@/app/(auth)/actions'
 import { ScreenHeader } from '@/components/screen-header'
+import { loadTimerCues } from '@/lib/account/queries'
 import { hasPasswordIdentity } from '@/lib/account/validation'
 import { createClient } from '@/lib/supabase/server'
 
 import { DisplayNameForm, PasswordForm } from './account-forms'
+import { TimerCuesForm } from './timer-cues-form'
 
 export const metadata: Metadata = { title: 'Mon compte' }
 
@@ -34,6 +36,7 @@ export default async function AccountPage() {
 
   const providers = (user.identities ?? []).map((identity) => identity.provider)
   const canChangePassword = hasPasswordIdentity(providers)
+  const cues = await loadTimerCues()
 
   return (
     <main className="gutter mx-auto flex w-full max-w-[720px] flex-col gap-[22px] pt-[clamp(20px,3vw,36px)] pb-[72px]">
@@ -61,6 +64,17 @@ export default async function AccountPage() {
       <section className="bg-card border-border flex flex-col gap-4 rounded-[20px] border p-5">
         <h2 className="text-[15px] font-bold">Nom affiché</h2>
         <DisplayNameForm displayName={profile?.display_name ?? ''} />
+      </section>
+
+      <section className="bg-card border-border flex flex-col gap-4 rounded-[20px] border p-5">
+        <div>
+          <h2 className="text-[15px] font-bold">Repères du chrono</h2>
+          <p className="text-tertiary mt-1 text-xs">
+            Pendant une série chronométrée, l&apos;écran est posé à un mètre. Ces repères
+            annoncent la fin sans qu&apos;on ait à le regarder.
+          </p>
+        </div>
+        <TimerCuesForm cues={cues} />
       </section>
 
       <section className="bg-card border-border flex flex-col gap-4 rounded-[20px] border p-5">
