@@ -167,9 +167,11 @@
     line-height: 1.1;
   }
 
-  /* Chiffres lus a bout de bras : reps en seance, puis le chrono. */
+  /* Chiffres lus a bout de bras : reps en seance, puis le chrono. La seance
+     tient dans la fenetre sans defiler : les deux chiffres cedent donc de la
+     hauteur sur un ecran court plutot que de pousser le bouton dehors. */
   .figure-reps {
-    font-size: 88px;
+    font-size: clamp(56px, 12dvh, 88px);
     font-weight: 800;
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.04em;
@@ -177,7 +179,7 @@
   }
 
   .figure-timer {
-    font-size: 52px;
+    font-size: clamp(34px, 7dvh, 52px);
     font-weight: 800;
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.03em;

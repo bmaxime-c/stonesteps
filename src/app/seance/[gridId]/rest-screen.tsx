@@ -20,25 +20,25 @@ export function RestScreen({
   onSkip: () => void
 }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-6">
+    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-[clamp(14px,3dvh,24px)]">
       <p className="text-live text-[13px] font-bold tracking-[0.1em] uppercase">Repos</p>
 
       <p
-        className="text-live text-[104px] leading-none font-extrabold tabular-nums"
+        className="text-live text-[clamp(62px,15dvh,104px)] leading-none font-extrabold tabular-nums"
         style={{ textShadow: '0 0 40px rgb(34 225 255 / 0.45)' }}
         aria-live="polite"
       >
         {remaining}s
       </p>
 
-      <p className="text-muted-foreground text-center text-[15px]">
+      <p className="text-muted-foreground text-center text-[clamp(13px,1.8dvh,15px)]">
         Prochaine série : {nextExerciseName} · {nextSetLabel}
       </p>
 
       <button
         type="button"
         onClick={onSkip}
-        className="border-border-strong w-full max-w-[280px] rounded-full border-[1.5px] py-[18px] text-lg font-bold"
+        className="border-border-strong w-full max-w-[280px] shrink-0 rounded-full border-[1.5px] py-[clamp(14px,2.4dvh,18px)] text-[clamp(16px,2.3dvh,18px)] font-bold"
       >
         Passer le repos
       </button>

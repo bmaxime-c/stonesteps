@@ -82,8 +82,8 @@ function RepsControl({
 
   return (
     <>
-      <div className="flex flex-1 flex-col items-center justify-center gap-[26px]">
-        <div className="flex items-center gap-[22px]">
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-[clamp(14px,3dvh,26px)]">
+        <div className="flex items-center gap-[clamp(14px,4vw,22px)]">
           <StepButton
             label="Retirer une répétition"
             onClick={() => setReps((r) => Math.max(0, r - 1))}
@@ -99,7 +99,7 @@ function RepsControl({
             <span className="sr-only" aria-live="polite">
               {STATUS_LABEL[status]}
             </span>
-            <p className="text-muted-foreground mt-1.5 text-[15px]">
+            <p className="text-muted-foreground mt-1.5 text-[clamp(13px,1.8dvh,15px)]">
               objectif {target} reps
             </p>
           </div>
@@ -116,7 +116,7 @@ function RepsControl({
       <button
         type="button"
         onClick={() => onValidate(reps, true)}
-        className="bg-primary text-primary-foreground mt-4 w-full rounded-full py-5 text-[19px] font-extrabold shadow-[0_0_34px_rgb(0_255_135/0.4)]"
+        className="bg-primary text-primary-foreground mt-[clamp(10px,2dvh,16px)] w-full shrink-0 rounded-full py-[clamp(14px,2.4dvh,20px)] text-[clamp(17px,2.4dvh,19px)] font-extrabold shadow-[0_0_34px_rgb(0_255_135/0.4)]"
       >
         Valider la série
       </button>
@@ -124,7 +124,11 @@ function RepsControl({
   )
 }
 
-/** Pas de reglage : 64 px, la cible tactile d'un ecran qu'on utilise essouffle. */
+/**
+ * 64 px, la cible tactile d'un ecran qu'on utilise essouffle. Le bouton ne
+ * descend sous cette taille que sur un ecran trop court pour la tenir, et
+ * jamais sous 56 px : en dessous, on ne vise plus rien a bout de bras.
+ */
 function StepButton({
   children,
   label,
@@ -139,7 +143,7 @@ function StepButton({
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="flex size-16 shrink-0 items-center justify-center rounded-full bg-white/12 text-[34px] leading-none select-none"
+      className="flex size-[clamp(56px,8dvh,64px)] shrink-0 items-center justify-center rounded-full bg-white/12 text-[clamp(28px,4dvh,34px)] leading-none select-none"
     >
       {children}
     </button>
@@ -218,9 +222,11 @@ function TimedControl({
   const strokeKey = status ?? 'progress'
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-[22px]">
-      <div className="relative size-[220px]">
-        <svg width="220" height="220" viewBox="0 0 220 220" aria-hidden="true">
+    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-[clamp(14px,3dvh,22px)]">
+      {/* L'anneau est le seul element qui peut rendre du terrain : il se cale
+          sur la hauteur disponible plutot que sur une taille fixe. */}
+      <div className="relative size-[min(220px,34dvh,70vw)] shrink">
+        <svg className="size-full" viewBox="0 0 220 220" aria-hidden="true">
           <circle
             cx="110"
             cy="110"
@@ -243,7 +249,7 @@ function TimedControl({
           />
         </svg>
 
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-7 text-center">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-[12%] text-center">
           {/* Meme parti que le compteur de reps : le statut se lit a la
               couleur, pas a un libelle. L'anneau la porte deja, le chiffre la
               reprend pour que l'information tienne au centre du regard. */}
@@ -251,7 +257,7 @@ function TimedControl({
           <span className="sr-only" aria-live="polite">
             {STATUS_LABEL[strokeKey]}
           </span>
-          <p className="text-muted-foreground text-[13px]">
+          <p className="text-muted-foreground text-[clamp(11px,1.6dvh,13px)]">
             {set.timerMode === 'minimal'
               ? `tenir ${target}s min`
               : `${set.targetReps} reps en ${target}s max`}
@@ -263,7 +269,7 @@ function TimedControl({
         <button
           type="button"
           onClick={() => onValidate(view.elapsed, true)}
-          className="bg-primary text-primary-foreground w-full max-w-[280px] rounded-full py-[18px] text-lg font-extrabold"
+          className="bg-primary text-primary-foreground w-full max-w-[280px] shrink-0 rounded-full py-[clamp(14px,2.4dvh,18px)] text-[clamp(16px,2.3dvh,18px)] font-extrabold"
         >
           Terminé
         </button>
@@ -277,7 +283,7 @@ function TimedControl({
             onCue('start')
             onStartTimer()
           }}
-          className="bg-primary text-primary-foreground w-full max-w-[280px] rounded-full py-[18px] text-lg font-extrabold shadow-[0_0_30px_rgb(0_255_135/0.4)]"
+          className="bg-primary text-primary-foreground w-full max-w-[280px] shrink-0 rounded-full py-[clamp(14px,2.4dvh,18px)] text-[clamp(16px,2.3dvh,18px)] font-extrabold shadow-[0_0_30px_rgb(0_255_135/0.4)]"
         >
           Démarrer le chrono
         </button>
