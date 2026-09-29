@@ -13,7 +13,11 @@
 
 import type { SetResult } from './model'
 
-export type RunStage = 'set' | 'rest' | 'summary'
+/**
+ * 'review' : correction d'une serie chronometree que ne suit aucun repos,
+ * avant de repartir.
+ */
+export type RunStage = 'set' | 'rest' | 'review' | 'summary'
 
 export type StoredRun = {
   gridId: string

@@ -129,21 +129,24 @@ function RepsControl({
  * descend sous cette taille que sur un ecran trop court pour la tenir, et
  * jamais sous 56 px : en dessous, on ne vise plus rien a bout de bras.
  */
-function StepButton({
+export function StepButton({
   children,
   label,
+  disabled = false,
   onClick,
 }: {
   children: React.ReactNode
   label: string
+  disabled?: boolean
   onClick: () => void
 }) {
   return (
     <button
       type="button"
       aria-label={label}
+      disabled={disabled}
       onClick={onClick}
-      className="flex size-[clamp(56px,8dvh,64px)] shrink-0 items-center justify-center rounded-full bg-white/12 text-[clamp(28px,4dvh,34px)] leading-none select-none"
+      className="flex size-[clamp(56px,8dvh,64px)] shrink-0 items-center justify-center rounded-full bg-white/12 text-[clamp(28px,4dvh,34px)] leading-none select-none disabled:opacity-35"
     >
       {children}
     </button>

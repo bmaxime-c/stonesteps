@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import type { TimerCuePreferences } from '@/lib/account/preferences'
 import { setTarget, setUnit } from '@/lib/grids/model'
+import { correctTimedResult, isCorrectable } from '@/lib/session/correction'
 import { isLevelValidated } from '@/lib/session/level'
 import { clearRun, loadRun, saveRun, type StoredRun } from '@/lib/session/local-store'
 import type { SetResult } from '@/lib/session/model'
@@ -20,6 +21,7 @@ import { useWakeLock, vibrate } from '@/lib/session/use-wake-lock'
 
 import { consolidateSession } from './actions'
 import { RestScreen } from './rest-screen'
+import { ReviewScreen } from './review-screen'
 import { SetRunner } from './set-runner'
 import { Summary } from './summary'
 
@@ -130,36 +132,27 @@ export function SessionRunner({
 
       const results = [...run.results, result]
       const isLast = run.cursor === steps.length - 1
+      const hasRest = !isLast && plan.restSeconds > 0
 
-      if (isLast) {
-        setRun({ ...run, results, stage: 'summary', timerStartedAt: null })
-        void persist(results)
+      // Une serie chronometree se rectifie avant de repartir : pendant le
+      // repos s'il y en a un, sinon sur une etape dediee.
+      if (!hasRest && isCorrectable(current.set)) {
+        setRun({ ...run, results, stage: 'review', timerStartedAt: null })
         return
       }
 
-      // Pas de repos apres la derniere serie : on passe au resume. Ni quand il
-      // est desactive sur la grille.
-      if (plan.restSeconds > 0) {
-        setRun({
-          ...run,
-          results,
-          stage: 'rest',
-          restStartedAt: Date.now(),
-          timerStartedAt: null,
-        })
-        return
-      }
-
-      setRun({
-        ...run,
-        results,
-        cursor: run.cursor + 1,
-        stage: 'set',
-        timerStartedAt: null,
-      })
+      setRun(advance({ ...run, results }, isLast, hasRest))
+      if (isLast) void persist(results)
     },
     [persist, plan.restSeconds, run, steps],
   )
+
+  const endReview = useCallback(() => {
+    if (run.stage !== 'review') return
+    const isLast = run.cursor === steps.length - 1
+    setRun(advance(run, isLast, false))
+    if (isLast) void persist(run.results)
+  }, [persist, run, steps.length])
 
   const endRest = useCallback(() => {
     setRun((current) =>
@@ -174,6 +167,25 @@ export function SessionRunner({
         : current,
     )
   }, [])
+
+  // Le repos, ou a defaut l'etape de correction, est le moment ou l'on
+  // rectifie la serie chronometree qui vient de finir : le resultat est deja
+  // range, on le recalcule sur place. Il se fige des qu'on repart.
+  const correctLast = useCallback(
+    (seconds: number) => {
+      setRun((current) => {
+        const finished = steps[current.cursor]
+        const last = current.results[current.results.length - 1]
+        if (current.stage !== 'rest' && current.stage !== 'review') return current
+        if (!finished || !last) return current
+        if (!isCorrectable(finished.set)) return current
+
+        const corrected = correctTimedResult(finished.set, last, seconds)
+        return { ...current, results: [...current.results.slice(0, -1), corrected] }
+      })
+    },
+    [steps],
+  )
 
   // `validate` change d'identite a chaque rendu : on le lit par reference dans
   // les minuteurs, sinon le delai serait reprogramme en boucle et ne
@@ -231,6 +243,19 @@ export function SessionRunner({
   if (!step) return null
 
   const nextStep = steps[run.cursor + 1]
+  const lastResult = run.results[run.results.length - 1]
+  const correction =
+    (run.stage === 'rest' || run.stage === 'review') &&
+    lastResult &&
+    step.set.timerMode !== 'none'
+      ? {
+          mode: step.set.timerMode,
+          value: lastResult.actualValue,
+          max: step.set.timerMode === 'strict' ? setTarget(step.set) : null,
+          status: lastResult.status,
+          onChange: correctLast,
+        }
+      : null
   const rest =
     run.restStartedAt === null
       ? { remaining: plan.restSeconds, done: false }
@@ -274,11 +299,18 @@ export function SessionRunner({
         {run.stage === 'rest' && nextStep ? nextStep.exerciseName : step.exerciseName}
       </p>
 
-      {run.stage === 'rest' && nextStep ? (
+      {run.stage === 'review' && correction ? (
+        <ReviewScreen
+          correction={correction}
+          continueLabel={nextStep ? 'Série suivante' : 'Voir le résumé'}
+          onContinue={endReview}
+        />
+      ) : run.stage === 'rest' && nextStep ? (
         <RestScreen
           remaining={rest.remaining}
           nextExerciseName={nextStep.exerciseName}
           nextSetLabel={setLabel(nextStep)}
+          correction={correction}
           onSkip={endRest}
         />
       ) : (
@@ -315,6 +347,17 @@ export function SessionRunner({
       ) : null}
     </main>
   )
+}
+
+/**
+ * Etape qui suit une serie close : le resume apres la derniere, le repos s'il
+ * y en a un, sinon directement la serie suivante.
+ */
+function advance(run: StoredRun, isLast: boolean, hasRest: boolean): StoredRun {
+  const base = { ...run, timerStartedAt: null }
+  if (isLast) return { ...base, stage: 'summary' }
+  if (hasRest) return { ...base, stage: 'rest', restStartedAt: Date.now() }
+  return { ...base, cursor: run.cursor + 1, stage: 'set' }
 }
 
 function freshRun(gridId: string, levelId: string): StoredRun {
