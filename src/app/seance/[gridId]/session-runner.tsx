@@ -236,9 +236,12 @@ export function SessionRunner({
       ? { remaining: plan.restSeconds, done: false }
       : restView(plan.restSeconds, run.restStartedAt, now)
 
+  // Mode plein ecran : la seance tient dans la fenetre, sans defilement. On
+  // mesure en dvh et non en vh, sinon la barre d'URL mobile retranche une
+  // bande qu'on ne verrait jamais.
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-[620px] flex-col px-[clamp(16px,4vw,32px)] pt-[clamp(12px,2vw,24px)] pb-12">
-      <header className="flex items-center justify-between gap-3 py-2 pb-4">
+    <main className="mx-auto flex h-[100dvh] w-full max-w-[620px] flex-col overflow-hidden px-[clamp(16px,4vw,32px)] pt-[calc(env(safe-area-inset-top)+clamp(8px,1.5dvh,20px))] pb-[calc(env(safe-area-inset-bottom)+clamp(12px,2dvh,24px))]">
+      <header className="flex shrink-0 items-center justify-between gap-3 pb-[clamp(10px,2dvh,16px)]">
         <div className="flex min-w-0 flex-wrap items-center gap-2.5">
           <span className="bg-success/16 text-success rounded-full px-3 py-[5px] text-[12.5px] font-extrabold whitespace-nowrap">
             Niveau {plan.levelNumber}/{plan.levelCount}
@@ -260,14 +263,14 @@ export function SessionRunner({
       </header>
 
       {/* Progression sur le total de series du niveau, pas sur les exercices. */}
-      <div className="mb-7 h-1 overflow-hidden rounded-sm bg-white/12">
+      <div className="mb-[clamp(14px,3dvh,28px)] h-1 shrink-0 overflow-hidden rounded-sm bg-white/12">
         <div
           className="bg-primary h-full transition-[width] duration-300"
           style={{ width: `${progressRatio(run.results.length, steps.length) * 100}%` }}
         />
       </div>
 
-      <p className="mb-3 text-center text-[26px] font-bold tracking-[-0.01em]">
+      <p className="mb-[clamp(6px,1.5dvh,12px)] shrink-0 text-center text-[clamp(20px,3.4dvh,26px)] font-bold tracking-[-0.01em]">
         {run.stage === 'rest' && nextStep ? nextStep.exerciseName : step.exerciseName}
       </p>
 
