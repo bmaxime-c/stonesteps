@@ -54,6 +54,12 @@ Le chrono a deux modes, à ne pas confondre :
 - `minimal` — il faut **tenir au moins** `timer_seconds` (gainage, descente lente) ;
 - `strict` — il faut **finir en au plus** `timer_seconds` (séries explosives).
 
+Le tap sur « Terminé » n'est qu'une **première mesure**. Une série chronométrée
+se corrige ensuite, pendant le repos qui suit ou, sans repos, sur une étape
+dédiée avant la série suivante ou le résumé. La déclaration de l'utilisateur
+prime sur le chrono : une série `strict` close d'office peut être ramenée sous
+la limite, et passe alors en réussite.
+
 ## Versionnement des grilles
 
 Une grille est une **identité** qui porte des **versions** : au plus un

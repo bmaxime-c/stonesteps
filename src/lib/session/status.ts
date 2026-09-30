@@ -31,7 +31,8 @@ export function compareStatus(actual: number, target: number): SetStatus {
  *
  * `completed` dit si l'utilisateur a valide avant la fin du compte a rebours.
  * Sans validation, la serie est cloturee en echec des que la limite est
- * atteinte — c'est le chrono qui tranche, pas l'utilisateur.
+ * atteinte. Ce n'est qu'une premiere mesure : l'utilisateur peut ensuite la
+ * rectifier (voir `correction.ts`), et sa declaration prime sur le chrono.
  */
 export function strictStatus(
   elapsedSeconds: number,

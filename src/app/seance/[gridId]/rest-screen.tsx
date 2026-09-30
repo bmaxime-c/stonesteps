@@ -1,5 +1,7 @@
 'use client'
 
+import { CorrectionControl, type Correction } from './correction-control'
+
 /**
  * Repos entre deux series.
  *
@@ -7,16 +9,21 @@
  * meme ecran, seul le corps change. Le compte a rebours est en cyan, la seule
  * couleur qui ne signifie pas un statut de serie — un repos n'est ni reussi ni
  * echoue.
+ *
+ * Apres une serie chronometree, le repos porte aussi sa correction : le temps
+ * saisi au tap sur « Termine » n'est qu'une premiere mesure.
  */
 export function RestScreen({
   remaining,
   nextExerciseName,
   nextSetLabel,
+  correction,
   onSkip,
 }: {
   remaining: number
   nextExerciseName: string
   nextSetLabel: string
+  correction: Correction | null
   onSkip: () => void
 }) {
   return (
@@ -34,6 +41,8 @@ export function RestScreen({
       <p className="text-muted-foreground text-center text-[clamp(13px,1.8dvh,15px)]">
         Prochaine série : {nextExerciseName} · {nextSetLabel}
       </p>
+
+      {correction ? <CorrectionControl correction={correction} /> : null}
 
       <button
         type="button"

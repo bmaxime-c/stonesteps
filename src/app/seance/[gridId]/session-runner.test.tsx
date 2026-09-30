@@ -268,8 +268,216 @@ describe('serie strict', () => {
       await vi.advanceTimersByTimeAsync(40_000)
     })
 
+    // Derniere serie : on passe par la correction avant le resume.
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Voir le résumé' }))
+    })
     expect(screen.getByText('Niveau 3 non validé')).toBeInTheDocument()
     expect(screen.getByText('Série 1/1 · 40s / 40s')).toBeInTheDocument()
+  })
+})
+
+describe('correction pendant le repos', () => {
+  const timedPlan = (over: Partial<LevelSet>) =>
+    plan({
+      restSeconds: 60,
+      steps: buildSteps({
+        exercises: [
+          {
+            id: 'e1',
+            exerciseId: 'x1',
+            exerciseName: 'Gainage',
+            position: 1,
+            sets: [set(1, over), set(2, over)],
+          },
+        ],
+      }),
+    })
+
+  const click = (name: string) =>
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name }))
+    })
+
+  const advance = (ms: number) =>
+    act(async () => {
+      await vi.advanceTimersByTimeAsync(ms)
+    })
+
+  it('ne propose rien apres une serie sans chrono', async () => {
+    const user = userEvent.setup()
+    render(<SessionRunner cues={silentCues} plan={plan({ restSeconds: 60 })} />)
+
+    await user.click(validateButton())
+    expect(screen.getByText('Repos')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('region', { name: 'Corriger la série précédente' }),
+    ).toBeNull()
+  })
+
+  it('rectifie un tap tardif sur une serie minimal', async () => {
+    vi.useFakeTimers()
+    render(
+      <SessionRunner
+        cues={silentCues}
+        plan={timedPlan({ timerMode: 'minimal', timerSeconds: 30 })}
+      />,
+    )
+
+    click('Démarrer le chrono')
+    await advance(31_000)
+    click('Terminé')
+
+    // Le chrono dit 31s ; l'utilisateur avait lache a 29s.
+    expect(screen.getByText('31s')).toHaveClass('text-surpass')
+    click('Retirer une seconde')
+    click('Retirer une seconde')
+    expect(screen.getByText('29s')).toHaveClass('text-fail')
+
+    click('Passer le repos')
+    click('Démarrer le chrono')
+    await advance(30_000)
+    click('Terminé')
+    click('Voir le résumé')
+
+    expect(screen.getByText('Niveau 3 non validé')).toBeInTheDocument()
+    expect(consolidate.mock.calls[0]?.[0].results[0]).toMatchObject({
+      actualValue: 29,
+      status: 'fail',
+    })
+  })
+
+  it('rattrape une serie strict close d office mais finie a temps', async () => {
+    vi.useFakeTimers()
+    render(
+      <SessionRunner
+        cues={silentCues}
+        plan={timedPlan({ timerMode: 'strict', timerSeconds: 40, targetReps: 8 })}
+      />,
+    )
+
+    click('Démarrer le chrono')
+    await advance(40_000)
+
+    // Cloture automatique : la limite est atteinte, et le + est bloque.
+    expect(screen.getByText('40s')).toHaveClass('text-fail')
+    expect(screen.getByRole('button', { name: 'Ajouter une seconde' })).toBeDisabled()
+    for (let i = 0; i < 5; i++) click('Retirer une seconde')
+    expect(screen.getByText('35s')).toHaveClass('text-success')
+
+    click('Passer le repos')
+    click('Démarrer le chrono')
+    await advance(30_000)
+    click('Terminé')
+    click('Voir le résumé')
+
+    expect(screen.getByText('Niveau 3 validé')).toBeInTheDocument()
+  })
+
+  it('se fige a la fin du repos', async () => {
+    vi.useFakeTimers()
+    render(
+      <SessionRunner
+        cues={silentCues}
+        plan={timedPlan({ timerMode: 'minimal', timerSeconds: 30 })}
+      />,
+    )
+
+    click('Démarrer le chrono')
+    await advance(30_000)
+    click('Terminé')
+    await advance(60_000)
+
+    expect(screen.queryByText('Repos')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Retirer une seconde' })).toBeNull()
+  })
+})
+
+describe('correction sans repos', () => {
+  const timedPlan = (restSeconds: number, over: Partial<LevelSet>) =>
+    plan({
+      restSeconds,
+      steps: buildSteps({
+        exercises: [
+          {
+            id: 'e1',
+            exerciseId: 'x1',
+            exerciseName: 'Gainage',
+            position: 1,
+            sets: [set(1, over), set(2, over)],
+          },
+        ],
+      }),
+    })
+
+  const click = (name: string) =>
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name }))
+    })
+
+  const advance = (ms: number) =>
+    act(async () => {
+      await vi.advanceTimersByTimeAsync(ms)
+    })
+
+  it('rectifie la derniere serie avant d arriver au resume', async () => {
+    vi.useFakeTimers()
+    render(
+      <SessionRunner
+        cues={silentCues}
+        plan={timedPlan(60, { timerMode: 'minimal', timerSeconds: 30 })}
+      />,
+    )
+
+    click('Démarrer le chrono')
+    await advance(30_000)
+    click('Terminé')
+    click('Passer le repos')
+    click('Démarrer le chrono')
+    await advance(29_000)
+    click('Terminé')
+
+    // Le chrono dit 29s ; le gainage a tenu 30s, le tap est venu trop tot.
+    expect(screen.queryByText('Niveau 3 non validé')).toBeNull()
+    expect(consolidate).not.toHaveBeenCalled()
+    click('Ajouter une seconde')
+    expect(screen.getByText('30s')).toHaveClass('text-success')
+
+    click('Voir le résumé')
+    expect(screen.getByText('Niveau 3 validé')).toBeInTheDocument()
+    expect(consolidate).toHaveBeenCalledTimes(1)
+    expect(consolidate.mock.calls[0]?.[0].results[1]).toMatchObject({
+      actualValue: 30,
+      status: 'success',
+    })
+  })
+
+  it('s arrete aussi entre deux series quand le repos est desactive', async () => {
+    vi.useFakeTimers()
+    render(
+      <SessionRunner
+        cues={silentCues}
+        plan={timedPlan(0, { timerMode: 'strict', timerSeconds: 40, targetReps: 8 })}
+      />,
+    )
+
+    click('Démarrer le chrono')
+    await advance(40_000)
+    click('Retirer une seconde')
+    expect(screen.getByText('39s')).toHaveClass('text-success')
+
+    click('Série suivante')
+    expect(screen.getByText(/Série 2\/2/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Démarrer le chrono' })).toBeInTheDocument()
+  })
+
+  it('ne s intercale pas apres une serie sans chrono', async () => {
+    const user = userEvent.setup()
+    render(<SessionRunner cues={silentCues} plan={plan({ restSeconds: 0 })} />)
+
+    await user.click(validateButton())
+    expect(screen.queryByRole('button', { name: 'Série suivante' })).toBeNull()
+    expect(screen.getByText(/Série 2\/2/)).toBeInTheDocument()
   })
 })
 
