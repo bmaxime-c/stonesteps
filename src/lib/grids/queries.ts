@@ -1,5 +1,7 @@
 import 'server-only'
 
+import { env } from '@/lib/env'
+import { publicImageUrl } from '@/lib/exercises/image'
 import { logSupabaseError } from '@/lib/supabase/log'
 import { createClient } from '@/lib/supabase/server'
 
@@ -25,7 +27,7 @@ const VERSION_SELECT = `
     id, position,
     level_exercises (
       id, exercise_id, position,
-      exercises ( name ),
+      exercises ( name, image_path ),
       level_sets ( id, position, target_reps, timer_mode, timer_seconds )
     )
   )
@@ -60,7 +62,7 @@ type VersionRow = {
       id: string
       exercise_id: string
       position: number
-      exercises: { name: string } | null
+      exercises: { name: string; image_path: string | null } | null
       level_sets: {
         id: string
         position: number
@@ -106,6 +108,10 @@ function toVersion(row: VersionRow): GridVersion {
             // Le nom vient du catalogue ; il n'est recopie en snapshot que
             // dans l'historique, pas dans la definition.
             exerciseName: exercise.exercises?.name ?? 'Exercice',
+            imageUrl: publicImageUrl(
+              env.supabaseUrl,
+              exercise.exercises?.image_path ?? null,
+            ),
             position: exercise.position,
             sets: [...exercise.level_sets]
               .sort((a, b) => a.position - b.position)
@@ -223,33 +229,4 @@ export async function loadPublicGrids(): Promise<Grid[]> {
     .map((row) => toGrid(row, userId))
     .filter((grid) => !grid.owned && grid.follow === null)
     .filter((grid) => grid.publishedVersions.length > 0)
-}
-
-export type CatalogExercise = {
-  id: string
-  name: string
-  muscleGroup: 'push' | 'pull' | 'legs' | 'core'
-}
-
-/**
- * Catalogue d'exercices : les integres, plus ceux de l'utilisateur.
- *
- * La RLS decide ce qui remonte — lecture ouverte quand `owner_id` est null,
- * ses propres exercices sinon.
- */
-export async function loadExerciseCatalog(): Promise<CatalogExercise[]> {
-  const supabase = await createClient()
-
-  const { data, error } = await supabase
-    .from('exercises')
-    .select('id, name, muscle_group')
-    .order('created_at', { ascending: true })
-
-  if (error || !data) return []
-
-  return data.map((row) => ({
-    id: row.id,
-    name: row.name,
-    muscleGroup: row.muscle_group,
-  }))
 }

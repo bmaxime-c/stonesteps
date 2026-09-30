@@ -261,6 +261,10 @@ export function SessionRunner({
       ? { remaining: plan.restSeconds, done: false }
       : restView(plan.restSeconds, run.restStartedAt, now)
 
+  // Exercice montre en tete : celui de la serie en cours, ou pendant le repos
+  // celui de la suivante.
+  const shown = run.stage === 'rest' && nextStep ? nextStep : step
+
   // Mode plein ecran : la seance tient dans la fenetre, sans defilement. On
   // mesure en dvh et non en vh, sinon la barre d'URL mobile retranche une
   // bande qu'on ne verrait jamais.
@@ -296,8 +300,20 @@ export function SessionRunner({
       </div>
 
       <p className="mb-[clamp(6px,1.5dvh,12px)] shrink-0 text-center text-[clamp(20px,3.4dvh,26px)] font-bold tracking-[-0.01em]">
-        {run.stage === 'rest' && nextStep ? nextStep.exerciseName : step.exerciseName}
+        {shown.exerciseName}
       </p>
+
+      {/* L'image guide le geste. Pendant le repos, c'est celle de la serie qui
+          vient : on s'y prepare. Sa hauteur suit l'ecran pour que la seance
+          tienne toujours sans defilement. */}
+      {shown.exerciseImageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={shown.exerciseImageUrl}
+          alt={`Illustration : ${shown.exerciseName}`}
+          className="bg-inset mx-auto mb-[clamp(6px,1.5dvh,12px)] h-[clamp(64px,16dvh,160px)] w-auto max-w-full shrink-0 rounded-[14px] object-contain"
+        />
+      ) : null}
 
       {run.stage === 'review' && correction ? (
         <ReviewScreen

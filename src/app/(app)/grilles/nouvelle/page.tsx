@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 
+import { loadExerciseCatalog } from '@/lib/exercises/queries'
 import { emptyGrid } from '@/lib/grids/draft'
-import { loadExerciseCatalog } from '@/lib/grids/queries'
 
 import { GridBuilder } from '../grid-builder'
 

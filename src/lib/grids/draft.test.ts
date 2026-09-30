@@ -53,6 +53,7 @@ describe('creation', () => {
               id: 'e1',
               exerciseId: 'x1',
               exerciseName: 'Pompes',
+              imageUrl: null,
               position: 1,
               sets: [
                 {

@@ -158,7 +158,9 @@ dessus est une **encre sombre**, jamais du blanc ; et aucun néon ne sert au
 texte courant — il est réservé aux chiffres, aux statuts et aux accents.
 
 Typographie : DM Sans via `next/font/google`, famille unique. Pas de dégradé,
-pas d'image : les seuls effets sont des halos `box-shadow`.
+pas d'image décorative : les seuls effets sont des halos `box-shadow`. Seule
+exception, les images d'exercices du catalogue (#35), qui guident le geste en
+séance.
 
 ## Navigation
 

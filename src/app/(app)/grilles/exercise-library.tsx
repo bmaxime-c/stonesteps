@@ -2,9 +2,9 @@
 
 import { ChevronLeft } from 'lucide-react'
 
-import { initials } from '@/lib/grids/describe'
-import type { CatalogExercise } from '@/lib/grids/queries'
-import type { MuscleGroup } from '@/lib/grids/model'
+import { ExerciseThumb } from '@/components/exercise-thumb'
+import { groupByCategory } from '@/lib/exercises/catalog'
+import type { CatalogExercise } from '@/lib/exercises/model'
 
 /**
  * Bibliotheque d'exercices.
@@ -14,15 +14,6 @@ import type { MuscleGroup } from '@/lib/grids/model'
  * d'edition et revient aussitot — on en ajoute rarement un seul, mais on veut
  * voir ou il atterrit.
  */
-
-const GROUP_LABELS: Record<MuscleGroup, string> = {
-  push: 'Poussée',
-  pull: 'Tirage',
-  legs: 'Jambes',
-  core: 'Gainage & skills',
-}
-
-const GROUP_ORDER: MuscleGroup[] = ['push', 'pull', 'legs', 'core']
 
 export function ExerciseLibrary({
   catalog,
@@ -56,14 +47,11 @@ export function ExerciseLibrary({
         </div>
       </div>
 
-      {GROUP_ORDER.map((group) => {
-        const items = catalog.filter((exercise) => exercise.muscleGroup === group)
-        if (items.length === 0) return null
-
+      {groupByCategory(catalog).map(({ category, exercises: items }) => {
         return (
-          <section key={group} className="flex flex-col gap-2.5">
+          <section key={category.id} className="flex flex-col gap-2.5">
             <h2 className="text-success text-xs font-bold tracking-[0.08em] uppercase">
-              {GROUP_LABELS[group]}
+              {category.name}
             </h2>
 
             <div className="grid grid-cols-[repeat(auto-fit,minmax(min(240px,100%),1fr))] gap-2.5">
@@ -74,12 +62,11 @@ export function ExerciseLibrary({
                   onClick={() => onPick(exercise)}
                   className="bg-card border-border flex items-center gap-3 rounded-[14px] border p-3.5 text-left"
                 >
-                  <span
-                    className="bg-chip text-success flex size-[34px] shrink-0 items-center justify-center rounded-[10px] text-xs font-bold"
-                    aria-hidden="true"
-                  >
-                    {initials(exercise.name)}
-                  </span>
+                  <ExerciseThumb
+                    name={exercise.name}
+                    imageUrl={exercise.imageUrl}
+                    className="size-[34px]"
+                  />
                   <span className="min-w-0 flex-1 truncate text-[15px] font-semibold">
                     {exercise.name}
                   </span>

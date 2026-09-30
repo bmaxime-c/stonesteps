@@ -55,6 +55,7 @@ function plan(over: Partial<SessionPlan> = {}): SessionPlan {
         id: 'e1',
         exerciseId: 'x1',
         exerciseName: 'Pompes',
+        imageUrl: null,
         position: 1,
         sets: [set(1), set(2)],
       },
@@ -86,6 +87,56 @@ afterEach(() => {
 })
 
 const validateButton = () => screen.getByRole('button', { name: 'Valider la série' })
+
+describe('image de l exercice', () => {
+  function illustrated(restSeconds: number): SessionPlan {
+    return plan({
+      restSeconds,
+      steps: buildSteps({
+        exercises: [
+          {
+            id: 'e1',
+            exerciseId: 'x1',
+            exerciseName: 'Pompes',
+            imageUrl: 'https://img/pompes.webp',
+            position: 1,
+            sets: [set(1)],
+          },
+          {
+            id: 'e2',
+            exerciseId: 'x2',
+            exerciseName: 'Dips',
+            imageUrl: 'https://img/dips.webp',
+            position: 2,
+            sets: [set(1)],
+          },
+        ],
+      }),
+    })
+  }
+
+  it('montre l image de l exercice en cours', () => {
+    render(<SessionRunner cues={silentCues} plan={illustrated(0)} />)
+    expect(screen.getByRole('img', { name: 'Illustration : Pompes' })).toHaveAttribute(
+      'src',
+      'https://img/pompes.webp',
+    )
+  })
+
+  it('montre celle de l exercice suivant pendant le repos', async () => {
+    const user = userEvent.setup()
+    render(<SessionRunner cues={silentCues} plan={illustrated(30)} />)
+
+    await user.click(validateButton())
+
+    expect(screen.getByRole('img', { name: 'Illustration : Dips' })).toBeInTheDocument()
+  })
+
+  it('n affiche rien sans image', () => {
+    render(<SessionRunner cues={silentCues} plan={plan()} />)
+    expect(screen.queryByRole('img')).not.toBeInTheDocument()
+  })
+})
 
 describe('parcours d une seance sans chrono', () => {
   it('annonce le niveau, l exercice et la serie en cours', () => {
@@ -236,6 +287,7 @@ describe('serie strict', () => {
             id: 'e1',
             exerciseId: 'x1',
             exerciseName: 'Pompes sautees',
+            imageUrl: null,
             position: 1,
             sets: [set(1, { timerMode: 'strict', timerSeconds: 40, targetReps: 8 })],
           },
@@ -287,6 +339,7 @@ describe('correction pendant le repos', () => {
             id: 'e1',
             exerciseId: 'x1',
             exerciseName: 'Gainage',
+            imageUrl: null,
             position: 1,
             sets: [set(1, over), set(2, over)],
           },
@@ -403,6 +456,7 @@ describe('correction sans repos', () => {
             id: 'e1',
             exerciseId: 'x1',
             exerciseName: 'Gainage',
+            imageUrl: null,
             position: 1,
             sets: [set(1, over), set(2, over)],
           },
@@ -559,6 +613,7 @@ describe('reperes du chrono', () => {
             id: 'e1',
             exerciseId: 'x1',
             exerciseName: 'Pompes sautees',
+            imageUrl: null,
             position: 1,
             sets: [set(1, { timerMode: 'strict', timerSeconds: 40, targetReps: 8 })],
           },

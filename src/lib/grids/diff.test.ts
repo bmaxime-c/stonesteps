@@ -23,6 +23,7 @@ function level(position: number, reps: number[], exerciseId = 'x1'): Level {
         id: crypto.randomUUID(),
         exerciseId,
         exerciseName: 'Pompes',
+        imageUrl: null,
         position: 1,
         sets: reps.map((targetReps, index) => set({ position: index + 1, targetReps })),
       },
