@@ -34,29 +34,83 @@ export type Database = {
   }
   public: {
     Tables: {
-      exercises: {
+      exercise_categories: {
         Row: {
           created_at: string
           id: string
-          muscle_group: Database['public']['Enums']['muscle_group']
           name: string
-          owner_id: string | null
+          position: number
         }
         Insert: {
           created_at?: string
           id?: string
-          muscle_group: Database['public']['Enums']['muscle_group']
           name: string
-          owner_id?: string | null
+          position: number
         }
         Update: {
           created_at?: string
           id?: string
-          muscle_group?: Database['public']['Enums']['muscle_group']
+          name?: string
+          position?: number
+        }
+        Relationships: []
+      }
+      exercise_editors: {
+        Row: {
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'exercise_editors_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: true
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      exercises: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          image_path: string | null
+          name: string
+          owner_id: string | null
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          image_path?: string | null
+          name: string
+          owner_id?: string | null
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          image_path?: string | null
           name?: string
           owner_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: 'exercises_category_id_fkey'
+            columns: ['category_id']
+            isOneToOne: false
+            referencedRelation: 'exercise_categories'
+            referencedColumns: ['id']
+          },
           {
             foreignKeyName: 'exercises_owner_id_fkey'
             columns: ['owner_id']
@@ -441,16 +495,17 @@ export type Database = {
       can_read_grid_version: { Args: { v: string }; Returns: boolean }
       can_read_level: { Args: { l: string }; Returns: boolean }
       can_read_level_exercise: { Args: { le: string }; Returns: boolean }
+      is_exercise_editor: { Args: never; Returns: boolean }
       owns_grid: { Args: { g: string }; Returns: boolean }
       owns_grid_version: { Args: { v: string }; Returns: boolean }
       owns_level: { Args: { l: string }; Returns: boolean }
       owns_level_exercise: { Args: { le: string }; Returns: boolean }
       owns_session: { Args: { s: string }; Returns: boolean }
       shares_a_grid_with_me: { Args: { p: string }; Returns: boolean }
+      used_exercise_ids: { Args: never; Returns: string[] }
     }
     Enums: {
       grid_version_status: 'draft' | 'published'
-      muscle_group: 'push' | 'pull' | 'legs' | 'core'
       set_status: 'success' | 'surpass' | 'fail'
       timer_mode: 'none' | 'minimal' | 'strict'
     }
@@ -580,7 +635,6 @@ export const Constants = {
   public: {
     Enums: {
       grid_version_status: ['draft', 'published'],
-      muscle_group: ['push', 'pull', 'legs', 'core'],
       set_status: ['success', 'surpass', 'fail'],
       timer_mode: ['none', 'minimal', 'strict'],
     },

@@ -117,6 +117,7 @@ merge. Avec `--clip`, il ne reste qu'à coller dans le
 | `…914000002_schema.sql`              | grilles, niveaux, historique   |
 | `…914000003_rls_policies.sql`        | Row Level Security             |
 | `…914000004_seed_exercises.sql`      | catalogue d'exercices intégré  |
+| `…930000001_exercise_editor.sql`     | éditeur du catalogue, images   |
 
 Les six premières portent le modèle précédent. Aucune n'est modifiée ni
 supprimée — c'est la règle. C'est `reset_schema` qui défait leur effet :
@@ -136,6 +137,19 @@ Trois points structurants :
   C'est elle qui rendrait idempotente une éventuelle synchronisation hors ligne.
 - Le mode de chrono est un enum : `none`, `minimal` (tenir ≥ N secondes) ou
   `strict` (finir en ≤ N secondes).
+
+### Éditeurs du catalogue d'exercices
+
+Le catalogue commun (catégories, noms, images) ne se modifie qu'avec un droit
+spécial, sans interface pour l'administrer. Il s'attribue dans le SQL Editor :
+
+```sql
+insert into public.exercise_editors (user_id)
+select id from auth.users where email = 'prenom.nom@exemple.fr';
+```
+
+L'éditeur voit alors un lien « Exercices » dans l'onglet Grilles. Les images
+vont dans le bucket Storage public `exercise-images`, créé par la migration.
 
 ### À configurer une fois dans le dashboard Supabase
 

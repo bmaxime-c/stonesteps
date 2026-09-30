@@ -3,6 +3,7 @@ import Link from 'next/link'
 
 import { EmptyState } from '@/components/empty-state'
 import { ScreenHeader } from '@/components/screen-header'
+import { isExerciseEditor } from '@/lib/exercises/queries'
 import { initials, plural } from '@/lib/grids/describe'
 import { editableVersion, latestPublished, playableVersion } from '@/lib/grids/model'
 import type { Grid } from '@/lib/grids/model'
@@ -22,7 +23,7 @@ export const metadata: Metadata = { title: 'Mes grilles' }
  * s'editent et se publient, celles qu'on suit se consultent et se retirent.
  */
 export default async function GridsPage() {
-  const grids = await loadMyGrids()
+  const [grids, editor] = await Promise.all([loadMyGrids(), isExerciseEditor()])
   const mine = grids.filter((grid) => grid.owned)
   const followed = grids.filter((grid) => !grid.owned)
 
@@ -33,6 +34,16 @@ export default async function GridsPage() {
         title="Mes grilles"
         action={
           <div className="flex flex-wrap gap-2">
+            {/* Le catalogue d'exercices ne s'edite qu'avec un droit attribue en
+                base : sans lui, le lien n'a pas lieu d'etre. */}
+            {editor ? (
+              <Link
+                href="/grilles/exercices"
+                className="border-border-strong text-muted-foreground rounded-full border px-4 py-3 text-[15px] font-semibold whitespace-nowrap"
+              >
+                Exercices
+              </Link>
+            ) : null}
             <Link
               href="/grilles/decouvrir"
               className="border-border-strong text-muted-foreground rounded-full border px-4 py-3 text-[15px] font-semibold whitespace-nowrap"

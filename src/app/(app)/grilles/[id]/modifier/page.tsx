@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 
+import { loadExerciseCatalog } from '@/lib/exercises/queries'
 import { fromGrid } from '@/lib/grids/draft'
 import { editableVersion, latestPublished } from '@/lib/grids/model'
-import { loadExerciseCatalog, loadGrid } from '@/lib/grids/queries'
+import { loadGrid } from '@/lib/grids/queries'
 
 import { GridBuilder } from '../../grid-builder'
 

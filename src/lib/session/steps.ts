@@ -14,6 +14,8 @@ export type SetStep = {
   index: number
   set: LevelSet
   exerciseName: string
+  /** Image du catalogue, montree en seance pour guider le geste. */
+  exerciseImageUrl: string | null
   /** Rang de l'exercice dans le niveau, a partir de 1. */
   exerciseNumber: number
   exerciseCount: number
@@ -38,6 +40,7 @@ export function buildSteps(level: Pick<Level, 'exercises'>): SetStep[] {
         index: steps.length,
         set,
         exerciseName: exercise.exerciseName,
+        exerciseImageUrl: exercise.imageUrl,
         exerciseNumber: exerciseIndex + 1,
         exerciseCount: exercises.length,
         setNumber: setIndex + 1,

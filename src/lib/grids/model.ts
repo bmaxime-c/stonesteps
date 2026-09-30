@@ -11,7 +11,6 @@
 import type { Database } from '@/lib/database.types'
 
 export type TimerMode = Database['public']['Enums']['timer_mode']
-export type MuscleGroup = Database['public']['Enums']['muscle_group']
 
 /**
  * Une serie.
@@ -32,6 +31,8 @@ export type LevelExercise = {
   id: string
   exerciseId: string
   exerciseName: string
+  /** Image du catalogue, affichee en seance pour guider le geste. */
+  imageUrl: string | null
   position: number
   sets: LevelSet[]
 }

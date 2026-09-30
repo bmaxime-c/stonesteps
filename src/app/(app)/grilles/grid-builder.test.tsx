@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { emptyGrid } from '@/lib/grids/draft'
-import type { CatalogExercise } from '@/lib/grids/queries'
+import type { CatalogExercise } from '@/lib/exercises/model'
 
 import type {
   DeleteGridResult,
@@ -44,10 +44,14 @@ vi.mock('./actions', () => ({
   setGridVisibility: (gridId: string, isPublic: boolean) => visibility(gridId, isPublic),
 }))
 
+const pushCategory = { id: 'c1', name: 'Poussée', position: 1 }
+const pullCategory = { id: 'c2', name: 'Tirage', position: 2 }
+const coreCategory = { id: 'c4', name: 'Gainage & skills', position: 4 }
+
 const catalog: CatalogExercise[] = [
-  { id: 'x1', name: 'Pompes', muscleGroup: 'push' },
-  { id: 'x2', name: 'Tractions', muscleGroup: 'pull' },
-  { id: 'x3', name: 'Planche (gainage)', muscleGroup: 'core' },
+  { id: 'x1', name: 'Pompes', category: pushCategory, imageUrl: null },
+  { id: 'x2', name: 'Tractions', category: pullCategory, imageUrl: null },
+  { id: 'x3', name: 'Planche (gainage)', category: coreCategory, imageUrl: null },
 ]
 
 beforeEach(() => {

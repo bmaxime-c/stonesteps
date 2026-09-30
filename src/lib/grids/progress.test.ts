@@ -21,6 +21,7 @@ function level(id: string, position: number): Level {
         id: `e-${id}`,
         exerciseId: 'x1',
         exerciseName: 'Pompes',
+        imageUrl: null,
         position: 1,
         sets: [
           {

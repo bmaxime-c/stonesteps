@@ -24,7 +24,7 @@ import {
   type EditableGrid,
   type EditableSet,
 } from '@/lib/grids/draft'
-import type { CatalogExercise } from '@/lib/grids/queries'
+import type { CatalogExercise } from '@/lib/exercises/model'
 import { cn } from '@/lib/utils'
 
 import {
