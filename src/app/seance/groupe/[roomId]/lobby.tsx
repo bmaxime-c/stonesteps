@@ -12,6 +12,8 @@ import { cn } from '@/lib/utils'
 
 import { leaveRoom, startRoom } from '../actions'
 import { GroupRunner } from './group-runner'
+import { HostBanner } from './host-banner'
+import { useHostDuty } from './use-host-duty'
 
 type LobbyLevel = Pick<Level, 'id' | 'position'>
 
@@ -41,6 +43,15 @@ export function Lobby({
   cues: TimerCuePreferences
 }) {
   const { room, presentIds, reload } = useRoom(initialRoom, userId)
+  // Avant le lancement aussi, l'hote bat : s'il ferme l'onglet sans quitter,
+  // un autre prend la main et peut lancer. Le coureur prend le relais ensuite.
+  const duty = useHostDuty({
+    room,
+    presentIds,
+    userId,
+    reload,
+    active: room.status === 'open',
+  })
 
   // Lance puis termine : le coureur porte la seance jusqu'au resume.
   if (room.status !== 'open') {
@@ -57,7 +68,7 @@ export function Lobby({
     )
   }
 
-  const isHost = room.hostId === userId
+  const isHost = duty.isHost
   const ceiling = roomCeiling(room.members)
 
   return (
@@ -140,7 +151,15 @@ export function Lobby({
         </p>
       )}
 
+      {duty.error ? (
+        <p className="text-fail text-center text-[13px] font-semibold" role="alert">
+          {duty.error}
+        </p>
+      ) : null}
+
       <LeaveButton roomId={room.id} />
+
+      {duty.becameHost ? <HostBanner /> : null}
     </main>
   )
 }

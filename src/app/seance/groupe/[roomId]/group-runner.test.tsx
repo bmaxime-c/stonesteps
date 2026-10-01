@@ -15,6 +15,8 @@ const actions = vi.hoisted(() => ({
   declareSet: vi.fn(),
   advanceRoom: vi.fn(),
   consolidateSession: vi.fn(),
+  heartbeatRoom: vi.fn(),
+  claimRoomHost: vi.fn(),
 }))
 
 const router = vi.hoisted(() => ({ push: vi.fn() }))
@@ -24,6 +26,8 @@ vi.mock('next/navigation', () => ({ useRouter: () => router }))
 vi.mock('../actions', () => ({
   declareSet: actions.declareSet,
   advanceRoom: actions.advanceRoom,
+  heartbeatRoom: actions.heartbeatRoom,
+  claimRoomHost: actions.claimRoomHost,
 }))
 
 vi.mock('@/app/seance/[gridId]/actions', () => ({
@@ -170,6 +174,8 @@ beforeEach(() => {
   window.sessionStorage.clear()
   actions.declareSet.mockReset().mockResolvedValue({ error: null, stale: false })
   actions.advanceRoom.mockReset().mockResolvedValue({ error: null, stale: false })
+  actions.heartbeatRoom.mockReset().mockResolvedValue({ deposed: false })
+  actions.claimRoomHost.mockReset().mockResolvedValue({ claimed: true, error: null })
   actions.consolidateSession
     .mockReset()
     .mockResolvedValue({ sessionId: 'sess-1', error: null })
@@ -776,5 +782,161 @@ describe('GroupRunner, reprise apres coupure', () => {
       [2, 'fail'],
       [3, 'fail'],
     ])
+  })
+})
+
+describe('GroupRunner, battement et prise de main', () => {
+  const ago = (ms: number) => new Date(Date.now() - ms).toISOString()
+
+  it('l hote bat des le montage, puis a intervalle', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    render(element())
+
+    await waitFor(() => expect(actions.heartbeatRoom).toHaveBeenCalledOnce())
+    expect(actions.heartbeatRoom).toHaveBeenCalledWith('room-1')
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000)
+    })
+    expect(actions.heartbeatRoom).toHaveBeenCalledTimes(3)
+  })
+
+  it('un invite ne bat pas', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    render(element({ userId: 'guest' }))
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(6_000)
+    })
+    expect(actions.heartbeatRoom).not.toHaveBeenCalled()
+  })
+
+  it('hote perime et je suis candidat : prend la main, une seule fois', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    render(
+      element({
+        room: room({ hostSeenAt: ago(16_000) }),
+        userId: 'guest',
+        present: ['guest'],
+      }),
+    )
+
+    await waitFor(() => expect(actions.claimRoomHost).toHaveBeenCalledOnce())
+    expect(actions.claimRoomHost).toHaveBeenCalledWith('room-1')
+    // Tant que le salon n'a pas change, on ne retente pas.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3_000)
+    })
+    expect(actions.claimRoomHost).toHaveBeenCalledOnce()
+    // Prise : on relit le salon sans attendre l'evenement.
+    expect(reload).toHaveBeenCalled()
+  })
+
+  it('hote perime mais je ne suis pas candidat : jamais', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    render(
+      element({
+        room: room({
+          hostSeenAt: ago(16_000),
+          members: [
+            member('host', 'Alice'),
+            member('guest', 'Bruno'),
+            member('carl', 'Carl', { joinedAt: '2026-10-01T10:02:00Z' }),
+          ],
+        }),
+        userId: 'carl',
+        present: ['guest', 'carl'],
+      }),
+    )
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3_000)
+    })
+    // Bruno, entre avant, est le candidat.
+    expect(actions.claimRoomHost).not.toHaveBeenCalled()
+  })
+
+  it('attend que l hote absent soit perime avant de prendre la main', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    render(
+      element({
+        room: room({ hostSeenAt: ago(0) }),
+        userId: 'guest',
+        present: ['guest'],
+      }),
+    )
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000)
+    })
+    expect(actions.claimRoomHost).not.toHaveBeenCalled()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(7_000)
+    })
+    expect(actions.claimRoomHost).toHaveBeenCalledOnce()
+  })
+
+  it('un hote present ne se fait pas prendre la main, meme silencieux', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    render(element({ room: room({ hostSeenAt: ago(30_000) }), userId: 'guest' }))
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000)
+    })
+    expect(actions.claimRoomHost).not.toHaveBeenCalled()
+  })
+
+  it('un refus host_alive ou host_taken reste silencieux', async () => {
+    actions.claimRoomHost.mockResolvedValue({ claimed: false, error: null })
+    render(
+      element({
+        room: room({ hostSeenAt: ago(16_000) }),
+        userId: 'guest',
+        present: ['guest'],
+      }),
+    )
+
+    await waitFor(() => expect(actions.claimRoomHost).toHaveBeenCalledOnce())
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('le bandeau s affiche quand on devient hote, et l on se met a battre', async () => {
+    const view = render(element({ userId: 'guest' }))
+    expect(screen.queryByText("Tu es maintenant l'hôte")).not.toBeInTheDocument()
+
+    view.rerender(element({ room: room({ hostId: 'guest' }), userId: 'guest' }))
+
+    expect(screen.getByRole('status')).toHaveTextContent("Tu es maintenant l'hôte")
+    await waitFor(() => expect(actions.heartbeatRoom).toHaveBeenCalledOnce())
+  })
+
+  it('pas de bandeau pour l hote d origine', () => {
+    render(element())
+
+    expect(screen.queryByText("Tu es maintenant l'hôte")).not.toBeInTheDocument()
+  })
+
+  it('un hote depossede cesse de battre et redevient invite', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    actions.heartbeatRoom.mockResolvedValue({ deposed: true })
+    render(
+      element({
+        room: room({ stage: 'rest', restStartedAt: new Date().toISOString() }),
+      }),
+    )
+    expect(screen.getByRole('button', { name: 'Passer le repos' })).toBeInTheDocument()
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('button', { name: 'Passer le repos' }),
+      ).not.toBeInTheDocument(),
+    )
+    expect(reload).toHaveBeenCalled()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(12_000)
+    })
+    expect(actions.heartbeatRoom).toHaveBeenCalledOnce()
   })
 })

@@ -15,6 +15,8 @@ const actions = vi.hoisted(() => ({
   leaveRoom: vi.fn(),
   startRoom: vi.fn(),
   followGrid: vi.fn(),
+  heartbeatRoom: vi.fn(),
+  claimRoomHost: vi.fn(),
 }))
 
 const router = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }))
@@ -34,6 +36,8 @@ vi.mock('../actions', () => ({
   createRoom: actions.createRoom,
   leaveRoom: actions.leaveRoom,
   startRoom: actions.startRoom,
+  heartbeatRoom: actions.heartbeatRoom,
+  claimRoomHost: actions.claimRoomHost,
   declareSet: vi.fn(),
   advanceRoom: vi.fn(),
 }))
@@ -98,6 +102,8 @@ function renderLobby(userId: string, overrides: Partial<Room> = {}) {
 beforeEach(() => {
   live.present = new Set()
   for (const fn of Object.values(actions)) fn.mockReset()
+  actions.heartbeatRoom.mockResolvedValue({ deposed: false })
+  actions.claimRoomHost.mockResolvedValue({ claimed: true, error: null })
   router.push.mockReset()
   router.refresh.mockReset()
 })
@@ -254,5 +260,46 @@ describe('OpenRoomButton', () => {
       await screen.findByText("Le salon n'a pas pu être ouvert."),
     ).toBeInTheDocument()
     expect(router.push).not.toHaveBeenCalled()
+  })
+})
+
+describe('Lobby, battement et prise de main', () => {
+  it('l hote bat des l ouverture du salon', async () => {
+    renderLobby('host')
+
+    await waitFor(() => expect(actions.heartbeatRoom).toHaveBeenCalledWith('room-1'))
+  })
+
+  it('un invite ne bat pas', async () => {
+    renderLobby('guest')
+
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(actions.heartbeatRoom).not.toHaveBeenCalled()
+  })
+
+  it('l hote parti sans quitter, le plus ancien present prend la main', async () => {
+    live.present = new Set(['guest'])
+    renderLobby('guest', { hostSeenAt: new Date(Date.now() - 16_000).toISOString() })
+
+    await waitFor(() => expect(actions.claimRoomHost).toHaveBeenCalledOnce())
+    expect(actions.claimRoomHost).toHaveBeenCalledWith('room-1')
+  })
+
+  it('devenu hote, l invite voit le bandeau et peut lancer', () => {
+    const view = renderLobby('guest')
+    expect(screen.queryByRole('button', { name: /Lancer/ })).not.toBeInTheDocument()
+
+    view.rerender(
+      <Lobby
+        initialRoom={room({ hostId: 'guest' })}
+        userId="guest"
+        grid={grid}
+        levels={levels}
+        cues={cues}
+      />,
+    )
+
+    expect(screen.getByText("Tu es maintenant l'hôte")).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Lancer le niveau 2' })).toBeInTheDocument()
   })
 })

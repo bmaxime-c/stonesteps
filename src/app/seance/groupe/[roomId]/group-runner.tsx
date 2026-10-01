@@ -46,6 +46,8 @@ import { useWakeLock, vibrate } from '@/lib/session/use-wake-lock'
 
 import { advanceRoom, declareSet } from '../actions'
 import { Finished } from './finished'
+import { HostBanner } from './host-banner'
+import { useHostDuty } from './use-host-duty'
 import { WaitingScreen } from './waiting-screen'
 
 /**
@@ -61,6 +63,8 @@ import { WaitingScreen } from './waiting-screen'
  * l'etape de correction. Une fois declaree, il attend le groupe, en
  * corrigeant encore son chrono s'il le faut. L'hote fait avancer : des que
  * tous les presents ont declare, a la fin du repos commun, ou quand il force.
+ * S'il disparait, un present prend la main et la seance continue
+ * (useHostDuty).
  * Les series que le groupe a passees sans nous, ou closes avant d'en recevoir
  * la declaration, sont comptees echouees. A la fin, chacun enregistre sa
  * propre seance.
@@ -93,7 +97,16 @@ export function GroupRunner({
   const levelId = level?.id ?? ''
   const steps = useMemo(() => (level ? buildSteps(level) : []), [level])
   const roomId = room.id
-  const isHost = room.hostId === userId
+  // Battement et prise de main pendant la seance : l'hote peut changer en
+  // cours de route, et c'est ce role qui fait avancer le groupe.
+  const duty = useHostDuty({
+    room,
+    presentIds,
+    userId,
+    reload,
+    active: room.status === 'running',
+  })
+  const isHost = duty.isHost
 
   const [run, setRun] = useState<GroupRun | null>(null)
   const [hydrated, setHydrated] = useState(false)
@@ -463,14 +476,16 @@ export function GroupRunner({
         />
       )}
 
-      {stepError ? (
+      {(stepError ?? duty.error) ? (
         <p
           className="text-fail shrink-0 text-center text-[13px] font-semibold"
           role="alert"
         >
-          {stepError}
+          {stepError ?? duty.error}
         </p>
       ) : null}
+
+      {duty.becameHost ? <HostBanner /> : null}
 
       {blinking ? (
         <div
