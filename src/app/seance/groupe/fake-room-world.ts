@@ -615,7 +615,8 @@ export type RoomWorld = ReturnType<typeof createRoomWorld>
 
 // ---------------------------------------------------------------------------
 // Jeu de donnees : une grille « Haut du corps » en deux versions publiees,
-// quatre niveaux d'un exercice, deux series de reps par niveau, 60 s de repos.
+// quatre niveaux d'un exercice, deux series de reps par niveau -- quatre au
+// niveau 3, de quoi manquer des series et revenir --, 60 s de repos.
 // ---------------------------------------------------------------------------
 
 const EXERCISES = ['Pompes', 'Tractions', 'Dips', 'Muscle-up']
@@ -633,7 +634,7 @@ function level(versionId: string, position: number): Level {
         exerciseName: EXERCISES[position - 1],
         imageUrl: null,
         position: 1,
-        sets: Array.from({ length: SETS_PER_LEVEL }, (_, index) => ({
+        sets: Array.from({ length: position === 3 ? 4 : SETS_PER_LEVEL }, (_, index) => ({
           id: `${versionId}-s${position}-${index + 1}`,
           position: index + 1,
           targetReps: position * 10,
