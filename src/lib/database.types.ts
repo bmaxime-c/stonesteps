@@ -622,6 +622,11 @@ export type Database = {
       can_read_level: { Args: { l: string }; Returns: boolean }
       can_read_level_exercise: { Args: { le: string }; Returns: boolean }
       can_read_room: { Args: { r: string }; Returns: boolean }
+      claim_room_host: { Args: { p_room: string }; Returns: undefined }
+      create_room: {
+        Args: { p_ceiling: number; p_grid: string; p_version: string }
+        Returns: string
+      }
       declare_set: {
         Args: {
           p_cursor: number
@@ -630,6 +635,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      heartbeat_room: { Args: { p_room: string }; Returns: undefined }
       is_exercise_editor: { Args: never; Returns: boolean }
       is_published_version_of: { Args: { g: string; v: string }; Returns: boolean }
       is_room_host: { Args: { r: string }; Returns: boolean }
