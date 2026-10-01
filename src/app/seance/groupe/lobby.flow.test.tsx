@@ -444,14 +444,14 @@ describe('Salon a plusieurs, de l ouverture au lancement', () => {
     const roomId = created.roomId!
 
     const alice = await openLink('alice', roomId)
-    expect(await alice.findByRole('listitem', { name: /Alice/ })).toBeInTheDocument()
+    expect(await alice.findByText(/^Alice/, { selector: 'li p' })).toBeInTheDocument()
     // Seule, Alice peut choisir jusqu'a son niveau en cours.
     expect(alice.getByRole('button', { name: 'Niveau 4' })).toBeInTheDocument()
 
     // B ouvre le lien : il entre, et le plafond descend a son niveau.
     const bruno = await openLink('bruno', roomId)
-    expect(bruno.getByRole('listitem', { name: /Bruno/ })).toBeInTheDocument()
-    expect(await alice.findByRole('listitem', { name: /Bruno/ })).toBeInTheDocument()
+    expect(bruno.getByText(/^Bruno/, { selector: 'li p' })).toBeInTheDocument()
+    expect(await alice.findByText(/^Bruno/, { selector: 'li p' })).toBeInTheDocument()
     await waitFor(() =>
       expect(alice.queryByRole('button', { name: 'Niveau 3' })).not.toBeInTheDocument(),
     )

@@ -86,7 +86,6 @@ export function Lobby({
             return (
               <li
                 key={member.userId}
-                aria-label={name}
                 className="bg-card border-border flex items-center gap-3 rounded-[14px] border px-4 py-3"
               >
                 <span
@@ -165,6 +164,11 @@ function InviteLink({ roomId }: { roomId: string }) {
       >
         {copied ? 'Lien copié' : 'Copier le lien'}
       </button>
+      {/* Le libelle change sous le focus sans etre relu : la confirmation
+          passe par une region annoncee. */}
+      <span role="status" aria-live="polite" className="sr-only">
+        {copied ? 'Lien copié' : ''}
+      </span>
       {failed ? (
         <p className="text-fail w-full text-[12px] font-semibold">
           Copie impossible : partage l&apos;adresse de cette page.

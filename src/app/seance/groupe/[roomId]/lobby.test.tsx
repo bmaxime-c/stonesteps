@@ -92,6 +92,15 @@ beforeEach(() => {
   router.refresh.mockReset()
 })
 
+/** Ligne d'un participant, reperee a son nom affiche. */
+function participant(name: string): HTMLElement {
+  const item = screen
+    .getAllByRole('listitem')
+    .find((candidate) => candidate.textContent?.includes(name))
+  if (!item) throw new Error(`participant introuvable : ${name}`)
+  return item
+}
+
 describe('Lobby', () => {
   it('ne propose aucun niveau au-dessus du plafond du salon', () => {
     renderLobby('host')
@@ -134,11 +143,14 @@ describe('Lobby', () => {
     live.present = new Set(['host'])
     renderLobby('guest')
 
-    const alice = screen.getByRole('listitem', { name: /Alice/ })
+    const alice = participant('Alice')
     expect(alice).toHaveTextContent('Hôte')
     expect(alice).toHaveTextContent('Présent')
+    // Le nom visible suffit : un aria-label le doublerait, et masquerait aux
+    // lecteurs d'ecran l'hote et la presence.
+    expect(alice).not.toHaveAttribute('aria-label')
 
-    const bruno = screen.getByRole('listitem', { name: /Bruno/ })
+    const bruno = participant('Bruno')
     expect(bruno).not.toHaveTextContent('Hôte')
     expect(bruno).toHaveTextContent('Absent')
   })
@@ -163,6 +175,9 @@ describe('Lobby', () => {
       `${window.location.origin}/seance/groupe/room-1`,
     )
     expect(screen.getByRole('button', { name: 'Lien copié' })).toBeInTheDocument()
+    // La confirmation est annoncee : le focus reste sur le bouton, et un
+    // libelle qui change sous lui ne se lit pas de lui-meme.
+    expect(screen.getByRole('status')).toHaveTextContent('Lien copié')
   })
 
   it('un salon termine quitte l ecran d attente', () => {
