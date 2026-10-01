@@ -4,14 +4,17 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 
+import type { TimerCuePreferences } from '@/lib/account/preferences'
+import type { Level } from '@/lib/grids/model'
 import type { Room } from '@/lib/session/group/model'
 import { ROOM_CAPACITY, roomCeiling, selectableLevels } from '@/lib/session/group/room'
 import { useRoom } from '@/lib/session/group/use-room'
 import { cn } from '@/lib/utils'
 
 import { leaveRoom, startRoom } from '../actions'
+import { GroupRunner } from './group-runner'
 
-export type LobbyLevel = { id: string; position: number }
+type LobbyLevel = Pick<Level, 'id' | 'position'>
 
 /**
  * Salon d'attente d'une seance a plusieurs.
@@ -21,25 +24,29 @@ export type LobbyLevel = { id: string; position: number }
  * a chaque entree ou sortie : le salon est relu en direct, et les niveaux
  * proposes en decoulent sans jamais etre stockes.
  *
- * Plein ecran, sans barre : on n'en sort qu'en quittant le salon.
+ * Plein ecran, sans barre : on n'en sort qu'en quittant le salon. Au
+ * lancement, tout le salon bascule sur le coureur de groupe.
  */
 export function Lobby({
   initialRoom,
   userId,
   grid,
   levels,
+  cues,
 }: {
   initialRoom: Room
   userId: string
   grid: { name: string; version: number; accentColor: string }
   /** Niveaux de la version figee du salon. */
-  levels: LobbyLevel[]
+  levels: Level[]
+  cues: TimerCuePreferences
 }) {
   const { room, presentIds } = useRoom(initialRoom, userId)
 
-  if (room.status !== 'open') {
-    return <Started room={room} levels={levels} gridName={grid.name} />
+  if (room.status === 'running') {
+    return <GroupRunner room={room} levels={levels} cues={cues} />
   }
+  if (room.status === 'finished') return <Finished gridName={grid.name} />
 
   const isHost = room.hostId === userId
   const ceiling = roomCeiling(room.members)
@@ -282,33 +289,14 @@ function LeaveButton({ roomId }: { roomId: string }) {
   )
 }
 
-/**
- * Salon lance ou termine.
- *
- * Provisoire : le coureur de groupe prendra la place de cet ecran, sur la
- * serie du curseur du salon.
- */
-function Started({
-  room,
-  levels,
-  gridName,
-}: {
-  room: Room
-  levels: LobbyLevel[]
-  gridName: string
-}) {
-  const level = levels.find((candidate) => candidate.id === room.levelId)
-
+/** Seance terminee : il ne reste qu'a rentrer. */
+function Finished({ gridName }: { gridName: string }) {
   return (
     <main className="gutter mx-auto flex min-h-dvh w-full max-w-[520px] flex-col justify-center gap-5 py-10 text-center">
       <p className="text-tertiary text-[13px] font-bold tracking-[0.1em] uppercase">
         {gridName}
       </p>
-      <h1 className="text-[24px] font-extrabold">
-        {room.status === 'running'
-          ? `La séance est lancée${level ? ` : niveau ${level.position}` : ''}`
-          : 'La séance est terminée'}
-      </h1>
+      <h1 className="text-[24px] font-extrabold">La séance est terminée</h1>
       <Link
         href="/"
         className="border-border-strong rounded-full border-[1.5px] py-4 text-[16px] font-bold"

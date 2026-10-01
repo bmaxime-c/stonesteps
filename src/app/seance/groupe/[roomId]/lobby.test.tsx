@@ -65,12 +65,23 @@ function room(overrides: Partial<Room> = {}): Room {
   }
 }
 
-const levels = [1, 2, 3, 4, 5].map((position) => ({ id: `l${position}`, position }))
+const levels = [1, 2, 3, 4, 5].map((position) => ({
+  id: `l${position}`,
+  position,
+  exercises: [],
+}))
+const cues = { sound: false, blink: false, flash: false, warningPercent: 15 }
 const grid = { name: 'Tractions', version: 3, accentColor: '#00FF87' }
 
 function renderLobby(userId: string, overrides: Partial<Room> = {}) {
   return render(
-    <Lobby initialRoom={room(overrides)} userId={userId} grid={grid} levels={levels} />,
+    <Lobby
+      initialRoom={room(overrides)}
+      userId={userId}
+      grid={grid}
+      levels={levels}
+      cues={cues}
+    />,
   )
 }
 
@@ -154,13 +165,13 @@ describe('Lobby', () => {
     expect(screen.getByRole('button', { name: 'Lien copié' })).toBeInTheDocument()
   })
 
-  it('un salon lance quitte l ecran d attente', () => {
-    renderLobby('guest', { status: 'running', levelId: 'l2' })
+  it('un salon termine quitte l ecran d attente', () => {
+    renderLobby('guest', { status: 'finished', levelId: 'l2' })
 
     expect(
       screen.queryByRole('button', { name: 'Quitter le salon' }),
     ).not.toBeInTheDocument()
-    expect(screen.getByText(/La séance est lancée/)).toBeInTheDocument()
+    expect(screen.getByText('La séance est terminée')).toBeInTheDocument()
   })
 })
 

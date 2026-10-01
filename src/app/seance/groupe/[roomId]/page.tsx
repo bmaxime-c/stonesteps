@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 
+import { loadTimerCues } from '@/lib/account/queries'
 import { loadGrid } from '@/lib/grids/queries'
 import { loadRoom } from '@/lib/session/group/queries'
 import { createClient } from '@/lib/supabase/server'
@@ -76,6 +77,8 @@ export default async function RoomPage({ params }: PageProps<'/seance/groupe/[ro
   )
   if (!version) return <RoomRefusal message={ROOM_UNAVAILABLE} />
 
+  const cues = await loadTimerCues()
+
   return (
     <Lobby
       initialRoom={room}
@@ -85,7 +88,8 @@ export default async function RoomPage({ params }: PageProps<'/seance/groupe/[ro
         version: version.version,
         accentColor: version.accentColor,
       }}
-      levels={version.levels.map((level) => ({ id: level.id, position: level.position }))}
+      levels={version.levels}
+      cues={cues}
     />
   )
 }
