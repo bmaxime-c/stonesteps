@@ -19,8 +19,9 @@ const NOT_THE_ROOM_LEVEL = "Ce niveau n'est pas celui du salon."
  * Verifications toutes cote serveur, parce que le client pourrait pretendre
  * n'importe quoi : l'utilisateur est membre du salon, le salon est termine, le
  * niveau enregistre est celui que le salon a lance, la seance en porte toutes
- * les series, et ce niveau ne depasse pas le plafond calcule a son entree. Sans la derniere, un participant entre sur un
- * niveau facile pourrait se faire valider un niveau qu'il n'a jamais atteint.
+ * les series, et ce niveau ne depasse pas le plafond calcule a son entree.
+ * Sans la derniere, un participant entre sur un niveau facile pourrait se
+ * faire valider un niveau qu'il n'a jamais atteint.
  *
  * Le niveau se lit sur la version figee du salon : une publication pendant la
  * seance ne doit faire rejeter aucun resultat. Son numero vient de la base,
@@ -64,14 +65,16 @@ async function roomLevelNumber(
     return { levelNumber: null, error: NOT_THE_ROOM_LEVEL }
   }
 
-  // Chaque serie du niveau a un resultat : jouee, ou comptee echouee si le
-  // groupe l'a passee sans nous. Une seance amputee de series pourrait sinon
-  // valider un niveau sur ses seules series reussies.
+  // Chaque serie du niveau a un resultat, et un seul : jouee, ou comptee
+  // echouee si le groupe l'a passee sans nous. Une seance amputee de series
+  // pourrait sinon valider un niveau sur ses seules series reussies -- y
+  // compris en repetant une reussite a la place d'un echec, d'ou le controle
+  // des rangs et pas seulement de leur nombre.
   const setCount = level.level_exercises.reduce(
     (total, exercise) => total + exercise.level_sets.length,
     0,
   )
-  if (input.results.length !== setCount) {
+  if (!coversEverySet(input.results, setCount)) {
     return {
       levelNumber: null,
       error:
@@ -88,6 +91,19 @@ async function roomLevelNumber(
   }
 
   return { levelNumber: level.position, error: null }
+}
+
+/**
+ * Les rangs des resultats sont exactement 0..setCount-1, chacun une fois.
+ */
+function coversEverySet(results: ConsolidateInput['results'], setCount: number): boolean {
+  if (results.length !== setCount) return false
+  const indexes = new Set(results.map((result) => result.setIndex))
+  if (indexes.size !== setCount) return false
+  for (let index = 0; index < setCount; index += 1) {
+    if (!indexes.has(index)) return false
+  }
+  return true
 }
 
 /**

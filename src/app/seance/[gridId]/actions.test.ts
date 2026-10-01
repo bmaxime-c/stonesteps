@@ -288,6 +288,46 @@ describe('consolidateSession, seance de groupe', () => {
     expect(sessionInsert()).toBeUndefined()
   })
 
+  it('refuse une serie en double qui en masque une autre', async () => {
+    db.responses['levels.select'] = { data: levelRow(2, 2) }
+    const [first] = input().results
+
+    // Deux resultats pour deux series, mais deux fois la premiere : la
+    // seconde, peut-etre echouee, a disparu.
+    const outcome = await consolidateSession(
+      input({ roomId: 'r1', results: [first!, { ...first! }] }),
+    )
+
+    expect(outcome).toEqual({
+      sessionId: null,
+      error: expect.stringContaining('toutes les séries'),
+    })
+    expect(sessionInsert()).toBeUndefined()
+  })
+
+  it('refuse des rangs hors du niveau, meme en bon nombre', async () => {
+    db.responses['levels.select'] = { data: levelRow(2, 2) }
+    const [first] = input().results
+
+    const outcome = await consolidateSession(
+      input({ roomId: 'r1', results: [first!, { ...first!, setIndex: 2 }] }),
+    )
+
+    expect(outcome.sessionId).toBeNull()
+    expect(sessionInsert()).toBeUndefined()
+  })
+
+  it('accepte chaque rang une fois, quel que soit leur ordre', async () => {
+    db.responses['levels.select'] = { data: levelRow(2, 2) }
+    const [first] = input().results
+
+    const outcome = await consolidateSession(
+      input({ roomId: 'r1', results: [{ ...first!, setIndex: 1 }, first!] }),
+    )
+
+    expect(outcome).toEqual({ sessionId: 'sess1', error: null })
+  })
+
   it('compte les series sur tous les exercices du niveau', async () => {
     db.responses['levels.select'] = {
       data: {
