@@ -6,8 +6,10 @@ import type { LevelOutcome } from '@/lib/session/model'
 
 import {
   advanceRoom,
+  claimRoomHost,
   createRoom,
   declareSet,
+  heartbeatRoom,
   joinRoom,
   leaveRoom,
   startRoom,
@@ -138,6 +140,7 @@ function room(overrides: Partial<Room> = {}): Room {
     cursor: 0,
     stage: 'set',
     restStartedAt: null,
+    hostSeenAt: '2026-10-01T10:00:00.000Z',
     members: [
       {
         userId: 'host',
@@ -305,28 +308,27 @@ describe('rejoindre un salon', () => {
 })
 
 describe('creer un salon', () => {
-  it('ouvre le salon sur la version jouable et y inscrit l hote', async () => {
+  it('ouvre le salon et y inscrit l hote d un seul appel, create_room', async () => {
     loaders.outcomes = [validated('v2-l1'), validated('v2-l2')]
-    db.responses['session_rooms.insert'] = { data: { id: 'new-room' } }
+    db.responses['rpc.create_room'] = { data: 'new-room' }
 
     const result = await createRoom('g1')
 
     expect(result).toEqual({ roomId: 'new-room', error: null })
-    expect(inserts('session_rooms').map((write) => write.values)).toEqual([
-      { grid_id: 'g1', grid_version_id: 'v2', host_id: 'me' },
+    expect(db.rpcs).toEqual([
+      { fn: 'create_room', args: { p_grid: 'g1', p_version: 'v2', p_ceiling: 3 } },
     ])
-    expect(inserts('session_room_members').map((write) => write.values)).toEqual([
-      { room_id: 'new-room', user_id: 'me', level_ceiling: 3 },
-    ])
+    // Plus d'insertion directe : un salon ne nait jamais sans son hote membre.
+    expect(db.writes).toEqual([])
   })
 
   it('ouvre sur la version ou le suivi est fige', async () => {
     loaders.grid = grid({ follow: { frozenAtVersion: 1 } })
-    db.responses['session_rooms.insert'] = { data: { id: 'new-room' } }
+    db.responses['rpc.create_room'] = { data: 'new-room' }
 
     await createRoom('g1')
 
-    expect(inserts('session_rooms')[0].values).toMatchObject({ grid_version_id: 'v1' })
+    expect(db.rpcs[0].args).toMatchObject({ p_version: 'v1' })
   })
 
   it('refuse une grille qui n est pas chez l utilisateur', async () => {
@@ -335,17 +337,30 @@ describe('creer un salon', () => {
     const result = await createRoom('g1')
 
     expect(result.roomId).toBeNull()
+    expect(db.rpcs).toEqual([])
     expect(db.writes).toEqual([])
   })
 
+  it('traduit une grille devenue injouable', async () => {
+    db.responses['rpc.create_room'] = {
+      error: { code: 'P0001', message: 'grid_not_playable' },
+    }
+
+    const result = await createRoom('g1')
+
+    expect(result).toEqual({
+      roomId: null,
+      error: "Cette grille n'est plus jouable : le salon n'a pas pu être ouvert.",
+    })
+  })
+
   it('signale un salon qui n a pas pu etre cree', async () => {
-    db.responses['session_rooms.insert'] = { error: { message: 'boom' } }
+    db.responses['rpc.create_room'] = { error: { message: 'boom' } }
 
     const result = await createRoom('g1')
 
     expect(result.roomId).toBeNull()
     expect(result.error).toMatch(/salon/)
-    expect(inserts('session_room_members')).toEqual([])
   })
 })
 
@@ -406,6 +421,18 @@ describe('lancer un salon', () => {
     const result = await startRoom('r1', 'v2-l1')
 
     expect(result.error).toBe("Seul l'hôte peut lancer la séance.")
+  })
+})
+
+describe('lancer un salon, hote membre', () => {
+  it('traduit un hote sorti de la liste', async () => {
+    db.responses['rpc.start_room'] = {
+      error: { code: 'P0001', message: 'host_not_in_room' },
+    }
+
+    const result = await startRoom('r1', 'v2-l1')
+
+    expect(result.error).toBe('Rejoins la liste du salon avant de lancer la séance.')
   })
 })
 
@@ -500,6 +527,80 @@ describe('faire avancer le groupe', () => {
     expect(result).toEqual({
       error: "Seul l'hôte fait avancer le groupe.",
       stale: false,
+    })
+  })
+})
+
+describe('battement de l hote', () => {
+  it('passe par heartbeat_room', async () => {
+    const result = await heartbeatRoom('r1')
+
+    expect(result).toEqual({ deposed: false })
+    expect(db.rpcs).toEqual([{ fn: 'heartbeat_room', args: { p_room: 'r1' } }])
+  })
+
+  it('un hote remplace pendant une coupure apprend qu il ne l est plus', async () => {
+    db.responses['rpc.heartbeat_room'] = {
+      error: { code: 'P0001', message: 'not_room_host' },
+    }
+
+    const result = await heartbeatRoom('r1')
+
+    expect(result).toEqual({ deposed: true })
+  })
+
+  it('un battement perdu ne depossede personne', async () => {
+    db.responses['rpc.heartbeat_room'] = { error: { message: 'fetch failed' } }
+
+    const result = await heartbeatRoom('r1')
+
+    // Le suivant partira a son heure : rien a montrer, rien a changer.
+    expect(result).toEqual({ deposed: false })
+  })
+})
+
+describe('prendre la main', () => {
+  it('passe par claim_room_host', async () => {
+    const result = await claimRoomHost('r1')
+
+    expect(result).toEqual({ claimed: true, error: null })
+    expect(db.rpcs).toEqual([{ fn: 'claim_room_host', args: { p_room: 'r1' } }])
+  })
+
+  it.each(['host_alive', 'host_taken'])(
+    'un refus %s est silencieux : quelqu un tient deja le salon',
+    async (code) => {
+      db.responses['rpc.claim_room_host'] = { error: { code: 'P0001', message: code } }
+
+      const result = await claimRoomHost('r1')
+
+      expect(result).toEqual({ claimed: false, error: null })
+    },
+  )
+
+  it('traduit une seance terminee', async () => {
+    db.responses['rpc.claim_room_host'] = {
+      error: { code: 'P0001', message: 'room_finished' },
+    }
+
+    const result = await claimRoomHost('r1')
+
+    expect(result).toEqual({
+      claimed: false,
+      error: 'La séance de ce salon est terminée.',
+    })
+  })
+
+  it('traduit une prise de main hors du salon', async () => {
+    db.responses['rpc.claim_room_host'] = {
+      error: { code: 'P0001', message: 'not_room_member' },
+    }
+
+    const result = await claimRoomHost('r1')
+
+    expect(result).toEqual({
+      claimed: false,
+      error: 'Tu ne fais pas partie de ce salon.',
     })
   })
 })

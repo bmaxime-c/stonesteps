@@ -27,6 +27,11 @@ export type LiveRoom = {
  * et deux evenements rapproches se fusionneraient dans le desordre. La
  * relecture rend toujours l'etat entier, tel que la base le voit.
  *
+ * Une exception : le battement de l'hote, qui touche le salon toutes les
+ * quelques secondes et ne change que `host_seen_at`. Relire a chaque fois
+ * ferait relire tout le salon, membres compris, par chaque participant, pour
+ * une seule colonne : on la prend dans l'evenement.
+ *
  * La presence est indexee par utilisateur : deux onglets du meme compte
  * partagent une cle, et ne comptent que pour un participant.
  */
@@ -38,6 +43,15 @@ export function useRoom(initial: Room, userId: string): LiveRoom {
   const latestRead = useRef(0)
   // Relecture du canal en cours, exposee hors de l'effet qui la cree.
   const reloadRef = useRef<(() => Promise<void>) | null>(null)
+  // Salon affiche, lu par le gestionnaire d'evenements sans le recreer.
+  const roomRef = useRef(initial)
+  // roster_changed_at du dernier evenement : s'il n'a pas bouge, aucun membre
+  // n'est entre, sorti, ni n'a declare. Inconnu tant qu'aucun n'est arrive.
+  const rosterSeen = useRef<string | null>(null)
+
+  useEffect(() => {
+    roomRef.current = room
+  })
 
   const roomId = initial.id
 
@@ -49,7 +63,9 @@ export function useRoom(initial: Room, userId: string): LiveRoom {
       const { room: fresh } = await fetchRoom(supabase, roomId)
       // Un salon devenu illisible le temps d'une relecture : on garde le
       // dernier etat connu plutot que de vider l'ecran.
-      if (fresh && read === latestRead.current) setRoom(fresh)
+      if (fresh && read === latestRead.current) {
+        setRoom((current) => keepLatestBeat(current, fresh))
+      }
     }
     reloadRef.current = reload
 
@@ -73,7 +89,17 @@ export function useRoom(initial: Room, userId: string): LiveRoom {
           table: 'session_rooms',
           filter: `id=eq.${roomId}`,
         },
-        () => void reload(),
+        (payload: { new?: Record<string, unknown> }) => {
+          const row = payload.new
+          const beat = heartbeatOnly(row, roomRef.current, rosterSeen.current)
+          rosterSeen.current =
+            typeof row?.roster_changed_at === 'string' ? row.roster_changed_at : null
+          if (beat === null) {
+            void reload()
+            return
+          }
+          setRoom((current) => ({ ...current, hostSeenAt: beat }))
+        },
       )
       .on('presence', { event: 'sync' }, () => {
         setPresentIds(new Set(Object.keys(channel.presenceState())))
@@ -106,4 +132,48 @@ export function useRoom(initial: Room, userId: string): LiveRoom {
   }, [])
 
   return { room, presentIds, reload }
+}
+
+/** Colonnes du salon que porte `Room`, hors battement. */
+const ROOM_COLUMNS = {
+  host_id: 'hostId',
+  grid_version_id: 'gridVersionId',
+  level_id: 'levelId',
+  status: 'status',
+  cursor: 'cursor',
+  stage: 'stage',
+  rest_started_at: 'restStartedAt',
+} as const satisfies Record<string, keyof Room>
+
+/**
+ * Instant du battement si l'evenement n'est rien d'autre, null sinon.
+ *
+ * Un battement laisse intactes toutes les colonnes affichees et la liste des
+ * membres (roster_changed_at). Dans le doute -- evenement sans ligne, liste
+ * encore inconnue, instant illisible --, null : on relit, ce qui ne trompe
+ * jamais.
+ */
+function heartbeatOnly(
+  row: Record<string, unknown> | undefined,
+  room: Room,
+  rosterSeen: string | null,
+): string | null {
+  if (!row || rosterSeen === null || row.roster_changed_at !== rosterSeen) return null
+  for (const [column, field] of Object.entries(ROOM_COLUMNS)) {
+    if (row[column] !== room[field]) return null
+  }
+  const seenAt = row.host_seen_at
+  if (typeof seenAt !== 'string' || !Number.isFinite(Date.parse(seenAt))) return null
+  return seenAt
+}
+
+/**
+ * Salon relu, sans reculer le battement : une relecture partie avant un
+ * battement recu sur place reviendrait avec l'instant precedent, et ferait
+ * paraitre l'hote plus silencieux qu'il ne l'est.
+ */
+function keepLatestBeat(current: Room, fresh: Room): Room {
+  if (fresh.hostId !== current.hostId) return fresh
+  if (Date.parse(current.hostSeenAt) <= Date.parse(fresh.hostSeenAt)) return fresh
+  return { ...fresh, hostSeenAt: current.hostSeenAt }
 }

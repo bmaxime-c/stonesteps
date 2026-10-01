@@ -49,6 +49,7 @@ function room(over: Partial<Room> = {}): Room {
     cursor: 1,
     stage: 'set',
     restStartedAt: null,
+    hostSeenAt: '2026-10-01T10:00:00.000Z',
     members: [member('a'), member('b')],
     ...over,
   }

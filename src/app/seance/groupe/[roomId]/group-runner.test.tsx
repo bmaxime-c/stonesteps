@@ -15,6 +15,8 @@ const actions = vi.hoisted(() => ({
   declareSet: vi.fn(),
   advanceRoom: vi.fn(),
   consolidateSession: vi.fn(),
+  heartbeatRoom: vi.fn(),
+  claimRoomHost: vi.fn(),
 }))
 
 const router = vi.hoisted(() => ({ push: vi.fn() }))
@@ -24,6 +26,8 @@ vi.mock('next/navigation', () => ({ useRouter: () => router }))
 vi.mock('../actions', () => ({
   declareSet: actions.declareSet,
   advanceRoom: actions.advanceRoom,
+  heartbeatRoom: actions.heartbeatRoom,
+  claimRoomHost: actions.claimRoomHost,
 }))
 
 vi.mock('@/app/seance/[gridId]/actions', () => ({
@@ -99,6 +103,7 @@ function room(over: Partial<Room> = {}): Room {
     cursor: 0,
     stage: 'set',
     restStartedAt: null,
+    hostSeenAt: '2026-10-01T10:00:00.000Z',
     members: [member('host', 'Alice'), member('guest', 'Bruno')],
     ...over,
   }
@@ -169,6 +174,8 @@ beforeEach(() => {
   window.sessionStorage.clear()
   actions.declareSet.mockReset().mockResolvedValue({ error: null, stale: false })
   actions.advanceRoom.mockReset().mockResolvedValue({ error: null, stale: false })
+  actions.heartbeatRoom.mockReset().mockResolvedValue({ deposed: false })
+  actions.claimRoomHost.mockReset().mockResolvedValue({ claimed: true, error: null })
   actions.consolidateSession
     .mockReset()
     .mockResolvedValue({ sessionId: 'sess-1', error: null })
@@ -677,5 +684,359 @@ describe('GroupRunner, fin du niveau', () => {
 
     expect(router.push).toHaveBeenCalledWith('/')
     expect(window.sessionStorage.getItem('stonesteps.room.room-1')).toBeNull()
+  })
+})
+
+describe('GroupRunner, reprise apres coupure', () => {
+  const fourSets = levelsWith([set(1), set(2), set(3), set(4)])
+  const statuses = () =>
+    actions.consolidateSession.mock.calls[0][0].results.map((r: SetResult) => [
+      r.setIndex,
+      r.status,
+      r.actualValue,
+    ])
+
+  it('au remontage, les series passees sans nous sont echouees et l on reprend la serie en cours', async () => {
+    // Coupe apres la serie 1 ; le groupe a avance de deux series entre-temps.
+    stored([result(0)])
+    const view = render(
+      element({ room: room({ cursor: 3 }), userId: 'guest', levels: fourSets }),
+    )
+
+    expect(screen.getByText(/Série 4\/4/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Valider la série' })).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Valider la série' }))
+    await waitFor(() =>
+      expect(actions.declareSet).toHaveBeenCalledWith('room-1', 3, 'success'),
+    )
+    view.rerender(
+      element({
+        room: room({ status: 'finished', stage: 'finished', cursor: 3 }),
+        userId: 'guest',
+        levels: fourSets,
+      }),
+    )
+
+    expect(await screen.findByText('Niveau 2 non validé')).toBeInTheDocument()
+    await waitFor(() => expect(actions.consolidateSession).toHaveBeenCalledOnce())
+    expect(statuses()).toEqual([
+      [0, 'success', 11],
+      [1, 'fail', 0],
+      [2, 'fail', 0],
+      [3, 'success', 14],
+    ])
+  })
+
+  it('a la reconnexion, le salon relu compte echouees les series manquees', async () => {
+    stored([result(0)])
+    const view = render(
+      element({ room: room({ cursor: 1 }), userId: 'guest', levels: fourSets }),
+    )
+    expect(screen.getByText(/Série 2\/4/)).toBeInTheDocument()
+
+    // Le canal se reabonne et relit le salon : il est deux series plus loin.
+    view.rerender(
+      element({ room: room({ cursor: 3 }), userId: 'guest', levels: fourSets }),
+    )
+    expect(await screen.findByText(/Série 4\/4/)).toBeInTheDocument()
+
+    view.rerender(
+      element({
+        room: room({ status: 'finished', stage: 'finished', cursor: 3 }),
+        userId: 'guest',
+        levels: fourSets,
+      }),
+    )
+    await waitFor(() => expect(actions.consolidateSession).toHaveBeenCalledOnce())
+    expect(statuses()).toEqual([
+      [0, 'success', 11],
+      [1, 'fail', 0],
+      [2, 'fail', 0],
+      [3, 'fail', 0],
+    ])
+    expect(actions.consolidateSession.mock.calls[0][0].validated).toBe(false)
+  })
+
+  it('une serie jouee hors ligne, jamais recue par le salon, est echouee', async () => {
+    // Validee pendant la coupure : la declaration n'est jamais partie.
+    stored([result(0), result(1)], { undeclared: 1 })
+    const view = render(
+      element({ room: room({ cursor: 3 }), userId: 'guest', levels: fourSets }),
+    )
+    expect(screen.getByText(/Série 4\/4/)).toBeInTheDocument()
+
+    view.rerender(
+      element({
+        room: room({ status: 'finished', stage: 'finished', cursor: 3 }),
+        userId: 'guest',
+        levels: fourSets,
+      }),
+    )
+    await waitFor(() => expect(actions.consolidateSession).toHaveBeenCalledOnce())
+    expect(
+      statuses().map(([index, status]: [number, string]) => [index, status]),
+    ).toEqual([
+      [0, 'success'],
+      [1, 'fail'],
+      [2, 'fail'],
+      [3, 'fail'],
+    ])
+  })
+})
+
+describe('GroupRunner, battement et prise de main', () => {
+  const ago = (ms: number) => new Date(Date.now() - ms).toISOString()
+
+  it('l hote bat des le montage, puis a intervalle', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    render(element())
+
+    await waitFor(() => expect(actions.heartbeatRoom).toHaveBeenCalledOnce())
+    expect(actions.heartbeatRoom).toHaveBeenCalledWith('room-1')
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000)
+    })
+    expect(actions.heartbeatRoom).toHaveBeenCalledTimes(3)
+  })
+
+  it('un invite ne bat pas', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    render(element({ userId: 'guest' }))
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(6_000)
+    })
+    expect(actions.heartbeatRoom).not.toHaveBeenCalled()
+  })
+
+  it('hote perime et je suis candidat : prend la main, une seule fois', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    render(
+      element({
+        room: room({ hostSeenAt: ago(16_000) }),
+        userId: 'guest',
+        present: ['guest'],
+      }),
+    )
+
+    await waitFor(() => expect(actions.claimRoomHost).toHaveBeenCalledOnce())
+    expect(actions.claimRoomHost).toHaveBeenCalledWith('room-1')
+    // Tant que le salon n'a pas change, on ne retente pas.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3_000)
+    })
+    expect(actions.claimRoomHost).toHaveBeenCalledOnce()
+    // Prise : on relit le salon sans attendre l'evenement.
+    expect(reload).toHaveBeenCalled()
+  })
+
+  it('hote perime mais je ne suis pas candidat : jamais', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    render(
+      element({
+        room: room({
+          hostSeenAt: ago(16_000),
+          members: [
+            member('host', 'Alice'),
+            member('guest', 'Bruno'),
+            member('carl', 'Carl', { joinedAt: '2026-10-01T10:02:00Z' }),
+          ],
+        }),
+        userId: 'carl',
+        present: ['guest', 'carl'],
+      }),
+    )
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3_000)
+    })
+    // Bruno, entre avant, est le candidat.
+    expect(actions.claimRoomHost).not.toHaveBeenCalled()
+  })
+
+  it('attend que l hote absent soit perime avant de prendre la main', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    render(
+      element({
+        room: room({ hostSeenAt: ago(0) }),
+        userId: 'guest',
+        present: ['guest'],
+      }),
+    )
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000)
+    })
+    expect(actions.claimRoomHost).not.toHaveBeenCalled()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(7_000)
+    })
+    expect(actions.claimRoomHost).toHaveBeenCalledOnce()
+  })
+
+  it('un hote present ne se fait pas prendre la main, meme silencieux', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    render(element({ room: room({ hostSeenAt: ago(30_000) }), userId: 'guest' }))
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_000)
+    })
+    expect(actions.claimRoomHost).not.toHaveBeenCalled()
+  })
+
+  it('un refus host_alive ou host_taken reste silencieux', async () => {
+    actions.claimRoomHost.mockResolvedValue({ claimed: false, error: null })
+    render(
+      element({
+        room: room({ hostSeenAt: ago(16_000) }),
+        userId: 'guest',
+        present: ['guest'],
+      }),
+    )
+
+    await waitFor(() => expect(actions.claimRoomHost).toHaveBeenCalledOnce())
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('une prise de main en erreur est retentee au battement suivant', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    actions.claimRoomHost
+      .mockResolvedValueOnce({ claimed: false, error: "Tu n'as pas pu prendre la main." })
+      .mockResolvedValue({ claimed: true, error: null })
+    render(
+      element({
+        room: room({ hostSeenAt: ago(16_000) }),
+        userId: 'guest',
+        present: ['guest'],
+      }),
+    )
+
+    await waitFor(() => expect(actions.claimRoomHost).toHaveBeenCalledOnce())
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      "Tu n'as pas pu prendre la main.",
+    )
+    // Pas de relance en rafale : on attend un battement.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3_000)
+    })
+    expect(actions.claimRoomHost).toHaveBeenCalledOnce()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3_000)
+    })
+    expect(actions.claimRoomHost).toHaveBeenCalledTimes(2)
+    // Reussie, l erreur s efface.
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
+  })
+
+  it('une prise de main perdue en route est retentee', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    actions.claimRoomHost
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValue({ claimed: true, error: null })
+    render(
+      element({
+        room: room({ hostSeenAt: ago(16_000) }),
+        userId: 'guest',
+        present: ['guest'],
+      }),
+    )
+
+    await waitFor(() => expect(actions.claimRoomHost).toHaveBeenCalledOnce())
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(6_000)
+    })
+    expect(actions.claimRoomHost).toHaveBeenCalledTimes(2)
+    expect(reload).toHaveBeenCalled()
+  })
+
+  it('un refus silencieux ne relance pas aussitot, mais retente si l hote reste muet', async () => {
+    // Horloge de l appareil en avance sur le serveur : la base tient encore
+    // l hote pour vivant. Sans relance, le salon resterait sans hote.
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    actions.claimRoomHost
+      .mockResolvedValueOnce({ claimed: false, error: null })
+      .mockResolvedValue({ claimed: true, error: null })
+    render(
+      element({
+        room: room({ hostSeenAt: ago(16_000) }),
+        userId: 'guest',
+        present: ['guest'],
+      }),
+    )
+
+    await waitFor(() => expect(actions.claimRoomHost).toHaveBeenCalledOnce())
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3_000)
+    })
+    expect(actions.claimRoomHost).toHaveBeenCalledOnce()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3_000)
+    })
+    expect(actions.claimRoomHost).toHaveBeenCalledTimes(2)
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('un battement perdu en route ne casse rien : le suivant part a son heure', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    actions.heartbeatRoom
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValue({ deposed: false })
+    render(
+      element({
+        room: room({ stage: 'rest', restStartedAt: new Date().toISOString() }),
+      }),
+    )
+
+    await waitFor(() => expect(actions.heartbeatRoom).toHaveBeenCalledOnce())
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_000)
+    })
+    expect(actions.heartbeatRoom).toHaveBeenCalledTimes(2)
+    // Toujours hote.
+    expect(screen.getByRole('button', { name: 'Passer le repos' })).toBeInTheDocument()
+  })
+
+  it('le bandeau s affiche quand on devient hote, et l on se met a battre', async () => {
+    const view = render(element({ userId: 'guest' }))
+    expect(screen.queryByText("Tu es maintenant l'hôte")).not.toBeInTheDocument()
+
+    view.rerender(element({ room: room({ hostId: 'guest' }), userId: 'guest' }))
+
+    expect(screen.getByRole('status')).toHaveTextContent("Tu es maintenant l'hôte")
+    await waitFor(() => expect(actions.heartbeatRoom).toHaveBeenCalledOnce())
+  })
+
+  it('pas de bandeau pour l hote d origine', () => {
+    render(element())
+
+    expect(screen.queryByText("Tu es maintenant l'hôte")).not.toBeInTheDocument()
+  })
+
+  it('un hote depossede cesse de battre et redevient invite', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    actions.heartbeatRoom.mockResolvedValue({ deposed: true })
+    render(
+      element({
+        room: room({ stage: 'rest', restStartedAt: new Date().toISOString() }),
+      }),
+    )
+    expect(screen.getByRole('button', { name: 'Passer le repos' })).toBeInTheDocument()
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('button', { name: 'Passer le repos' }),
+      ).not.toBeInTheDocument(),
+    )
+    expect(reload).toHaveBeenCalled()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(12_000)
+    })
+    expect(actions.heartbeatRoom).toHaveBeenCalledOnce()
   })
 })

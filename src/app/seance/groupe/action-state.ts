@@ -38,3 +38,12 @@ export type RoomActionResult = { error: string | null }
  * se relit, et l'ecran suit l'etat que la base a retenu.
  */
 export type RoomStepResult = { error: string | null; stale: boolean }
+
+/** Sortie d'un battement : `deposed`, un autre membre a pris la main. */
+export type HeartbeatResult = { deposed: boolean }
+
+/**
+ * Sortie d'une prise de main. Refusee parce que l'hote vit encore, ou qu'un
+ * autre est passe avant : ni prise, ni erreur.
+ */
+export type ClaimHostResult = { claimed: boolean; error: string | null }

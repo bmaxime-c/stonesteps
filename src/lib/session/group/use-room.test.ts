@@ -111,6 +111,7 @@ const initial: Room = {
   cursor: 0,
   stage: 'set',
   restStartedAt: null,
+  hostSeenAt: '2026-10-01T10:00:00.000Z',
   members: [member('a', '2026-10-01T10:00:00Z')],
 }
 
@@ -126,6 +127,7 @@ function row(members: RoomMember[], status: Room['status'] = 'open') {
     cursor: 0,
     stage: 'set',
     rest_started_at: null,
+    host_seen_at: '2026-10-01T10:00:00.000Z',
     session_room_members: members.map((m) => ({
       user_id: m.userId,
       level_ceiling: m.levelCeiling,
@@ -268,5 +270,132 @@ describe('useRoom', () => {
     unmount()
 
     expect(fake.removed).toEqual([fake.channels[0]])
+  })
+})
+
+/**
+ * Ligne du salon telle que Realtime la pousse a une modification : les
+ * colonnes du salon seules, sans membres.
+ */
+function change(over: Record<string, unknown> = {}) {
+  return {
+    eventType: 'UPDATE',
+    new: {
+      id: 'room-1',
+      grid_id: 'grid-1',
+      grid_version_id: 'v1',
+      host_id: 'a',
+      level_id: null,
+      status: 'open',
+      cursor: 0,
+      stage: 'set',
+      rest_started_at: null,
+      host_seen_at: '2026-10-01T10:00:00.000Z',
+      roster_changed_at: '2026-10-01T10:00:00.000Z',
+      ...over,
+    },
+    old: {},
+  }
+}
+
+describe('useRoom, battement et reprise', () => {
+  it('expose l instant du dernier battement de l hote', async () => {
+    const { result } = renderHook(() => useRoom(initial, 'a'))
+    fake.room = {
+      ...row([member('a', '2026-10-01T10:00:00Z')]),
+      host_seen_at: '2026-10-01T10:00:05.000Z',
+    }
+
+    await act(async () => {
+      await result.current.reload()
+    })
+
+    expect(result.current.room.hostSeenAt).toBe('2026-10-01T10:00:05.000Z')
+  })
+
+  it('un battement seul met a jour l hote sur place, sans relire', async () => {
+    const { result } = renderHook(() => useRoom(initial, 'a'))
+    fake.room = row([member('a', '2026-10-01T10:00:00Z')])
+
+    // Premier evenement : la liste n'est pas encore connue, on relit.
+    act(() => {
+      fake.channels[0].emit('postgres_changes', { table: 'session_rooms' }, change())
+    })
+    await waitFor(() => expect(fake.reads).toBe(1))
+
+    act(() => {
+      fake.channels[0].emit(
+        'postgres_changes',
+        { table: 'session_rooms' },
+        change({ host_seen_at: '2026-10-01T10:00:10.000Z' }),
+      )
+    })
+
+    expect(result.current.room.hostSeenAt).toBe('2026-10-01T10:00:10.000Z')
+    expect(fake.reads).toBe(1)
+  })
+
+  it('une entree ou une declaration relit, meme avec un battement', async () => {
+    renderHook(() => useRoom(initial, 'a'))
+    fake.room = row([member('a', '2026-10-01T10:00:00Z')])
+
+    act(() => {
+      fake.channels[0].emit('postgres_changes', { table: 'session_rooms' }, change())
+    })
+    await waitFor(() => expect(fake.reads).toBe(1))
+
+    act(() => {
+      // roster_changed_at bouge : un membre est entre, sorti ou a declare.
+      fake.channels[0].emit(
+        'postgres_changes',
+        { table: 'session_rooms' },
+        change({
+          host_seen_at: '2026-10-01T10:00:10.000Z',
+          roster_changed_at: '2026-10-01T10:00:10.000Z',
+        }),
+      )
+    })
+
+    await waitFor(() => expect(fake.reads).toBe(2))
+  })
+
+  it('un changement de position ou d hote relit', async () => {
+    renderHook(() => useRoom(initial, 'a'))
+    fake.room = row([member('a', '2026-10-01T10:00:00Z')])
+
+    act(() => {
+      fake.channels[0].emit('postgres_changes', { table: 'session_rooms' }, change())
+    })
+    await waitFor(() => expect(fake.reads).toBe(1))
+
+    act(() => {
+      fake.channels[0].emit(
+        'postgres_changes',
+        { table: 'session_rooms' },
+        change({ host_id: 'b', host_seen_at: '2026-10-01T10:00:10.000Z' }),
+      )
+    })
+
+    await waitFor(() => expect(fake.reads).toBe(2))
+  })
+
+  it('relit le salon a chaque reabonnement, apres une coupure', async () => {
+    renderHook(() => useRoom(initial, 'a'))
+    await waitFor(() => expect(fake.channels[0].subscribed).not.toBeNull())
+    fake.room = row([member('a', '2026-10-01T10:00:00Z')], 'running')
+
+    await act(async () => {
+      fake.channels[0].subscribed?.('SUBSCRIBED')
+    })
+    await waitFor(() => expect(fake.reads).toBe(1))
+
+    // Le socket est tombe puis revenu : le canal se reabonne de lui-meme, et
+    // ce qui s'est passe entre-temps n'a laisse aucun evenement.
+    await act(async () => {
+      fake.channels[0].subscribed?.('CHANNEL_ERROR')
+      fake.channels[0].subscribed?.('SUBSCRIBED')
+    })
+
+    await waitFor(() => expect(fake.reads).toBe(2))
   })
 })
