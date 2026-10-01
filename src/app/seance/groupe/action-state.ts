@@ -29,3 +29,12 @@ export type JoinRoomResult =
   | { error: string; refusal: JoinRoomRefusal; gridId?: string }
 
 export type RoomActionResult = { error: string | null }
+
+/**
+ * Sortie d'une declaration ou d'une avance du groupe.
+ *
+ * `stale` : le salon avait deja bouge -- serie passee par le groupe, double
+ * tap, second onglet de l'hote. Ce n'est pas une erreur a montrer : le salon
+ * se relit, et l'ecran suit l'etat que la base a retenu.
+ */
+export type RoomStepResult = { error: string | null; stale: boolean }

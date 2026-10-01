@@ -2,9 +2,109 @@
 
 import { revalidatePath } from 'next/cache'
 
+import { loadRoom } from '@/lib/session/group/queries'
 import { isLevelValidated } from '@/lib/session/level'
 import type { ConsolidateInput, ConsolidateResult } from '@/lib/session/model'
 import { createClient } from '@/lib/supabase/server'
+
+type SupabaseServer = Awaited<ReturnType<typeof createClient>>
+
+const NOT_A_MEMBER = 'Tu ne fais pas partie de ce salon.'
+const NOT_THE_ROOM_LEVEL = "Ce niveau n'est pas celui du salon."
+
+/**
+ * Controle d'une seance jouee dans un salon : le numero de niveau a ranger,
+ * ou le refus.
+ *
+ * Verifications toutes cote serveur, parce que le client pourrait pretendre
+ * n'importe quoi : l'utilisateur est membre du salon, le salon est termine, le
+ * niveau enregistre est celui que le salon a lance, la seance en porte toutes
+ * les series, et ce niveau ne depasse pas le plafond calcule a son entree.
+ * Sans la derniere, un participant entre sur un niveau facile pourrait se
+ * faire valider un niveau qu'il n'a jamais atteint.
+ *
+ * Le niveau se lit sur la version figee du salon : une publication pendant la
+ * seance ne doit faire rejeter aucun resultat. Son numero vient de la base,
+ * pas de ce que le client a affiche.
+ */
+async function roomLevelNumber(
+  supabase: SupabaseServer,
+  userId: string,
+  input: ConsolidateInput & { roomId: string },
+): Promise<{ levelNumber: number; error: null } | { levelNumber: null; error: string }> {
+  // La RLS rend null a qui n'est ni hote ni membre : meme refus dans les deux cas.
+  const room = await loadRoom(input.roomId)
+  const member = room?.members.find((candidate) => candidate.userId === userId)
+  if (!room || !member) return { levelNumber: null, error: NOT_A_MEMBER }
+
+  // Le groupe enregistre une fois le niveau joue jusqu'au bout : une seance
+  // de salon en cours n'a pas encore de verdict.
+  if (room.status !== 'finished') {
+    return {
+      levelNumber: null,
+      error:
+        "La séance du salon n'est pas terminée : elle ne peut pas encore être enregistrée.",
+    }
+  }
+
+  if (
+    room.levelId === null ||
+    room.levelId !== input.levelId ||
+    room.gridId !== input.gridId
+  ) {
+    return { levelNumber: null, error: NOT_THE_ROOM_LEVEL }
+  }
+
+  const { data: level } = await supabase
+    .from('levels')
+    .select('position, grid_version_id, level_exercises ( level_sets ( id ) )')
+    .eq('id', room.levelId)
+    .maybeSingle()
+
+  if (!level || level.grid_version_id !== room.gridVersionId) {
+    return { levelNumber: null, error: NOT_THE_ROOM_LEVEL }
+  }
+
+  // Chaque serie du niveau a un resultat, et un seul : jouee, ou comptee
+  // echouee si le groupe l'a passee sans nous. Une seance amputee de series
+  // pourrait sinon valider un niveau sur ses seules series reussies -- y
+  // compris en repetant une reussite a la place d'un echec, d'ou le controle
+  // des rangs et pas seulement de leur nombre.
+  const setCount = level.level_exercises.reduce(
+    (total, exercise) => total + exercise.level_sets.length,
+    0,
+  )
+  if (!coversEverySet(input.results, setCount)) {
+    return {
+      levelNumber: null,
+      error:
+        'La séance ne porte pas toutes les séries du niveau : elle ne peut pas être enregistrée.',
+    }
+  }
+
+  if (level.position > member.levelCeiling) {
+    return {
+      levelNumber: null,
+      error:
+        'Ce niveau dépasse ton niveau en cours : la séance ne peut pas être enregistrée.',
+    }
+  }
+
+  return { levelNumber: level.position, error: null }
+}
+
+/**
+ * Les rangs des resultats sont exactement 0..setCount-1, chacun une fois.
+ */
+function coversEverySet(results: ConsolidateInput['results'], setCount: number): boolean {
+  if (results.length !== setCount) return false
+  const indexes = new Set(results.map((result) => result.setIndex))
+  if (indexes.size !== setCount) return false
+  for (let index = 0; index < setCount; index += 1) {
+    if (!indexes.has(index)) return false
+  }
+  return true
+}
 
 /**
  * Consolidation d'une seance terminee.
@@ -20,6 +120,11 @@ import { createClient } from '@/lib/supabase/server'
  *
  * Le verdict est recalcule ici a partir des resultats : c'est le serveur qui
  * tranche, pas le booleen que le client a bien voulu envoyer.
+ *
+ * Une seance de groupe porte en plus `roomId` : elle s'enregistre comme une
+ * seance solo, a soi, une fois controlee contre le salon. Un niveau inferieur
+ * au niveau en cours entre dans l'historique sans toucher a la progression,
+ * qui ne retient que le premier niveau sans seance validee.
  */
 export async function consolidateSession(
   input: ConsolidateInput,
@@ -36,6 +141,16 @@ export async function consolidateSession(
     return { sessionId: null, error: 'Aucune série à enregistrer.' }
   }
 
+  let levelNumber = input.levelNumber
+  if (input.roomId !== undefined) {
+    const checked = await roomLevelNumber(supabase, user.id, {
+      ...input,
+      roomId: input.roomId,
+    })
+    if (checked.error !== null) return { sessionId: null, error: checked.error }
+    levelNumber = checked.levelNumber
+  }
+
   const validated = isLevelValidated(input.results)
 
   const { data: session, error: sessionError } = await supabase
@@ -46,7 +161,7 @@ export async function consolidateSession(
       level_id: input.levelId,
       grid_name: input.gridName,
       grid_version: input.gridVersion,
-      level_number: input.levelNumber,
+      level_number: levelNumber,
       started_at: input.startedAt,
       validated,
     })

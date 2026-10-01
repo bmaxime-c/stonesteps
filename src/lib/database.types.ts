@@ -607,16 +607,35 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      advance_room: {
+        Args: {
+          p_expected_cursor: number
+          p_expected_stage: Database['public']['Enums']['room_stage']
+          p_force?: boolean
+          p_present: string[]
+          p_room: string
+        }
+        Returns: undefined
+      }
       can_read_grid: { Args: { g: string }; Returns: boolean }
       can_read_grid_version: { Args: { v: string }; Returns: boolean }
       can_read_level: { Args: { l: string }; Returns: boolean }
       can_read_level_exercise: { Args: { le: string }; Returns: boolean }
       can_read_room: { Args: { r: string }; Returns: boolean }
+      declare_set: {
+        Args: {
+          p_cursor: number
+          p_room: string
+          p_status: Database['public']['Enums']['set_status']
+        }
+        Returns: undefined
+      }
       is_exercise_editor: { Args: never; Returns: boolean }
       is_published_version_of: { Args: { g: string; v: string }; Returns: boolean }
       is_room_host: { Args: { r: string }; Returns: boolean }
       is_room_member: { Args: { r: string }; Returns: boolean }
       is_room_open: { Args: { r: string }; Returns: boolean }
+      is_room_topic_member: { Args: { t: string }; Returns: boolean }
       owns_grid: { Args: { g: string }; Returns: boolean }
       owns_grid_version: { Args: { v: string }; Returns: boolean }
       owns_level: { Args: { l: string }; Returns: boolean }

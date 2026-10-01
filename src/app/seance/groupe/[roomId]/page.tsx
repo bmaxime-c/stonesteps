@@ -89,6 +89,7 @@ export default async function RoomPage({ params }: PageProps<'/seance/groupe/[ro
         name: version.name,
         version: version.version,
         accentColor: version.accentColor,
+        restSeconds: version.restSeconds,
       }}
       levels={version.levels}
       cues={cues}

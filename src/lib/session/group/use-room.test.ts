@@ -11,7 +11,7 @@ type Listener = { type: string; filter: Record<string, unknown>; handler: Handle
 
 type FakeChannel = {
   name: string
-  options: { config?: { presence?: { key?: string } } }
+  options: { config?: { presence?: { key?: string }; private?: boolean } }
   listeners: Listener[]
   tracked: unknown[]
   presence: Record<string, unknown[]>
@@ -24,6 +24,8 @@ const fake = vi.hoisted(() => ({
   removed: [] as FakeChannel[],
   room: null as unknown,
   reads: 0,
+  /** Ordre des appels qui comptent pour l'autorisation du canal. */
+  log: [] as string[],
 }))
 
 vi.mock('@/lib/supabase/client', () => ({
@@ -51,6 +53,7 @@ vi.mock('@/lib/supabase/client', () => ({
           return api
         },
         subscribe(callback: (status: string) => void) {
+          fake.log.push('subscribe')
           channel.subscribed = callback
           return api
         },
@@ -63,6 +66,11 @@ vi.mock('@/lib/supabase/client', () => ({
       }
       fake.channels.push(channel)
       return api
+    },
+    realtime: {
+      setAuth: async () => {
+        fake.log.push('setAuth')
+      },
     },
     removeChannel: async (api: { __fake: FakeChannel }) => {
       fake.removed.push(api.__fake)
@@ -134,6 +142,7 @@ beforeEach(() => {
   fake.removed = []
   fake.room = null
   fake.reads = 0
+  fake.log = []
 })
 
 describe('useRoom', () => {
@@ -150,6 +159,15 @@ describe('useRoom', () => {
     expect(fake.channels).toHaveLength(1)
     expect(fake.channels[0].name).toBe('room:room-1')
     expect(fake.channels[0].options.config?.presence?.key).toBe('a')
+  })
+
+  it('ouvre un canal prive, authentifie avant l abonnement', async () => {
+    renderHook(() => useRoom(initial, 'a'))
+
+    expect(fake.channels[0].options.config?.private).toBe(true)
+    // Sans jeton transmis avant de rejoindre, Realtime traiterait l'appelant
+    // en anonyme et les policies du canal le refuseraient.
+    await waitFor(() => expect(fake.log).toEqual(['setAuth', 'subscribe']))
   })
 
   it('une entree, signalee par le salon, met a jour la liste', async () => {
@@ -205,8 +223,22 @@ describe('useRoom', () => {
     await waitFor(() => expect(result.current.room.status).toBe('running'))
   })
 
+  it('relit le salon a la demande', async () => {
+    const { result } = renderHook(() => useRoom(initial, 'a'))
+    fake.room = row([member('a', '2026-10-01T10:00:00Z')], 'running')
+
+    // Un appel refuse parce que le salon a bouge : on relit sans attendre
+    // l'evenement, qui a pu se perdre.
+    await act(async () => {
+      await result.current.reload()
+    })
+
+    expect(result.current.room.status).toBe('running')
+  })
+
   it('se signale present une fois abonne', async () => {
     renderHook(() => useRoom(initial, 'a'))
+    await waitFor(() => expect(fake.channels[0].subscribed).not.toBeNull())
 
     await act(async () => {
       fake.channels[0].subscribed?.('SUBSCRIBED')

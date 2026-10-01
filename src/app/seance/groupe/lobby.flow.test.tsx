@@ -2,276 +2,21 @@ import { act, render, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { Grid, GridVersion, Level } from '@/lib/grids/model'
-import type { LevelOutcome } from '@/lib/session/model'
-
 import RoomPage from './[roomId]/page'
 import { createRoom, startRoom } from './actions'
+import { player, seedGrid } from './fake-room-world'
 
 /**
  * Test d'acceptation de la tranche « salon » : de l'ouverture au lancement.
  *
  * Tout est reel — page, actions, regles du salon, suivi en direct, ecrans —
- * sauf la frontiere Supabase. Une base en memoire tient les salons et leurs
- * membres, rejoue ce que tiennent la RLS, le trigger d'entree et start_room,
- * et pousse les evenements Realtime aux canaux ouverts, comme le ferait le
- * serveur.
+ * sauf la frontiere Supabase, tenue par la base en memoire de
+ * fake-room-world.
  */
 
-type Handler = (payload: Record<string, unknown>) => void
-type Listener = { type: string; filter: Record<string, unknown>; handler: Handler }
-type Channel = { name: string; listeners: Listener[] }
-
-type RoomRecord = {
-  id: string
-  grid_id: string
-  grid_version_id: string
-  host_id: string
-  level_id: string | null
-  status: 'open' | 'running' | 'finished'
-  cursor: number
-}
-
-type MemberRecord = {
-  room_id: string
-  user_id: string
-  level_ceiling: number
-  joined_at: string
-}
-
-const world = vi.hoisted(() => {
-  const state = {
-    user: null as string | null,
-    names: {} as Record<string, string>,
-    grids: {} as Record<string, unknown>,
-    outcomes: {} as Record<string, unknown[]>,
-    /** Niveau -> version et position, pour que start_room verifie le niveau. */
-    levels: {} as Record<string, { versionId: string; position: number }>,
-    rooms: [] as RoomRecord[],
-    members: [] as MemberRecord[],
-    channels: [] as Channel[],
-    presence: {} as Record<string, Set<string>>,
-    clock: 0,
-  }
-
-  /** Ce que le serveur Realtime enverrait aux abonnes du salon. */
-  function broadcast(roomId: string, table: string, event: string) {
-    for (const channel of state.channels) {
-      if (channel.name !== `room:${roomId}`) continue
-      for (const listener of channel.listeners) {
-        const filter = listener.filter
-        if (listener.type !== 'postgres_changes' || filter.table !== table) continue
-        if (filter.event !== '*' && filter.event !== event) continue
-        listener.handler({ new: { room_id: roomId, id: roomId }, old: {} })
-      }
-    }
-  }
-
-  function syncPresence(roomId: string) {
-    for (const channel of state.channels) {
-      if (channel.name !== `room:${roomId}`) continue
-      for (const listener of channel.listeners) {
-        if (listener.type === 'presence') listener.handler({})
-      }
-    }
-  }
-
-  /**
-   * Ligne telle que PostgREST la rend, membres et noms compris.
-   *
-   * RLS : seuls l'hote et les membres lisent le salon.
-   */
-  function roomRow(roomId: string) {
-    const room = state.rooms.find((candidate) => candidate.id === roomId)
-    if (!room) return null
-    const insider =
-      room.host_id === state.user ||
-      state.members.some(
-        (member) => member.room_id === roomId && member.user_id === state.user,
-      )
-    if (!insider) return null
-    return {
-      ...room,
-      stage: 'set',
-      rest_started_at: null,
-      session_room_members: state.members
-        .filter((member) => member.room_id === roomId)
-        .map((member) => ({
-          user_id: member.user_id,
-          level_ceiling: member.level_ceiling,
-          declared_cursor: -1,
-          last_status: null,
-          joined_at: member.joined_at,
-          profiles: { display_name: state.names[member.user_id] ?? null },
-        })),
-    }
-  }
-
-  type DbError = { code: string; message: string }
-  type Result = { data: unknown; error: DbError | null }
-
-  /** Trigger d'entree : salon ouvert, six places, une ligne par compte. */
-  function insertMember(values: Omit<MemberRecord, 'joined_at'>): Result {
-    const room = state.rooms.find((candidate) => candidate.id === values.room_id)
-    const members = state.members.filter((member) => member.room_id === values.room_id)
-    const raise = (message: string) => ({
-      data: null,
-      error: { code: 'P0001', message },
-    })
-
-    if (!room) return raise('room_not_found')
-    if (members.some((member) => member.user_id === values.user_id)) {
-      return { data: null, error: { code: '23505', message: 'duplicate key' } }
-    }
-    if (room.status !== 'open') return raise('room_started')
-    if (members.length >= 6) return raise('room_full')
-
-    state.clock += 1
-    state.members.push({
-      ...values,
-      joined_at: `2026-10-01T10:${String(state.clock).padStart(2, '0')}:00Z`,
-    })
-    // Le trigger touche le salon : c'est par lui que l'entree se propage.
-    broadcast(values.room_id, 'session_rooms', 'UPDATE')
-    return { data: null, error: null }
-  }
-
-  function insertRoom(values: Omit<RoomRecord, 'id' | 'level_id' | 'status' | 'cursor'>) {
-    const id = `room-${state.rooms.length + 1}`
-    state.rooms.push({ ...values, id, level_id: null, status: 'open', cursor: 0 })
-    return { data: { id }, error: null }
-  }
-
-  /** start_room : hote, salon ouvert, niveau de la version figee, plafond. */
-  function startRoom(roomId: string, levelId: string): Result {
-    const room = state.rooms.find((candidate) => candidate.id === roomId)
-    const raise = (message: string) => ({
-      data: null,
-      error: { code: 'P0001', message },
-    })
-    if (!room) return raise('room_not_found')
-    if (room.host_id !== state.user) return raise('not_room_host')
-    if (room.status !== 'open') return raise('room_started')
-
-    const level = state.levels[levelId]
-    if (!level || level.versionId !== room.grid_version_id) {
-      return raise('level_not_in_room')
-    }
-    const ceiling = Math.min(
-      ...state.members
-        .filter((member) => member.room_id === roomId)
-        .map((member) => member.level_ceiling),
-    )
-    if (level.position > ceiling) return raise('level_above_ceiling')
-
-    Object.assign(room, { status: 'running', level_id: levelId, cursor: 0 })
-    broadcast(roomId, 'session_rooms', 'UPDATE')
-    return { data: null, error: null }
-  }
-
-  /** room_entry : la porte, ouverte a qui connait l'identifiant. */
-  function roomEntry(roomId: string): Result {
-    const room = state.rooms.find((candidate) => candidate.id === roomId)
-    return {
-      data: room
-        ? {
-            grid_id: room.grid_id,
-            grid_version_id: room.grid_version_id,
-            status: room.status,
-          }
-        : null,
-      error: null,
-    }
-  }
-
-  /** Requete chainee, resolue a la fin comme un builder PostgREST. */
-  function query(run: () => Result) {
-    const builder = {
-      select: () => builder,
-      single: () => builder,
-      eq: () => builder,
-      maybeSingle: async () => run(),
-      then: (resolve: (value: Result) => unknown, reject: (reason: unknown) => unknown) =>
-        Promise.resolve().then(run).then(resolve, reject),
-    }
-    return builder
-  }
-
-  function client() {
-    return {
-      auth: {
-        getUser: async () => ({
-          data: { user: state.user ? { id: state.user } : null },
-        }),
-      },
-      from: (table: string) => ({
-        // Seule lecture de la tranche : le salon par son identifiant.
-        select: () => {
-          let roomId = ''
-          const builder = {
-            eq: (_column: string, value: string) => {
-              roomId = value
-              return builder
-            },
-            maybeSingle: async () => ({ data: roomRow(roomId), error: null }),
-          }
-          return builder
-        },
-        insert: (values: never) => {
-          // Ecriture immediate : un builder PostgREST l'enverrait au premier await.
-          const result =
-            table === 'session_rooms' ? insertRoom(values) : insertMember(values)
-          return query(() => result)
-        },
-      }),
-      rpc: (fn: string, args: { p_room: string; p_level: string }) =>
-        query(() => {
-          if (fn === 'start_room') return startRoom(args.p_room, args.p_level)
-          if (fn === 'room_entry') return roomEntry(args.p_room)
-          return { data: null, error: { code: '42883', message: 'unknown function' } }
-        }),
-    }
-  }
-
-  /** Client navigateur : memes lectures, plus les canaux Realtime. */
-  function browserClient() {
-    return {
-      ...client(),
-      channel: (name: string, options: { config: { presence: { key: string } } }) => {
-        const channel: Channel = { name, listeners: [] }
-        state.channels.push(channel)
-        const roomId = name.slice('room:'.length)
-        const api = {
-          on: (type: string, filter: Record<string, unknown>, handler: Handler) => {
-            channel.listeners.push({ type, filter, handler })
-            return api
-          },
-          subscribe: (callback: (status: string) => void) => {
-            queueMicrotask(() => callback('SUBSCRIBED'))
-            return api
-          },
-          track: async () => {
-            state.presence[roomId] ??= new Set()
-            state.presence[roomId].add(options.config.presence.key)
-            syncPresence(roomId)
-            return 'ok'
-          },
-          presenceState: () =>
-            Object.fromEntries(
-              [...(state.presence[roomId] ?? [])].map((key) => [key, [{}]]),
-            ),
-          __channel: channel,
-        }
-        return api
-      },
-      removeChannel: async (api: { __channel: Channel }) => {
-        state.channels = state.channels.filter((channel) => channel !== api.__channel)
-        return 'ok'
-      },
-    }
-  }
-
-  return { state, client, browserClient }
+const world = await vi.hoisted(async () => {
+  const { createRoomWorld } = await import('./fake-room-world')
+  return createRoomWorld()
 })
 
 vi.mock('server-only', () => ({}))
@@ -285,7 +30,7 @@ vi.mock('@/lib/grids/queries', () => ({
   loadGrid: async () => world.state.grids[world.state.user ?? ''] ?? null,
 }))
 vi.mock('@/lib/session/queries', () => ({
-  loadLevelOutcomes: async () => world.state.outcomes[world.state.user ?? ''] ?? [],
+  loadLevelOutcomes: async () => world.outcomesOf(world.state.user ?? ''),
 }))
 vi.mock('@/lib/account/queries', () => ({
   loadTimerCues: async () => ({
@@ -309,83 +54,6 @@ vi.mock('@/app/(app)/grilles/actions', () => ({
   duplicateGrid: vi.fn(),
 }))
 
-const EXERCISES = ['Pompes', 'Tractions', 'Dips', 'Muscle-up']
-
-function level(versionId: string, position: number): Level {
-  return {
-    id: `${versionId}-l${position}`,
-    position,
-    exercises: [
-      {
-        id: `${versionId}-e${position}`,
-        exerciseId: `x${position}`,
-        exerciseName: EXERCISES[position - 1],
-        imageUrl: null,
-        position: 1,
-        sets: [1, 2].map((setPosition) => ({
-          id: `${versionId}-s${position}-${setPosition}`,
-          position: setPosition,
-          targetReps: position * 10,
-          timerMode: 'none' as const,
-          timerSeconds: null,
-        })),
-      },
-    ],
-  }
-}
-
-function version(id: string, number: number): GridVersion {
-  return {
-    id,
-    version: number,
-    status: 'published',
-    name: 'Haut du corps',
-    accentColor: '#00FF87',
-    restSeconds: 60,
-    unchangedPrefix: 0,
-    levels: [1, 2, 3, 4].map((position) => level(id, position)),
-  }
-}
-
-const VERSIONS = [version('v1', 1), version('v2', 2)]
-
-/** La grille vue par un utilisateur : creee, suivie, ou suivie et figee en v1. */
-function gridFor(kind: 'owner' | 'follower' | 'frozen'): Grid {
-  return {
-    id: 'g1',
-    ownerId: 'alice',
-    ownerName: 'Alice',
-    isPublic: true,
-    deletedAt: null,
-    owned: kind === 'owner',
-    publishedVersions: VERSIONS,
-    draft: null,
-    follow: kind === 'owner' ? null : { frozenAtVersion: kind === 'frozen' ? 1 : null },
-    followerCount: 0,
-  }
-}
-
-/** Historique : les niveaux deja valides, sur la version 2. */
-function validatedUpTo(position: number): LevelOutcome[] {
-  return Array.from({ length: position }, (_, index) => ({
-    levelId: `v2-l${index + 1}`,
-    levelNumber: index + 1,
-    validated: true,
-    startedAt: '2026-09-01T10:00:00Z',
-  }))
-}
-
-function player(
-  id: string,
-  name: string,
-  kind: 'owner' | 'follower' | 'frozen',
-  validated: number,
-) {
-  world.state.names[id] = name
-  world.state.grids[id] = gridFor(kind)
-  world.state.outcomes[id] = validatedUpTo(validated)
-}
-
 /**
  * Ouvre le lien du salon en tant que `userId`, comme le ferait le navigateur.
  *
@@ -405,32 +73,15 @@ async function openLink(userId: string, roomId: string) {
 }
 
 beforeEach(() => {
-  Object.assign(world.state, {
-    user: null,
-    names: {},
-    grids: {},
-    outcomes: {},
-    levels: Object.fromEntries(
-      VERSIONS.flatMap((candidate) =>
-        candidate.levels.map((entry) => [
-          entry.id,
-          { versionId: candidate.id, position: entry.position },
-        ]),
-      ),
-    ),
-    rooms: [],
-    members: [],
-    channels: [],
-    presence: {},
-    clock: 0,
-  })
+  world.reset()
+  seedGrid(world)
 
   // Alice en est au niveau 4, Bruno au 2. Camille suit une copie figee en v1.
-  player('alice', 'Alice', 'owner', 3)
-  player('bruno', 'Bruno', 'follower', 1)
-  player('camille', 'Camille', 'frozen', 3)
+  player(world, 'alice', 'Alice', 'owner', 3)
+  player(world, 'bruno', 'Bruno', 'follower', 1)
+  player(world, 'camille', 'Camille', 'frozen', 3)
   for (const name of ['Dora', 'Elio', 'Fanny', 'Gael', 'Hugo']) {
-    player(name.toLowerCase(), name, 'follower', 3)
+    player(world, name.toLowerCase(), name, 'follower', 3)
   }
 })
 
@@ -443,14 +94,14 @@ describe('Salon a plusieurs, de l ouverture au lancement', () => {
     const roomId = created.roomId!
 
     const alice = await openLink('alice', roomId)
-    expect(await alice.findByRole('listitem', { name: /Alice/ })).toBeInTheDocument()
+    expect(await alice.findByText(/^Alice/, { selector: 'li p' })).toBeInTheDocument()
     // Seule, Alice peut choisir jusqu'a son niveau en cours.
     expect(alice.getByRole('button', { name: 'Niveau 4' })).toBeInTheDocument()
 
     // B ouvre le lien : il entre, et le plafond descend a son niveau.
     const bruno = await openLink('bruno', roomId)
-    expect(bruno.getByRole('listitem', { name: /Bruno/ })).toBeInTheDocument()
-    expect(await alice.findByRole('listitem', { name: /Bruno/ })).toBeInTheDocument()
+    expect(bruno.getByText(/^Bruno/, { selector: 'li p' })).toBeInTheDocument()
+    expect(await alice.findByText(/^Bruno/, { selector: 'li p' })).toBeInTheDocument()
     await waitFor(() =>
       expect(alice.queryByRole('button', { name: 'Niveau 3' })).not.toBeInTheDocument(),
     )

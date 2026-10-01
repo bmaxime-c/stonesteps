@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { createClient } from '@/lib/supabase/client'
 
@@ -11,6 +11,11 @@ export type LiveRoom = {
   room: Room
   /** Utilisateurs connectes au salon en ce moment, un par compte. */
   presentIds: ReadonlySet<string>
+  /**
+   * Relit le salon sans attendre d'evenement : apres un appel refuse parce
+   * que le salon avait bouge, l'evenement qui l'annoncait a pu se perdre.
+   */
+  reload: () => Promise<void>
 }
 
 /**
@@ -31,6 +36,8 @@ export function useRoom(initial: Room, userId: string): LiveRoom {
   // Numero de la derniere relecture lancee : une reponse plus ancienne,
   // arrivee apres coup, ne doit pas ecraser une plus recente.
   const latestRead = useRef(0)
+  // Relecture du canal en cours, exposee hors de l'effet qui la cree.
+  const reloadRef = useRef<(() => Promise<void>) | null>(null)
 
   const roomId = initial.id
 
@@ -44,10 +51,14 @@ export function useRoom(initial: Room, userId: string): LiveRoom {
       // dernier etat connu plutot que de vider l'ecran.
       if (fresh && read === latestRead.current) setRoom(fresh)
     }
+    reloadRef.current = reload
 
+    // Canal prive : Realtime consulte les policies de realtime.messages avant
+    // d'y laisser entrer, et seuls les membres du salon passent.
     const channel = supabase.channel(`room:${roomId}`, {
-      config: { presence: { key: userId } },
+      config: { presence: { key: userId }, private: true },
     })
+    let closed = false
 
     channel
       // Un seul abonnement : le salon. Une entree ou une sortie le touche
@@ -67,18 +78,32 @@ export function useRoom(initial: Room, userId: string): LiveRoom {
       .on('presence', { event: 'sync' }, () => {
         setPresentIds(new Set(Object.keys(channel.presenceState())))
       })
-      .subscribe((status) => {
+
+    // Le jeton de session doit etre remis au socket avant de rejoindre : un
+    // canal prive rejoint sans lui l'est en anonyme, et les policies le
+    // refusent. Le client le transmet de lui-meme a la connexion, mais sans
+    // garantie d'arriver avant l'abonnement.
+    void supabase.realtime.setAuth().then(() => {
+      if (closed) return
+      channel.subscribe((status) => {
         if (status !== 'SUBSCRIBED') return
         void channel.track({ user_id: userId })
         // Ce qui a change entre le rendu serveur et l'abonnement n'a declenche
         // aucun evenement : une relecture rattrape ce trou.
         void reload()
       })
+    })
 
     return () => {
+      closed = true
+      reloadRef.current = null
       void supabase.removeChannel(channel)
     }
   }, [roomId, userId])
 
-  return { room, presentIds }
+  const reload = useCallback(async () => {
+    await reloadRef.current?.()
+  }, [])
+
+  return { room, presentIds, reload }
 }
