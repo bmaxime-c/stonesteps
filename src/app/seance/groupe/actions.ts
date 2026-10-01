@@ -12,7 +12,9 @@ import { logSupabaseError } from '@/lib/supabase/log'
 import { createClient } from '@/lib/supabase/server'
 
 import type {
+  ClaimHostResult,
   CreateRoomResult,
+  HeartbeatResult,
   JoinRoomRefusal,
   JoinRoomResult,
   RoomActionResult,
@@ -40,6 +42,11 @@ const DATABASE_MESSAGES: Record<string, string> = {
   stale_cursor: 'Le groupe est déjà passé à la série suivante.',
   room_moved: 'Le groupe a déjà avancé.',
   room_waiting: "Un participant n'a pas encore fini sa série.",
+  room_finished: 'La séance de ce salon est terminée.',
+  host_alive: "L'hôte est toujours là : il garde la main.",
+  host_taken: 'Un autre participant vient de prendre la main.',
+  host_not_in_room: 'Rejoins la liste du salon avant de lancer la séance.',
+  grid_not_playable: "Cette grille n'est plus jouable : le salon n'a pas pu être ouvert.",
 }
 
 /**
@@ -47,6 +54,12 @@ const DATABASE_MESSAGES: Record<string, string> = {
  * l'appel. L'ecran se relit et suit la base : rien a signaler.
  */
 const STALE_CODES = new Set(['stale_cursor', 'room_moved', 'room_waiting'])
+
+/**
+ * Refus d'une prise de main qui disent seulement que quelqu'un tient deja le
+ * salon : l'hote s'est manifeste, ou un autre candidat est passe le premier.
+ */
+const CLAIM_SILENT_CODES = new Set(['host_alive', 'host_taken'])
 
 function isStale(error: DatabaseError): boolean {
   return error?.code === 'P0001' && STALE_CODES.has(error.message ?? '')
@@ -104,7 +117,8 @@ async function playerStanding(grid: Grid) {
  * Ouvre un salon sur une grille que l'on joue.
  *
  * Le salon fige la version jouable de l'hote, et l'hote en est le premier
- * membre : son plafond compte comme celui des autres.
+ * membre : son plafond compte comme celui des autres. Les deux naissent
+ * ensemble, par create_room, qui rejoue les controles de lecture de la grille.
  */
 export async function createRoom(gridId: string): Promise<CreateRoomResult> {
   const supabase = await createClient()
@@ -125,31 +139,23 @@ export async function createRoom(gridId: string): Promise<CreateRoomResult> {
     return { roomId: null, error: "Cette grille n'a aucune version jouable." }
   }
 
-  const { data: room, error: roomError } = await supabase
-    .from('session_rooms')
-    .insert({ grid_id: gridId, grid_version_id: standing.versionId, host_id: user.id })
-    .select('id')
-    .single()
-
-  if (roomError || !room) {
-    logSupabaseError('createRoom', roomError)
-    return { roomId: null, error: "Le salon n'a pas pu être ouvert." }
-  }
-
-  const { error: memberError } = await supabase.from('session_room_members').insert({
-    room_id: room.id,
-    user_id: user.id,
-    level_ceiling: standing.ceiling,
+  // Salon et inscription de l'hote en une seule transaction : un echec a
+  // mi-chemin laissait un salon sans membre, dont l'hote ne pouvait rien faire.
+  const { data: roomId, error } = await supabase.rpc('create_room', {
+    p_grid: gridId,
+    p_version: standing.versionId,
+    p_ceiling: standing.ceiling,
   })
 
-  if (memberError) {
-    // Pas de compensation possible : un salon ne se supprime pas. Il reste
-    // ouvert et vide, et l'hote peut toujours y entrer par le lien.
-    logSupabaseError('createRoom.member', memberError)
-    return { roomId: null, error: "Tu n'as pas pu entrer dans le salon." }
+  if (error || !roomId) {
+    logSupabaseError('createRoom', error)
+    return {
+      roomId: null,
+      error: databaseMessage(error, "Le salon n'a pas pu être ouvert."),
+    }
   }
 
-  return { roomId: room.id, error: null }
+  return { roomId, error: null }
 }
 
 /**
@@ -350,5 +356,50 @@ export async function advanceRoom(
       not_room_host: "Seul l'hôte fait avancer le groupe.",
     }),
     stale: false,
+  }
+}
+
+/**
+ * Battement de l'hote : il se manifeste au salon, qui le tient pour vivant.
+ *
+ * `deposed` : un autre membre a pris la main pendant une coupure. L'ancien
+ * hote l'apprend ici, cesse de battre et redevient invite. Un battement
+ * perdu en route ne dit rien de tel : le suivant partira a son heure.
+ */
+export async function heartbeatRoom(roomId: string): Promise<HeartbeatResult> {
+  const supabase = await createClient()
+
+  const { error } = await supabase.rpc('heartbeat_room', { p_room: roomId })
+
+  if (!error) return { deposed: false }
+  if (error.code === 'P0001' && error.message === 'not_room_host') {
+    return { deposed: true }
+  }
+
+  logSupabaseError('heartbeatRoom', error)
+  return { deposed: false }
+}
+
+/**
+ * Prend la main d'un hote silencieux.
+ *
+ * claim_room_host tranche sous verrou : un hote encore vivant garde sa place,
+ * et de deux candidats simultanes un seul passe. Ces deux refus ne sont pas
+ * des erreurs a montrer -- quelqu'un tient le salon, c'est tout ce qui compte.
+ */
+export async function claimRoomHost(roomId: string): Promise<ClaimHostResult> {
+  const supabase = await createClient()
+
+  const { error } = await supabase.rpc('claim_room_host', { p_room: roomId })
+
+  if (!error) return { claimed: true, error: null }
+  if (error.code === 'P0001' && CLAIM_SILENT_CODES.has(error.message ?? '')) {
+    return { claimed: false, error: null }
+  }
+
+  logSupabaseError('claimRoomHost', error)
+  return {
+    claimed: false,
+    error: databaseMessage(error, "Tu n'as pas pu prendre la main."),
   }
 }

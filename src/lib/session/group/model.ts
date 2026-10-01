@@ -33,6 +33,11 @@ export type Room = {
   cursor: number
   stage: RoomStage
   restStartedAt: string | null
+  /**
+   * Dernier battement de l'hote, a l'heure du serveur. Un hote silencieux
+   * depuis trop longtemps est tenu pour parti (host.ts).
+   */
+  hostSeenAt: string
   /** Dans l'ordre d'arrivee. */
   members: RoomMember[]
 }

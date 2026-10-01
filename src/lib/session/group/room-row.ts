@@ -21,7 +21,7 @@ import type { Room } from './model'
  */
 const ROOM_SELECT = `
   id, grid_id, grid_version_id, host_id, level_id, status, cursor, stage,
-  rest_started_at,
+  rest_started_at, host_seen_at,
   session_room_members (
     user_id, level_ceiling, declared_cursor, last_status, joined_at,
     profiles!session_room_members_user_id_fkey ( display_name )
@@ -38,6 +38,7 @@ type RoomRow = {
   cursor: number
   stage: Room['stage']
   rest_started_at: string | null
+  host_seen_at: string
   session_room_members: {
     user_id: string
     level_ceiling: number
@@ -59,6 +60,7 @@ function toRoom(row: RoomRow): Room {
     cursor: row.cursor,
     stage: row.stage,
     restStartedAt: row.rest_started_at,
+    hostSeenAt: row.host_seen_at,
     members: [...row.session_room_members]
       .sort((a, b) => a.joined_at.localeCompare(b.joined_at))
       .map((member) => ({

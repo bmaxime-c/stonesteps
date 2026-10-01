@@ -2,10 +2,10 @@
  * Base Supabase en memoire, pour les tests d'acceptation du salon.
  *
  * Module de test, jamais importe par l'application. Il tient les salons, leurs
- * membres et les seances enregistrees, rejoue ce que tiennent la RLS, le
- * trigger d'entree et les fonctions start_room, declare_set et advance_room,
- * et pousse les evenements Realtime aux canaux ouverts, comme le ferait le
- * serveur. Tout le reste -- pages, actions, regles, ecrans -- reste reel.
+ * membres et les seances enregistrees, rejoue ce que tiennent la RLS, les
+ * triggers d'entree et de depart, et les fonctions create_room, start_room,
+ * declare_set, advance_room, heartbeat_room et claim_room_host, et pousse les
+ * evenements Realtime aux canaux ouverts, comme le ferait le serveur. Tout le reste -- pages, actions, regles, ecrans -- reste reel.
  *
  * A charger dans vi.hoisted : les mocks de module s'y referent.
  */
@@ -29,6 +29,9 @@ export type RoomRecord = {
   cursor: number
   stage: 'set' | 'rest' | 'finished'
   rest_started_at: string | null
+  host_seen_at: string
+  /** Opaque ici : seul compte qu'il change a chaque mouvement de la liste. */
+  roster_changed_at: string
 }
 
 export type MemberRecord = {
@@ -82,6 +85,8 @@ export function createRoomWorld() {
     channels: [] as Channel[],
     presence: {} as Record<string, Set<string>>,
     clock: 0,
+    /** Mouvements de la liste des membres, pour roster_changed_at. */
+    roster: 0,
   }
 
   function reset() {
@@ -99,6 +104,7 @@ export function createRoomWorld() {
       channels: [],
       presence: {},
       clock: 0,
+      roster: 0,
     })
   }
 
@@ -112,8 +118,20 @@ export function createRoomWorld() {
   const roomMembers = (roomId: string) =>
     state.members.filter((member) => member.room_id === roomId)
 
-  /** Ce que le serveur Realtime enverrait aux abonnes du salon. */
+  /** Le trigger touch_room_roster : la liste a bouge. */
+  function touchRoster(room: RoomRecord) {
+    state.roster += 1
+    room.roster_changed_at = `roster-${state.roster}`
+  }
+
+  const now = () => new Date().toISOString()
+
+  /**
+   * Ce que le serveur Realtime enverrait aux abonnes du salon : la ligne du
+   * salon telle qu'elle est apres la modification, sans les membres.
+   */
   function broadcast(roomId: string) {
+    const room = findRoom(roomId)
     for (const channel of state.channels) {
       if (channel.name !== `room:${roomId}`) continue
       for (const listener of channel.listeners) {
@@ -121,7 +139,7 @@ export function createRoomWorld() {
         if (listener.type !== 'postgres_changes' || filter.table !== 'session_rooms') {
           continue
         }
-        listener.handler({ new: { id: roomId }, old: {} })
+        listener.handler({ eventType: 'UPDATE', new: room ? { ...room } : {}, old: {} })
       }
     }
   }
@@ -196,27 +214,114 @@ export function createRoomWorld() {
       last_status: null,
       joined_at: `2026-10-01T10:${String(state.clock).padStart(2, '0')}:00Z`,
     })
+    touchRoster(room)
     // Le trigger touche le salon : c'est par lui que l'entree se propage.
     broadcast(values.room_id)
     return { data: null, error: null }
   }
 
-  function insertRoom(values: {
-    grid_id: string
-    grid_version_id: string
-    host_id: string
-  }) {
+  /**
+   * create_room : salon et inscription de l'hote d'un seul tenant. La grille
+   * doit etre chez l'appelant, sur la version demandee.
+   */
+  function createRoom(args: { p_grid: string; p_version: string; p_ceiling: number }) {
+    const grid = state.grids[state.user ?? ''] as
+      { id: string; publishedVersions: { id: string }[] } | undefined
+    if (
+      !state.user ||
+      grid?.id !== args.p_grid ||
+      !grid.publishedVersions.some((candidate) => candidate.id === args.p_version)
+    ) {
+      return raise('grid_not_playable')
+    }
+
     const id = `room-${state.rooms.length + 1}`
     state.rooms.push({
-      ...values,
       id,
+      grid_id: args.p_grid,
+      grid_version_id: args.p_version,
+      host_id: state.user,
       level_id: null,
       status: 'open',
       cursor: 0,
       stage: 'set',
       rest_started_at: null,
+      host_seen_at: now(),
+      roster_changed_at: 'roster-0',
     })
-    return { data: { id }, error: null }
+    insertMember({ room_id: id, user_id: state.user, level_ceiling: args.p_ceiling })
+    return { data: id, error: null }
+  }
+
+  /**
+   * Sortie d'un membre : sa propre ligne, salon ouvert (RLS). Puis le trigger
+   * de passation : l'hote qui part laisse la main au plus ancien restant, et
+   * un salon vide disparait.
+   */
+  function deleteMember(filters: Record<string, unknown>): Result {
+    const room = findRoom(String(filters.room_id))
+    const userId = String(filters.user_id)
+    const leaving = state.members.find(
+      (member) => member.room_id === room?.id && member.user_id === userId,
+    )
+    if (!room || !leaving || userId !== state.user || room.status !== 'open') {
+      return { data: [], error: null }
+    }
+
+    state.members = state.members.filter((member) => member !== leaving)
+    if (room.host_id === userId) {
+      const next = roomMembers(room.id).sort(
+        (a, b) =>
+          a.joined_at.localeCompare(b.joined_at) || a.user_id.localeCompare(b.user_id),
+      )[0]
+      if (!next) {
+        state.rooms = state.rooms.filter((candidate) => candidate !== room)
+        broadcast(room.id)
+        return { data: [{ room_id: room.id }], error: null }
+      }
+      Object.assign(room, { host_id: next.user_id, host_seen_at: now() })
+    }
+    touchRoster(room)
+    broadcast(room.id)
+    return { data: [{ room_id: room.id }], error: null }
+  }
+
+  /** heartbeat_room : l'hote seul, salon ouvert ou lance. */
+  function heartbeatRoom(roomId: string): Result {
+    const room = findRoom(roomId)
+    if (
+      !room ||
+      room.host_id !== state.user ||
+      (room.status !== 'open' && room.status !== 'running')
+    ) {
+      return raise('not_room_host')
+    }
+    room.host_seen_at = now()
+    broadcast(roomId)
+    return { data: null, error: null }
+  }
+
+  /**
+   * claim_room_host : un membre prend la place d'un hote silencieux depuis
+   * plus de 15 s. Les appels se suivent un a un, comme sous le verrou du
+   * salon : le second candidat trouve un hote tout frais.
+   */
+  function claimRoomHost(roomId: string): Result {
+    const room = findRoom(roomId)
+    const member = roomMembers(roomId).some((m) => m.user_id === state.user)
+    if (!room || !member || !state.user) return raise('not_room_member')
+    if (room.status !== 'open' && room.status !== 'running') {
+      return raise('room_finished')
+    }
+    if (room.host_id !== state.user) {
+      if (Date.now() - Date.parse(room.host_seen_at) <= 15_000) {
+        return raise('host_alive')
+      }
+      room.host_id = state.user
+    }
+    room.host_seen_at = now()
+    broadcast(roomId)
+    return { data: null, error: null }
   }
 
   function insertSession(values: Omit<SessionRow, 'id' | 'completed_at'>): Result {
@@ -235,6 +340,9 @@ export function createRoomWorld() {
     const room = findRoom(roomId)
     if (!room) return raise('room_not_found')
     if (room.host_id !== state.user) return raise('not_room_host')
+    if (!roomMembers(roomId).some((member) => member.user_id === state.user)) {
+      return raise('host_not_in_room')
+    }
     if (room.status !== 'open') return raise('room_started')
 
     const level = state.levels[levelId]
@@ -244,7 +352,13 @@ export function createRoomWorld() {
     const ceiling = Math.min(...roomMembers(roomId).map((member) => member.level_ceiling))
     if (level.position > ceiling) return raise('level_above_ceiling')
 
-    Object.assign(room, { status: 'running', level_id: levelId, cursor: 0, stage: 'set' })
+    Object.assign(room, {
+      status: 'running',
+      level_id: levelId,
+      cursor: 0,
+      stage: 'set',
+      host_seen_at: now(),
+    })
     broadcast(roomId)
     return { data: null, error: null }
   }
@@ -260,6 +374,7 @@ export function createRoomWorld() {
     if (cursor !== room.cursor) return raise('stale_cursor')
 
     Object.assign(member, { declared_cursor: cursor, last_status: status })
+    touchRoster(room)
     // Le trigger touch_room_roster reveille les abonnes du salon.
     broadcast(roomId)
     return { data: null, error: null }
@@ -362,9 +477,11 @@ export function createRoomWorld() {
 
   function insert(table: string, values: never) {
     // Ecriture immediate : un builder PostgREST l'enverrait au premier await.
+    // Pas d'insertion directe de salon : la policy n'existe plus, tout passe
+    // par create_room.
     const result =
       table === 'session_rooms'
-        ? insertRoom(values)
+        ? raise('new row violates row-level security policy')
         : table === 'session_room_members'
           ? insertMember(values)
           : table === 'sessions'
@@ -394,10 +511,20 @@ export function createRoomWorld() {
         select: () => select(table),
         insert: (values: never) => insert(table, values),
         update: (values: Partial<SessionRow>) => update(table, values),
-        delete: () => query(() => ({ data: [], error: null })),
+        delete: () =>
+          query((filters) =>
+            table === 'session_room_members'
+              ? deleteMember(filters)
+              : { data: [], error: null },
+          ),
       }),
       rpc: (fn: string, args: Record<string, never>) =>
         query(() => {
+          if (fn === 'create_room') {
+            return createRoom(args as unknown as Parameters<typeof createRoom>[0])
+          }
+          if (fn === 'heartbeat_room') return heartbeatRoom(args.p_room)
+          if (fn === 'claim_room_host') return claimRoomHost(args.p_room)
           if (fn === 'start_room') return startRoom(args.p_room, args.p_level)
           if (fn === 'room_entry') return roomEntry(args.p_room)
           if (fn === 'declare_set')
@@ -472,7 +599,16 @@ export function createRoomWorld() {
     ]
   }
 
-  return { state, reset, broadcast, client, browserClient, outcomesOf }
+  /**
+   * Coupure du telephone de `userId` : il quitte la presence du salon. Le
+   * canal Realtime le voit partir, comme a la fermeture d'un onglet.
+   */
+  function disconnect(userId: string, roomId: string) {
+    state.presence[roomId]?.delete(userId)
+    syncPresence(roomId)
+  }
+
+  return { state, reset, broadcast, disconnect, client, browserClient, outcomesOf }
 }
 
 export type RoomWorld = ReturnType<typeof createRoomWorld>

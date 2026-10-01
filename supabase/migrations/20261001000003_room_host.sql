@@ -15,7 +15,8 @@
 -- que tout le monde a quitte disparait.
 --
 -- Reprises de revue : start_room exige que l'hote soit membre, et create_room
--- ouvre salon et inscription de l'hote en une seule transaction.
+-- ouvre salon et inscription de l'hote en une seule transaction. Elle devient
+-- la seule porte de creation : la policy d'insert directe disparait.
 --
 -- Codes leves (P0001), traduits par l'application : not_room_host,
 -- not_room_member, room_finished, host_alive, host_taken, host_not_in_room,
@@ -214,6 +215,10 @@ begin
   return v_room;
 end;
 $$;
+
+-- Plus d'insertion directe : par elle, un salon pouvait naitre sans que son
+-- hote en soit membre. create_room, security definer, ne passe pas par la RLS.
+drop policy session_rooms_insert_host on public.session_rooms;
 
 -- ---------------------------------------------------------------------------
 -- Depart de l'hote

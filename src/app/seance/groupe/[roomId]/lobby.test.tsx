@@ -69,6 +69,7 @@ function room(overrides: Partial<Room> = {}): Room {
     cursor: 0,
     stage: 'set',
     restStartedAt: null,
+    hostSeenAt: '2026-10-01T10:00:00.000Z',
     members: [member('host', 'Alice', 4), member('guest', 'Bruno', 2)],
     ...overrides,
   }
