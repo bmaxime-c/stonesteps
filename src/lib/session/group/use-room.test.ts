@@ -223,6 +223,19 @@ describe('useRoom', () => {
     await waitFor(() => expect(result.current.room.status).toBe('running'))
   })
 
+  it('relit le salon a la demande', async () => {
+    const { result } = renderHook(() => useRoom(initial, 'a'))
+    fake.room = row([member('a', '2026-10-01T10:00:00Z')], 'running')
+
+    // Un appel refuse parce que le salon a bouge : on relit sans attendre
+    // l'evenement, qui a pu se perdre.
+    await act(async () => {
+      await result.current.reload()
+    })
+
+    expect(result.current.room.status).toBe('running')
+  })
+
   it('se signale present une fois abonne', async () => {
     renderHook(() => useRoom(initial, 'a'))
     await waitFor(() => expect(fake.channels[0].subscribed).not.toBeNull())
