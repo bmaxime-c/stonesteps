@@ -5,6 +5,8 @@ import { gridProgress } from '@/lib/grids/progress'
 import { loadGrid } from '@/lib/grids/queries'
 import { loadRoom, loadRoomEntry } from '@/lib/session/group/queries'
 import { joinRefusal, memberCeiling, type JoinRefusal } from '@/lib/session/group/room'
+import type { RoomStage } from '@/lib/session/group/model'
+import type { SetStatus } from '@/lib/session/model'
 import { loadLevelOutcomes } from '@/lib/session/queries'
 import { logSupabaseError } from '@/lib/supabase/log'
 import { createClient } from '@/lib/supabase/server'
@@ -14,6 +16,7 @@ import type {
   JoinRoomRefusal,
   JoinRoomResult,
   RoomActionResult,
+  RoomStepResult,
 } from './action-state'
 
 const SESSION_EXPIRED = 'Session expirée. Reconnecte-toi.'
@@ -32,6 +35,21 @@ const DATABASE_MESSAGES: Record<string, string> = {
   level_not_in_room: "Ce niveau n'appartient pas à la grille du salon.",
   level_above_ceiling:
     "Ce niveau dépasse le plafond du salon : un participant ne l'a pas encore atteint.",
+  not_room_member: 'Tu ne fais pas partie de ce salon.',
+  room_not_running: "La séance de ce salon n'est pas en cours.",
+  stale_cursor: 'Le groupe est déjà passé à la série suivante.',
+  room_moved: 'Le groupe a déjà avancé.',
+  room_waiting: "Un participant n'a pas encore fini sa série.",
+}
+
+/**
+ * Codes qui disent seulement que le salon a bouge entre la lecture et
+ * l'appel. L'ecran se relit et suit la base : rien a signaler.
+ */
+const STALE_CODES = new Set(['stale_cursor', 'room_moved', 'room_waiting'])
+
+function isStale(error: DatabaseError): boolean {
+  return error?.code === 'P0001' && STALE_CODES.has(error.message ?? '')
 }
 
 const REFUSAL_MESSAGES: Record<JoinRefusal, string> = {
@@ -50,9 +68,17 @@ const REFUSAL_BY_CODE: Record<string, JoinRoomRefusal> = {
 
 type DatabaseError = { code?: string; message?: string } | null
 
-function databaseMessage(error: DatabaseError, fallback: string): string {
+/**
+ * `overrides` precise un code dont le sens depend de l'action : `not_room_host`
+ * ne dit pas la meme chose au lancement et a l'avance du groupe.
+ */
+function databaseMessage(
+  error: DatabaseError,
+  fallback: string,
+  overrides: Record<string, string> = {},
+): string {
   if (error?.code === 'P0001' && error.message) {
-    return DATABASE_MESSAGES[error.message] ?? fallback
+    return overrides[error.message] ?? DATABASE_MESSAGES[error.message] ?? fallback
   }
   return fallback
 }
@@ -258,4 +284,71 @@ export async function startRoom(
   }
 
   return { error: null }
+}
+
+/**
+ * Declare le statut de sa serie, celle du curseur du salon.
+ *
+ * Le statut seul, jamais la valeur : les autres voient qui a reussi, pas
+ * combien il a fait. Une correction du chrono redeclare la meme serie tant
+ * que le groupe ne l'a pas depassee ; ensuite, la base la refuse, et le
+ * client la compte echouee de lui-meme.
+ */
+export async function declareSet(
+  roomId: string,
+  cursor: number,
+  status: SetStatus,
+): Promise<RoomStepResult> {
+  const supabase = await createClient()
+
+  const { error } = await supabase.rpc('declare_set', {
+    p_room: roomId,
+    p_cursor: cursor,
+    p_status: status,
+  })
+
+  if (!error) return { error: null, stale: false }
+  if (isStale(error)) return { error: null, stale: true }
+
+  logSupabaseError('declareSet', error)
+  return {
+    error: databaseMessage(error, "Ta série n'a pas pu être déclarée."),
+    stale: false,
+  }
+}
+
+/**
+ * Fait passer le groupe a l'etape suivante, chez l'hote.
+ *
+ * L'hote annonce l'etape qu'il croit courante et les presents qu'il voit ;
+ * advance_room tranche sous verrou. Un salon deja avance -- double tap,
+ * second onglet -- n'est pas une erreur : l'etat retenu est deja en route.
+ */
+export async function advanceRoom(
+  roomId: string,
+  expectedCursor: number,
+  expectedStage: RoomStage,
+  presentIds: string[],
+  force: boolean,
+): Promise<RoomStepResult> {
+  const supabase = await createClient()
+
+  const { error } = await supabase.rpc('advance_room', {
+    p_room: roomId,
+    p_expected_cursor: expectedCursor,
+    p_expected_stage: expectedStage,
+    p_present: presentIds,
+    p_force: force,
+  })
+
+  if (!error) return { error: null, stale: false }
+  if (isStale(error)) return { error: null, stale: true }
+
+  logSupabaseError('advanceRoom', error)
+  return {
+    error: databaseMessage(error, "Le groupe n'a pas pu avancer.", {
+      not_room_host: "Seul l'hôte fait avancer le groupe.",
+    }),
+    stale: false,
+  }
 }

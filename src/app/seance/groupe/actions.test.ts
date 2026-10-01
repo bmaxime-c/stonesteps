@@ -4,7 +4,14 @@ import type { Grid, GridVersion } from '@/lib/grids/model'
 import type { Room, RoomEntry } from '@/lib/session/group/model'
 import type { LevelOutcome } from '@/lib/session/model'
 
-import { createRoom, joinRoom, leaveRoom, startRoom } from './actions'
+import {
+  advanceRoom,
+  createRoom,
+  declareSet,
+  joinRoom,
+  leaveRoom,
+  startRoom,
+} from './actions'
 
 // Client Supabase simule : chaque ecriture est consignee, et la reponse de
 // chaque couple table / operation se regle test par test.
@@ -399,5 +406,100 @@ describe('lancer un salon', () => {
     const result = await startRoom('r1', 'v2-l1')
 
     expect(result.error).toBe("Seul l'hôte peut lancer la séance.")
+  })
+})
+
+describe('declarer une serie', () => {
+  it('passe par declare_set, statut seul', async () => {
+    const result = await declareSet('r1', 2, 'surpass')
+
+    expect(result).toEqual({ error: null, stale: false })
+    expect(db.rpcs).toEqual([
+      { fn: 'declare_set', args: { p_room: 'r1', p_cursor: 2, p_status: 'surpass' } },
+    ])
+  })
+
+  it('une serie deja passee par le groupe n est pas une erreur', async () => {
+    db.responses['rpc.declare_set'] = {
+      error: { code: 'P0001', message: 'stale_cursor' },
+    }
+
+    const result = await declareSet('r1', 1, 'success')
+
+    // Le client relit le salon et compte la serie echouee de lui-meme.
+    expect(result).toEqual({ error: null, stale: true })
+  })
+
+  it('traduit une declaration hors du salon', async () => {
+    db.responses['rpc.declare_set'] = {
+      error: { code: 'P0001', message: 'not_room_member' },
+    }
+
+    const result = await declareSet('r1', 0, 'success')
+
+    expect(result).toEqual({ error: 'Tu ne fais pas partie de ce salon.', stale: false })
+  })
+
+  it('traduit une declaration dans un salon qui ne joue pas', async () => {
+    db.responses['rpc.declare_set'] = {
+      error: { code: 'P0001', message: 'room_not_running' },
+    }
+
+    const result = await declareSet('r1', 0, 'success')
+
+    expect(result.error).toMatch(/pas en cours/)
+  })
+})
+
+describe('faire avancer le groupe', () => {
+  it('passe par advance_room avec l etape attendue et les presents', async () => {
+    const result = await advanceRoom('r1', 3, 'set', ['a', 'b'], false)
+
+    expect(result).toEqual({ error: null, stale: false })
+    expect(db.rpcs).toEqual([
+      {
+        fn: 'advance_room',
+        args: {
+          p_room: 'r1',
+          p_expected_cursor: 3,
+          p_expected_stage: 'set',
+          p_present: ['a', 'b'],
+          p_force: false,
+        },
+      },
+    ])
+  })
+
+  it('un salon qui a deja bouge n est pas une erreur', async () => {
+    db.responses['rpc.advance_room'] = {
+      error: { code: 'P0001', message: 'room_moved' },
+    }
+
+    const result = await advanceRoom('r1', 3, 'set', [], true)
+
+    expect(result).toEqual({ error: null, stale: true })
+  })
+
+  it('une declaration pas encore vue n est pas une erreur', async () => {
+    db.responses['rpc.advance_room'] = {
+      error: { code: 'P0001', message: 'room_waiting' },
+    }
+
+    const result = await advanceRoom('r1', 3, 'set', ['a'], false)
+
+    expect(result).toEqual({ error: null, stale: true })
+  })
+
+  it('traduit une avance par un autre que l hote', async () => {
+    db.responses['rpc.advance_room'] = {
+      error: { code: 'P0001', message: 'not_room_host' },
+    }
+
+    const result = await advanceRoom('r1', 0, 'set', [], true)
+
+    expect(result).toEqual({
+      error: "Seul l'hôte fait avancer le groupe.",
+      stale: false,
+    })
   })
 })
