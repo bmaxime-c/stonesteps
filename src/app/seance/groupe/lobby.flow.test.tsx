@@ -237,6 +237,7 @@ const world = vi.hoisted(() => {
   function browserClient() {
     return {
       ...client(),
+      realtime: { setAuth: async () => {} },
       channel: (name: string, options: { config: { presence: { key: string } } }) => {
         const channel: Channel = { name, listeners: [] }
         state.channels.push(channel)

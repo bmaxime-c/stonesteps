@@ -45,9 +45,12 @@ export function useRoom(initial: Room, userId: string): LiveRoom {
       if (fresh && read === latestRead.current) setRoom(fresh)
     }
 
+    // Canal prive : Realtime consulte les policies de realtime.messages avant
+    // d'y laisser entrer, et seuls les membres du salon passent.
     const channel = supabase.channel(`room:${roomId}`, {
-      config: { presence: { key: userId } },
+      config: { presence: { key: userId }, private: true },
     })
+    let closed = false
 
     channel
       // Un seul abonnement : le salon. Une entree ou une sortie le touche
@@ -67,15 +70,24 @@ export function useRoom(initial: Room, userId: string): LiveRoom {
       .on('presence', { event: 'sync' }, () => {
         setPresentIds(new Set(Object.keys(channel.presenceState())))
       })
-      .subscribe((status) => {
+
+    // Le jeton de session doit etre remis au socket avant de rejoindre : un
+    // canal prive rejoint sans lui l'est en anonyme, et les policies le
+    // refusent. Le client le transmet de lui-meme a la connexion, mais sans
+    // garantie d'arriver avant l'abonnement.
+    void supabase.realtime.setAuth().then(() => {
+      if (closed) return
+      channel.subscribe((status) => {
         if (status !== 'SUBSCRIBED') return
         void channel.track({ user_id: userId })
         // Ce qui a change entre le rendu serveur et l'abonnement n'a declenche
         // aucun evenement : une relecture rattrape ce trou.
         void reload()
       })
+    })
 
     return () => {
+      closed = true
       void supabase.removeChannel(channel)
     }
   }, [roomId, userId])
