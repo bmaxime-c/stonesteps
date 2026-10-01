@@ -60,6 +60,14 @@ export type ConsolidateInput = {
   startedAt: string
   validated: boolean
   results: SetResult[]
+  /**
+   * Salon d'une seance de groupe, absent en solo.
+   *
+   * Le niveau joue est alors celui du salon, sur sa version figee : le
+   * serveur le controle contre le salon, pas contre la version jouable du
+   * moment, qu'une publication en cours de seance a pu changer.
+   */
+  roomId?: string
 }
 
 export type ConsolidateResult =

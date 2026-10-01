@@ -1,6 +1,5 @@
 'use client'
 
-import { X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
@@ -12,7 +11,7 @@ import { isLevelValidated } from '@/lib/session/level'
 import { clearRun, loadRun, saveRun, type StoredRun } from '@/lib/session/local-store'
 import type { SetResult } from '@/lib/session/model'
 import { setStatus } from '@/lib/session/status'
-import { progressRatio, setLabel, type SetStep } from '@/lib/session/steps'
+import { setLabel, type SetStep } from '@/lib/session/steps'
 import { restView } from '@/lib/session/timer'
 import { startDelay, stopAllTimers, stopDelay } from '@/lib/session/timers'
 import { useNow } from '@/lib/session/use-now'
@@ -22,6 +21,7 @@ import { useWakeLock, vibrate } from '@/lib/session/use-wake-lock'
 import { consolidateSession } from './actions'
 import { RestScreen } from './rest-screen'
 import { ReviewScreen } from './review-screen'
+import { RunnerHeader } from './runner-header'
 import { SetRunner } from './set-runner'
 import { Summary } from './summary'
 
@@ -270,50 +270,15 @@ export function SessionRunner({
   // bande qu'on ne verrait jamais.
   return (
     <main className="mx-auto flex h-[100dvh] w-full max-w-[620px] flex-col overflow-hidden px-[clamp(16px,4vw,32px)] pt-[calc(env(safe-area-inset-top)+clamp(8px,1.5dvh,20px))] pb-[calc(env(safe-area-inset-bottom)+clamp(12px,2dvh,24px))]">
-      <header className="flex shrink-0 items-center justify-between gap-3 pb-[clamp(10px,2dvh,16px)]">
-        <div className="flex min-w-0 flex-wrap items-center gap-2.5">
-          <span className="bg-success/16 text-success rounded-full px-3 py-[5px] text-[12.5px] font-extrabold whitespace-nowrap">
-            Niveau {plan.levelNumber}/{plan.levelCount}
-          </span>
-          <span className="text-[13px] font-semibold tracking-[0.04em] whitespace-nowrap text-white/60 uppercase">
-            Exercice {step.exerciseNumber}/{step.exerciseCount} · Série {step.setNumber}/
-            {step.setCount}
-          </span>
-        </div>
-
-        <button
-          type="button"
-          aria-label="Quitter la séance"
-          onClick={() => setConfirmingExit(true)}
-          className="flex size-[34px] shrink-0 items-center justify-center rounded-full bg-white/12"
-        >
-          <X className="size-3.5" />
-        </button>
-      </header>
-
-      {/* Progression sur le total de series du niveau, pas sur les exercices. */}
-      <div className="mb-[clamp(14px,3dvh,28px)] h-1 shrink-0 overflow-hidden rounded-sm bg-white/12">
-        <div
-          className="bg-primary h-full transition-[width] duration-300"
-          style={{ width: `${progressRatio(run.results.length, steps.length) * 100}%` }}
-        />
-      </div>
-
-      <p className="mb-[clamp(6px,1.5dvh,12px)] shrink-0 text-center text-[clamp(20px,3.4dvh,26px)] font-bold tracking-[-0.01em]">
-        {shown.exerciseName}
-      </p>
-
-      {/* L'image guide le geste. Pendant le repos, c'est celle de la serie qui
-          vient : on s'y prepare. Sa hauteur suit l'ecran pour que la seance
-          tienne toujours sans defilement. */}
-      {shown.exerciseImageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={shown.exerciseImageUrl}
-          alt={`Illustration : ${shown.exerciseName}`}
-          className="bg-inset mx-auto mb-[clamp(6px,1.5dvh,12px)] h-[clamp(64px,16dvh,160px)] w-auto max-w-full shrink-0 rounded-[14px] object-contain"
-        />
-      ) : null}
+      <RunnerHeader
+        levelNumber={plan.levelNumber}
+        levelCount={plan.levelCount}
+        step={step}
+        shown={shown}
+        done={run.results.length}
+        total={steps.length}
+        onExit={() => setConfirmingExit(true)}
+      />
 
       {run.stage === 'review' && correction ? (
         <ReviewScreen

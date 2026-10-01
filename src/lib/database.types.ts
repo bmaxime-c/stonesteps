@@ -371,6 +371,122 @@ export type Database = {
         }
         Relationships: []
       }
+      session_room_members: {
+        Row: {
+          declared_cursor: number
+          joined_at: string
+          last_status: Database['public']['Enums']['set_status'] | null
+          level_ceiling: number
+          room_id: string
+          user_id: string
+        }
+        Insert: {
+          declared_cursor?: number
+          joined_at?: string
+          last_status?: Database['public']['Enums']['set_status'] | null
+          level_ceiling: number
+          room_id: string
+          user_id: string
+        }
+        Update: {
+          declared_cursor?: number
+          joined_at?: string
+          last_status?: Database['public']['Enums']['set_status'] | null
+          level_ceiling?: number
+          room_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'session_room_members_room_id_fkey'
+            columns: ['room_id']
+            isOneToOne: false
+            referencedRelation: 'session_rooms'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'session_room_members_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      session_rooms: {
+        Row: {
+          created_at: string
+          cursor: number
+          grid_id: string
+          grid_version_id: string
+          host_id: string
+          host_seen_at: string
+          id: string
+          level_id: string | null
+          rest_started_at: string | null
+          roster_changed_at: string
+          stage: Database['public']['Enums']['room_stage']
+          status: Database['public']['Enums']['room_status']
+        }
+        Insert: {
+          created_at?: string
+          cursor?: number
+          grid_id: string
+          grid_version_id: string
+          host_id: string
+          host_seen_at?: string
+          id?: string
+          level_id?: string | null
+          rest_started_at?: string | null
+          roster_changed_at?: string
+          stage?: Database['public']['Enums']['room_stage']
+          status?: Database['public']['Enums']['room_status']
+        }
+        Update: {
+          created_at?: string
+          cursor?: number
+          grid_id?: string
+          grid_version_id?: string
+          host_id?: string
+          host_seen_at?: string
+          id?: string
+          level_id?: string | null
+          rest_started_at?: string | null
+          roster_changed_at?: string
+          stage?: Database['public']['Enums']['room_stage']
+          status?: Database['public']['Enums']['room_status']
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'session_rooms_grid_id_fkey'
+            columns: ['grid_id']
+            isOneToOne: false
+            referencedRelation: 'grids'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'session_rooms_grid_version_id_fkey'
+            columns: ['grid_version_id']
+            isOneToOne: false
+            referencedRelation: 'grid_versions'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'session_rooms_host_id_fkey'
+            columns: ['host_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'session_rooms_level_id_fkey'
+            columns: ['level_id']
+            isOneToOne: false
+            referencedRelation: 'levels'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       session_sets: {
         Row: {
           actual_value: number
@@ -491,21 +607,63 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      advance_room: {
+        Args: {
+          p_expected_cursor: number
+          p_expected_stage: Database['public']['Enums']['room_stage']
+          p_force?: boolean
+          p_present: string[]
+          p_room: string
+        }
+        Returns: undefined
+      }
       can_read_grid: { Args: { g: string }; Returns: boolean }
       can_read_grid_version: { Args: { v: string }; Returns: boolean }
       can_read_level: { Args: { l: string }; Returns: boolean }
       can_read_level_exercise: { Args: { le: string }; Returns: boolean }
+      can_read_room: { Args: { r: string }; Returns: boolean }
+      claim_room_host: { Args: { p_room: string }; Returns: undefined }
+      create_room: {
+        Args: { p_ceiling: number; p_grid: string; p_version: string }
+        Returns: string
+      }
+      declare_set: {
+        Args: {
+          p_cursor: number
+          p_room: string
+          p_status: Database['public']['Enums']['set_status']
+        }
+        Returns: undefined
+      }
+      heartbeat_room: { Args: { p_room: string }; Returns: undefined }
       is_exercise_editor: { Args: never; Returns: boolean }
+      is_published_version_of: { Args: { g: string; v: string }; Returns: boolean }
+      is_room_host: { Args: { r: string }; Returns: boolean }
+      is_room_member: { Args: { r: string }; Returns: boolean }
+      is_room_open: { Args: { r: string }; Returns: boolean }
+      is_room_topic_member: { Args: { t: string }; Returns: boolean }
       owns_grid: { Args: { g: string }; Returns: boolean }
       owns_grid_version: { Args: { v: string }; Returns: boolean }
       owns_level: { Args: { l: string }; Returns: boolean }
       owns_level_exercise: { Args: { le: string }; Returns: boolean }
       owns_session: { Args: { s: string }; Returns: boolean }
+      room_entry: {
+        Args: { p_room: string }
+        Returns: {
+          grid_id: string
+          grid_version_id: string
+          status: Database['public']['Enums']['room_status']
+        }[]
+      }
       shares_a_grid_with_me: { Args: { p: string }; Returns: boolean }
+      shares_a_room_with_me: { Args: { p: string }; Returns: boolean }
+      start_room: { Args: { p_level: string; p_room: string }; Returns: undefined }
       used_exercise_ids: { Args: never; Returns: string[] }
     }
     Enums: {
       grid_version_status: 'draft' | 'published'
+      room_stage: 'set' | 'rest' | 'finished'
+      room_status: 'open' | 'running' | 'finished'
       set_status: 'success' | 'surpass' | 'fail'
       timer_mode: 'none' | 'minimal' | 'strict'
     }
@@ -635,6 +793,8 @@ export const Constants = {
   public: {
     Enums: {
       grid_version_status: ['draft', 'published'],
+      room_stage: ['set', 'rest', 'finished'],
+      room_status: ['open', 'running', 'finished'],
       set_status: ['success', 'surpass', 'fail'],
       timer_mode: ['none', 'minimal', 'strict'],
     },
