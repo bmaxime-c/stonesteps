@@ -152,7 +152,7 @@ describe('useRoom', () => {
     expect(fake.channels[0].options.config?.presence?.key).toBe('a')
   })
 
-  it('un changement de membre relit le salon et met a jour la liste', async () => {
+  it('une entree, signalee par le salon, met a jour la liste', async () => {
     const { result } = renderHook(() => useRoom(initial, 'a'))
     fake.room = row([
       member('a', '2026-10-01T10:00:00Z'),
@@ -160,10 +160,8 @@ describe('useRoom', () => {
     ])
 
     act(() => {
-      fake.channels[0].emit('postgres_changes', {
-        table: 'session_room_members',
-        event: 'INSERT',
-      })
+      // Le trigger touche roster_changed_at : l'evenement arrive par le salon.
+      fake.channels[0].emit('postgres_changes', { table: 'session_rooms' })
     })
 
     await waitFor(() =>
@@ -171,46 +169,29 @@ describe('useRoom', () => {
     )
   })
 
-  it('les membres sont filtres sur le salon', () => {
+  it('une sortie, signalee par le salon, retire le membre', async () => {
+    const { result } = renderHook(() => useRoom(initial, 'a'))
+    fake.room = row([])
+
+    act(() => {
+      fake.channels[0].emit('postgres_changes', { table: 'session_rooms' })
+    })
+
+    await waitFor(() => expect(result.current.room.members).toEqual([]))
+  })
+
+  it('ne suit que son salon, et jamais la table des membres', () => {
     renderHook(() => useRoom(initial, 'a'))
 
     const filters = fake.channels[0].listeners
       .filter((listener) => listener.type === 'postgres_changes')
       .map((listener) => listener.filter)
 
-    expect(filters).toContainEqual(
+    // Les suppressions de membres ne passent pas par la RLS : s'y abonner
+    // ferait recevoir les sorties de tous les salons.
+    expect(filters).toEqual([
       expect.objectContaining({ table: 'session_rooms', filter: 'id=eq.room-1' }),
-    )
-    expect(filters).toContainEqual(
-      expect.objectContaining({
-        table: 'session_room_members',
-        filter: 'room_id=eq.room-1',
-      }),
-    )
-  })
-
-  it('une sortie relit le salon, mais pas celle d un autre salon', async () => {
-    const { result } = renderHook(() => useRoom(initial, 'a'))
-    fake.room = row([])
-
-    act(() => {
-      fake.channels[0].emit(
-        'postgres_changes',
-        { table: 'session_room_members', event: 'DELETE' },
-        { old: { room_id: 'other-room', user_id: 'z' } },
-      )
-    })
-    expect(fake.reads).toBe(0)
-
-    act(() => {
-      fake.channels[0].emit(
-        'postgres_changes',
-        { table: 'session_room_members', event: 'DELETE' },
-        { old: { room_id: 'room-1', user_id: 'a' } },
-      )
-    })
-
-    await waitFor(() => expect(result.current.room.members).toEqual([]))
+    ])
   })
 
   it('un changement du salon relit son statut', async () => {

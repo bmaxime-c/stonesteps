@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { Grid, GridVersion } from '@/lib/grids/model'
-import type { Room } from '@/lib/session/group/model'
+import type { Room, RoomEntry } from '@/lib/session/group/model'
 import type { LevelOutcome } from '@/lib/session/model'
 
 import { createRoom, joinRoom, leaveRoom, startRoom } from './actions'
@@ -20,7 +20,11 @@ const db = vi.hoisted(() => ({
 const loaders = vi.hoisted(() => ({
   grid: null as Grid | null,
   outcomes: [] as LevelOutcome[],
+  // Ce que rend la lecture du salon : null tant qu'on n'en est ni hote ni
+  // membre, comme le veut la RLS.
   room: null as Room | null,
+  // Ce que rend la porte, room_entry, a qui connait l'identifiant.
+  entry: null as RoomEntry | null,
 }))
 
 vi.mock('server-only', () => ({}))
@@ -78,7 +82,10 @@ vi.mock('@/lib/session/queries', () => ({
   loadLevelOutcomes: async () => loaders.outcomes,
 }))
 
-vi.mock('@/lib/session/group/queries', () => ({ loadRoom: async () => loaders.room }))
+vi.mock('@/lib/session/group/queries', () => ({
+  loadRoom: async () => loaders.room,
+  loadRoomEntry: async () => loaders.entry,
+}))
 
 function version(id: string, number: number): GridVersion {
   return {
@@ -155,7 +162,8 @@ beforeEach(() => {
   db.rpcs = []
   loaders.grid = grid()
   loaders.outcomes = []
-  loaders.room = room()
+  loaders.room = null
+  loaders.entry = { gridId: 'g1', gridVersionId: 'v2', status: 'open' }
 })
 
 describe('rejoindre un salon', () => {
@@ -208,11 +216,38 @@ describe('rejoindre un salon', () => {
 
     expect(result.refusal).toBe('not_following')
     expect(result.error).toMatch(/Adopte/)
+    // Le salon ne se lit pas du dehors : la page n'a que ceci pour la grille.
+    expect(result).toMatchObject({ gridId: 'g1' })
+    expect(db.writes).toEqual([])
+  })
+
+  it('refuse par la porte un salon deja lance, sans rien inserer', async () => {
+    loaders.entry = { gridId: 'g1', gridVersionId: 'v2', status: 'running' }
+
+    const result = await joinRoom('r1')
+
+    expect(result.refusal).toBe('started')
+    expect(db.writes).toEqual([])
+  })
+
+  it('compte les places quand l hote, sorti, relit son salon', async () => {
+    // L'hote voit les membres meme apres avoir quitte la liste.
+    loaders.room = room({
+      hostId: 'me',
+      members: Array.from({ length: 6 }, (_, index) => ({
+        ...room().members[0],
+        userId: `u${index}`,
+      })),
+    })
+
+    const result = await joinRoom('r1')
+
+    expect(result.refusal).toBe('full')
     expect(db.writes).toEqual([])
   })
 
   it('refuse un salon introuvable', async () => {
-    loaders.room = null
+    loaders.entry = null
 
     const result = await joinRoom('r1')
 

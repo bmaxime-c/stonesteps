@@ -17,6 +17,12 @@
 -- Le salon ne s'ecrit jamais directement : ses transitions passent par des
 -- fonctions SECURITY DEFINER qui verifient qui appelle et dans quel etat il
 -- est. Seule la ligne de membre de chacun lui appartient.
+--
+-- On entre par le lien : l'identifiant du salon tient lieu d'invitation. Un
+-- salon ne se lit donc en entier que par son hote et ses membres ; avant
+-- d'entrer, room_entry en dit juste assez a qui connait l'identifiant et peut
+-- lire la grille. Sans quoi un simple select listerait tous les salons des
+-- grilles publiques, et chacun pourrait s'inviter dans ceux des autres.
 
 -- ---------------------------------------------------------------------------
 -- Enumerations
@@ -53,6 +59,10 @@ create table public.session_rooms (
   rest_started_at  timestamptz,
   -- Derniere manifestation de l'hote : permet de reperer un salon abandonne.
   host_seen_at     timestamptz not null default now(),
+  -- Dernier changement de la liste des membres. Touche par trigger : c'est
+  -- par le salon, et non par la table des membres, que Realtime previent les
+  -- participants (voir en fin de fichier).
+  roster_changed_at timestamptz not null default now(),
   created_at       timestamptz not null default now()
 );
 
@@ -116,9 +126,12 @@ as $$
   );
 $$;
 
--- Un salon est lisible par qui peut lire sa grille, par son hote, et par ses
--- membres : un membre dont le suivi a disparu entre-temps ne doit pas perdre
--- de vue la seance qu'il est en train de faire.
+-- Porte d'un salon : on peut y entrer, ou l'apercevoir par room_entry, si
+-- l'on peut lire sa grille, si l'on en est l'hote, ou si l'on en est deja
+-- membre -- un membre dont le suivi a disparu entre-temps ne doit pas perdre
+-- de vue la seance qu'il est en train de faire. Ce n'est pas la lecture du
+-- salon lui-meme, reservee a l'hote et aux membres : il faut en plus en
+-- connaitre l'identifiant.
 create or replace function public.can_read_room(r uuid)
 returns boolean
 language sql
@@ -235,6 +248,51 @@ create trigger session_room_members_check_entry
   before insert on public.session_room_members
   for each row execute function public.check_room_entry();
 
+-- Toute entree, sortie ou mise a jour d'un membre touche son salon : les
+-- participants, abonnes au salon, en recoivent l'evenement et relisent la
+-- liste. SECURITY DEFINER : personne n'a le droit de modifier un salon.
+create or replace function public.touch_room_roster()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.session_rooms
+  set roster_changed_at = now()
+  where id = coalesce(new.room_id, old.room_id);
+  return null;
+end;
+$$;
+
+create trigger session_room_members_touch_room
+  after insert or update or delete on public.session_room_members
+  for each row execute function public.touch_room_roster();
+
+-- ---------------------------------------------------------------------------
+-- Porte du salon
+-- ---------------------------------------------------------------------------
+
+-- Ce qu'il faut savoir d'un salon avant d'y entrer : sa grille, sa version
+-- figee, son statut. Rien des membres. Il faut en connaitre l'identifiant --
+-- c'est le lien d'invitation -- et pouvoir lire la grille, ou en etre deja.
+-- Une ligne au plus ; aucune si le salon est inconnu ou hors de portee.
+create or replace function public.room_entry(p_room uuid)
+returns table (
+  grid_id uuid,
+  grid_version_id uuid,
+  status public.room_status
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select sr.grid_id, sr.grid_version_id, sr.status
+  from public.session_rooms sr
+  where sr.id = p_room and public.can_read_room(sr.id);
+$$;
+
 -- ---------------------------------------------------------------------------
 -- Lancement
 -- ---------------------------------------------------------------------------
@@ -303,9 +361,12 @@ alter table public.session_rooms enable row level security;
 
 -- L'hote d'abord, en comparaison directe : a l'INSERT ... RETURNING, les
 -- helpers relisent un instantane ou le salon n'existe pas encore.
-create policy session_rooms_select_readable on public.session_rooms
+--
+-- Hote et membres seulement, et non quiconque lit la grille : le salon
+-- s'ouvre par son lien, pas par une recherche. Avant d'entrer, room_entry.
+create policy session_rooms_select_member on public.session_rooms
   for select to authenticated
-  using (host_id = (select auth.uid()) or public.can_read_room(id));
+  using (host_id = (select auth.uid()) or public.is_room_member(id));
 
 -- Un salon nait ouvert, sans niveau, sur une grille qu'on peut lire. Le reste
 -- de son etat ne s'ecrit que par start_room.
@@ -339,9 +400,9 @@ create policy session_room_members_select_readable on public.session_room_member
     or public.is_room_host(room_id)
   );
 
--- On n'inscrit que soi, dans un salon qu'on peut lire. Places et statut sont
--- tenus par le trigger d'entree ; le plafond, par la Server Action, qui seule
--- sait le calculer.
+-- On n'inscrit que soi, dans un salon dont on connait l'identifiant et dont
+-- on peut lire la grille. Places et statut sont tenus par le trigger
+-- d'entree ; le plafond, par la Server Action, qui seule sait le calculer.
 create policy session_room_members_insert_own on public.session_room_members
   for insert to authenticated
   with check (
@@ -371,9 +432,12 @@ create policy profiles_select_room_mate on public.profiles
 -- Realtime
 -- ---------------------------------------------------------------------------
 
--- Chaque participant suit le salon et la liste des membres en direct. Les
--- evenements passent par la RLS : on ne recoit que ce qu'on peut lire. La cle
--- primaire des membres porte room_id, si bien qu'une suppression arrive avec
--- le salon concerne sans replica identity full.
-alter publication supabase_realtime
-  add table public.session_rooms, public.session_room_members;
+-- Chaque participant suit le salon en direct, et la liste des membres a
+-- travers lui : roster_changed_at bouge a chaque entree ou sortie.
+--
+-- La table des membres n'est volontairement pas publiee. Realtime n'applique
+-- pas la RLS aux suppressions : chaque sortie partirait, cle comprise, vers
+-- tous les abonnes de la table, quel que soit leur salon -- et la cle porte
+-- l'identifiant du salon, qui est l'invitation. Les evenements du salon, eux,
+-- passent par la RLS : seuls l'hote et les membres les recoivent.
+alter publication supabase_realtime add table public.session_rooms;

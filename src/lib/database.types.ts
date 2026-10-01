@@ -424,6 +424,7 @@ export type Database = {
           id: string
           level_id: string | null
           rest_started_at: string | null
+          roster_changed_at: string
           stage: Database['public']['Enums']['room_stage']
           status: Database['public']['Enums']['room_status']
         }
@@ -437,6 +438,7 @@ export type Database = {
           id?: string
           level_id?: string | null
           rest_started_at?: string | null
+          roster_changed_at?: string
           stage?: Database['public']['Enums']['room_stage']
           status?: Database['public']['Enums']['room_status']
         }
@@ -450,6 +452,7 @@ export type Database = {
           id?: string
           level_id?: string | null
           rest_started_at?: string | null
+          roster_changed_at?: string
           stage?: Database['public']['Enums']['room_stage']
           status?: Database['public']['Enums']['room_status']
         }
@@ -619,6 +622,14 @@ export type Database = {
       owns_level: { Args: { l: string }; Returns: boolean }
       owns_level_exercise: { Args: { le: string }; Returns: boolean }
       owns_session: { Args: { s: string }; Returns: boolean }
+      room_entry: {
+        Args: { p_room: string }
+        Returns: {
+          grid_id: string
+          grid_version_id: string
+          status: Database['public']['Enums']['room_status']
+        }[]
+      }
       shares_a_grid_with_me: { Args: { p: string }; Returns: boolean }
       shares_a_room_with_me: { Args: { p: string }; Returns: boolean }
       start_room: { Args: { p_level: string; p_room: string }; Returns: undefined }

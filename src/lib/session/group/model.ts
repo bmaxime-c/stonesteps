@@ -36,3 +36,15 @@ export type Room = {
   /** Dans l'ordre d'arrivee. */
   members: RoomMember[]
 }
+
+/**
+ * Ce qu'on sait d'un salon avant d'y entrer.
+ *
+ * Seuls l'hote et les membres lisent le salon ; les autres, munis du lien,
+ * n'en voient que de quoi decider s'ils peuvent entrer.
+ */
+export type RoomEntry = {
+  gridId: string
+  gridVersionId: string
+  status: RoomStatus
+}

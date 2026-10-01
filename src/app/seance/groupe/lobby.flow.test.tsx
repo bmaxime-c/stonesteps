@@ -13,8 +13,8 @@ import { createRoom, startRoom } from './actions'
  *
  * Tout est reel — page, actions, regles du salon, suivi en direct, ecrans —
  * sauf la frontiere Supabase. Une base en memoire tient les salons et leurs
- * membres, rejoue ce que tiennent le trigger d'entree et start_room, et
- * pousse les evenements Realtime aux canaux ouverts, comme le ferait le
+ * membres, rejoue ce que tiennent la RLS, le trigger d'entree et start_room,
+ * et pousse les evenements Realtime aux canaux ouverts, comme le ferait le
  * serveur.
  */
 
@@ -76,10 +76,20 @@ const world = vi.hoisted(() => {
     }
   }
 
-  /** Ligne telle que PostgREST la rend, membres et noms compris. */
+  /**
+   * Ligne telle que PostgREST la rend, membres et noms compris.
+   *
+   * RLS : seuls l'hote et les membres lisent le salon.
+   */
   function roomRow(roomId: string) {
     const room = state.rooms.find((candidate) => candidate.id === roomId)
     if (!room) return null
+    const insider =
+      room.host_id === state.user ||
+      state.members.some(
+        (member) => member.room_id === roomId && member.user_id === state.user,
+      )
+    if (!insider) return null
     return {
       ...room,
       stage: 'set',
@@ -121,7 +131,8 @@ const world = vi.hoisted(() => {
       ...values,
       joined_at: `2026-10-01T10:${String(state.clock).padStart(2, '0')}:00Z`,
     })
-    broadcast(values.room_id, 'session_room_members', 'INSERT')
+    // Le trigger touche le salon : c'est par lui que l'entree se propage.
+    broadcast(values.room_id, 'session_rooms', 'UPDATE')
     return { data: null, error: null }
   }
 
@@ -156,6 +167,21 @@ const world = vi.hoisted(() => {
     Object.assign(room, { status: 'running', level_id: levelId, cursor: 0 })
     broadcast(roomId, 'session_rooms', 'UPDATE')
     return { data: null, error: null }
+  }
+
+  /** room_entry : la porte, ouverte a qui connait l'identifiant. */
+  function roomEntry(roomId: string): Result {
+    const room = state.rooms.find((candidate) => candidate.id === roomId)
+    return {
+      data: room
+        ? {
+            grid_id: room.grid_id,
+            grid_version_id: room.grid_version_id,
+            status: room.status,
+          }
+        : null,
+      error: null,
+    }
   }
 
   /** Requete chainee, resolue a la fin comme un builder PostgREST. */
@@ -198,10 +224,12 @@ const world = vi.hoisted(() => {
           return query(() => result)
         },
       }),
-      rpc: async (fn: string, args: { p_room: string; p_level: string }) =>
-        fn === 'start_room'
-          ? startRoom(args.p_room, args.p_level)
-          : { data: null, error: { code: '42883', message: 'unknown function' } },
+      rpc: (fn: string, args: { p_room: string; p_level: string }) =>
+        query(() => {
+          if (fn === 'start_room') return startRoom(args.p_room, args.p_level)
+          if (fn === 'room_entry') return roomEntry(args.p_room)
+          return { data: null, error: { code: '42883', message: 'unknown function' } }
+        }),
     }
   }
 

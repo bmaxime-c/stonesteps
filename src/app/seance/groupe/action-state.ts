@@ -20,7 +20,12 @@ export type CreateRoomResult =
  */
 export type JoinRoomRefusal = JoinRefusal | 'not_found' | 'unknown'
 
+/**
+ * `gridId` accompagne `not_following` : un non-membre ne lit pas le salon, et
+ * la page n'a que lui pour retrouver la grille a adopter.
+ */
 export type JoinRoomResult =
-  { error: null; refusal: null } | { error: string; refusal: JoinRoomRefusal }
+  | { error: null; refusal: null }
+  | { error: string; refusal: JoinRoomRefusal; gridId?: string }
 
 export type RoomActionResult = { error: string | null }

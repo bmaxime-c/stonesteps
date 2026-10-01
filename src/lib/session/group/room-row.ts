@@ -14,10 +14,9 @@ import type { Room } from './model'
  * La relation vers `profiles` est nommee par sa cle etrangere : le salon en
  * porte une autre, celle de l'hote, et PostgREST refuserait de choisir.
  *
- * La RLS fait le tri : un salon dont on ne peut pas lire la grille ne remonte
- * pas, sauf a en etre l'hote ou un membre. Les membres ne se lisent qu'entre
- * membres : avant d'entrer, on ne voit que sa propre ligne, s'il y en a une.
- * C'est assez pour savoir si l'on revient ; le compte des places, lui, est
+ * La RLS fait le tri : seuls l'hote et les membres lisent le salon, et avec
+ * lui la liste entiere des membres. Les autres n'en recoivent rien ; avant
+ * d'entrer, ils passent par la porte, `room_entry`. Le compte des places est
  * tenu par le trigger d'entree, qui voit tout le monde.
  */
 const ROOM_SELECT = `

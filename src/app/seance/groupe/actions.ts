@@ -3,7 +3,7 @@
 import type { Grid } from '@/lib/grids/model'
 import { gridProgress } from '@/lib/grids/progress'
 import { loadGrid } from '@/lib/grids/queries'
-import { loadRoom } from '@/lib/session/group/queries'
+import { loadRoom, loadRoomEntry } from '@/lib/session/group/queries'
 import { joinRefusal, memberCeiling, type JoinRefusal } from '@/lib/session/group/room'
 import { loadLevelOutcomes } from '@/lib/session/queries'
 import { logSupabaseError } from '@/lib/supabase/log'
@@ -143,20 +143,16 @@ export async function joinRoom(roomId: string): Promise<JoinRoomResult> {
 
   if (!user) return { error: SESSION_EXPIRED, refusal: 'unknown' }
 
+  // Le salon ne se lit en entier que par son hote et ses membres. Pour les
+  // autres, il est null : seule la porte, room_entry, leur repond.
   const room = await loadRoom(roomId)
-  if (!room) {
-    return {
-      error: "Ce salon n'existe pas, ou tu n'y as pas accès.",
-      refusal: 'not_found',
-    }
-  }
-
-  if (room.members.some((member) => member.userId === user.id)) {
+  if (room?.members.some((member) => member.userId === user.id)) {
     return { error: null, refusal: null }
   }
 
-  const grid = await loadGrid(room.gridId)
-  if (!grid) {
+  const entry = await loadRoomEntry(roomId)
+  const grid = entry ? await loadGrid(entry.gridId) : null
+  if (!entry || !grid) {
     return {
       error: "Ce salon n'existe pas, ou tu n'y as pas accès.",
       refusal: 'not_found',
@@ -166,11 +162,21 @@ export async function joinRoom(roomId: string): Promise<JoinRoomResult> {
   const standing = await playerStanding(grid)
   const refusal = joinRefusal({
     userId: user.id,
-    room,
+    room: {
+      status: entry.status,
+      gridVersionId: entry.gridVersionId,
+      // Vide pour un non-membre : la RLS ne lui montre personne. Le compte
+      // des places revient alors au trigger d'entree.
+      members: room?.members ?? [],
+    },
     follows: follows(grid),
     playableVersionId: standing?.versionId ?? null,
   })
 
+  if (refusal === 'not_following') {
+    // La page a besoin de la grille pour proposer de l'adopter.
+    return { error: REFUSAL_MESSAGES[refusal], refusal, gridId: entry.gridId }
+  }
   if (refusal) return { error: REFUSAL_MESSAGES[refusal], refusal }
   // joinRefusal a deja refuse une version absente : standing est renseigne.
   if (!standing) return { error: REFUSAL_MESSAGES.version, refusal: 'version' }

@@ -19,8 +19,8 @@ const ROOM_UNAVAILABLE = "Ce salon n'existe pas, ou tu n'y as pas accès."
  *
  * Ouvrir le lien, c'est demander a entrer : un non-membre tente l'entree des
  * le rendu, et un membre revient sans rien ecrire. Tant qu'on n'est pas
- * entre, la RLS ne laisse voir que sa propre ligne de membre : la liste des
- * participants n'apparait qu'une fois la porte franchie.
+ * entre, la RLS ne laisse pas lire le salon : la liste des participants
+ * n'apparait qu'une fois la porte franchie.
  *
  * Hors du groupe de routes (app), comme la seance solo : plein ecran, sans
  * barre de navigation.
@@ -37,6 +37,8 @@ export default async function RoomPage({ params }: PageProps<'/seance/groupe/[ro
   // expiree entre les deux.
   if (!user) redirect(`/login?redirectTo=/seance/groupe/${roomId}`)
 
+  // Null tant qu'on n'est ni hote ni membre : le salon ne se lit pas du
+  // dehors, l'entree passe par sa porte.
   let room = await loadRoom(roomId)
 
   if (!room?.members.some((member) => member.userId === user.id)) {
@@ -46,8 +48,8 @@ export default async function RoomPage({ params }: PageProps<'/seance/groupe/[ro
       // Grille publique pas encore adoptee : on propose de l'adopter plutot
       // que de fermer la porte. Une grille privee ne se lit pas du dehors, et
       // finit en salon introuvable.
-      if (entry.refusal === 'not_following' && room) {
-        const grid = await loadGrid(room.gridId)
+      if (entry.refusal === 'not_following' && entry.gridId) {
+        const grid = await loadGrid(entry.gridId)
         const version = grid?.publishedVersions.at(-1)
         if (grid?.isPublic && version) {
           return (

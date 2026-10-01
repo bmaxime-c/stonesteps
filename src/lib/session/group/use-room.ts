@@ -13,13 +13,11 @@ export type LiveRoom = {
   presentIds: ReadonlySet<string>
 }
 
-const MEMBERS = 'session_room_members'
-
 /**
  * Salon suivi en direct.
  *
  * Part du salon rendu par le serveur, puis le relit a chaque changement du
- * salon ou de ses membres. Relire plutot que fusionner les evenements : un
+ * salon, entrees et sorties comprises. Relire plutot que fusionner les evenements : un
  * evenement ne porte ni le nom du participant, ni ce que la RLS laisse voir,
  * et deux evenements rapproches se fusionneraient dans le desordre. La
  * relecture rend toujours l'etat entier, tel que la base le voit.
@@ -52,6 +50,10 @@ export function useRoom(initial: Room, userId: string): LiveRoom {
     })
 
     channel
+      // Un seul abonnement : le salon. Une entree ou une sortie le touche
+      // (roster_changed_at), et l'evenement passe par la RLS. La table des
+      // membres n'est pas publiee : Realtime y diffuserait chaque sortie a
+      // tous ses abonnes, identifiant du salon compris.
       .on(
         'postgres_changes',
         {
@@ -61,37 +63,6 @@ export function useRoom(initial: Room, userId: string): LiveRoom {
           filter: `id=eq.${roomId}`,
         },
         () => void reload(),
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: MEMBERS,
-          filter: `room_id=eq.${roomId}`,
-        },
-        () => void reload(),
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: MEMBERS,
-          filter: `room_id=eq.${roomId}`,
-        },
-        () => void reload(),
-      )
-      // Les suppressions ne se filtrent pas cote serveur : elles arrivent pour
-      // tous les salons, et l'ancienne ligne n'en porte que la cle, qui
-      // contient, heureusement, le salon.
-      .on(
-        'postgres_changes',
-        { event: 'DELETE', schema: 'public', table: MEMBERS },
-        (payload) => {
-          const old = payload.old as { room_id?: string } | undefined
-          if (old?.room_id === roomId) void reload()
-        },
       )
       .on('presence', { event: 'sync' }, () => {
         setPresentIds(new Set(Object.keys(channel.presenceState())))
