@@ -680,3 +680,101 @@ describe('GroupRunner, fin du niveau', () => {
     expect(window.sessionStorage.getItem('stonesteps.room.room-1')).toBeNull()
   })
 })
+
+describe('GroupRunner, reprise apres coupure', () => {
+  const fourSets = levelsWith([set(1), set(2), set(3), set(4)])
+  const statuses = () =>
+    actions.consolidateSession.mock.calls[0][0].results.map((r: SetResult) => [
+      r.setIndex,
+      r.status,
+      r.actualValue,
+    ])
+
+  it('au remontage, les series passees sans nous sont echouees et l on reprend la serie en cours', async () => {
+    // Coupe apres la serie 1 ; le groupe a avance de deux series entre-temps.
+    stored([result(0)])
+    const view = render(
+      element({ room: room({ cursor: 3 }), userId: 'guest', levels: fourSets }),
+    )
+
+    expect(screen.getByText(/Série 4\/4/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Valider la série' })).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Valider la série' }))
+    await waitFor(() =>
+      expect(actions.declareSet).toHaveBeenCalledWith('room-1', 3, 'success'),
+    )
+    view.rerender(
+      element({
+        room: room({ status: 'finished', stage: 'finished', cursor: 3 }),
+        userId: 'guest',
+        levels: fourSets,
+      }),
+    )
+
+    expect(await screen.findByText('Niveau 2 non validé')).toBeInTheDocument()
+    await waitFor(() => expect(actions.consolidateSession).toHaveBeenCalledOnce())
+    expect(statuses()).toEqual([
+      [0, 'success', 11],
+      [1, 'fail', 0],
+      [2, 'fail', 0],
+      [3, 'success', 14],
+    ])
+  })
+
+  it('a la reconnexion, le salon relu compte echouees les series manquees', async () => {
+    stored([result(0)])
+    const view = render(
+      element({ room: room({ cursor: 1 }), userId: 'guest', levels: fourSets }),
+    )
+    expect(screen.getByText(/Série 2\/4/)).toBeInTheDocument()
+
+    // Le canal se reabonne et relit le salon : il est deux series plus loin.
+    view.rerender(
+      element({ room: room({ cursor: 3 }), userId: 'guest', levels: fourSets }),
+    )
+    expect(await screen.findByText(/Série 4\/4/)).toBeInTheDocument()
+
+    view.rerender(
+      element({
+        room: room({ status: 'finished', stage: 'finished', cursor: 3 }),
+        userId: 'guest',
+        levels: fourSets,
+      }),
+    )
+    await waitFor(() => expect(actions.consolidateSession).toHaveBeenCalledOnce())
+    expect(statuses()).toEqual([
+      [0, 'success', 11],
+      [1, 'fail', 0],
+      [2, 'fail', 0],
+      [3, 'fail', 0],
+    ])
+    expect(actions.consolidateSession.mock.calls[0][0].validated).toBe(false)
+  })
+
+  it('une serie jouee hors ligne, jamais recue par le salon, est echouee', async () => {
+    // Validee pendant la coupure : la declaration n'est jamais partie.
+    stored([result(0), result(1)], { undeclared: 1 })
+    const view = render(
+      element({ room: room({ cursor: 3 }), userId: 'guest', levels: fourSets }),
+    )
+    expect(screen.getByText(/Série 4\/4/)).toBeInTheDocument()
+
+    view.rerender(
+      element({
+        room: room({ status: 'finished', stage: 'finished', cursor: 3 }),
+        userId: 'guest',
+        levels: fourSets,
+      }),
+    )
+    await waitFor(() => expect(actions.consolidateSession).toHaveBeenCalledOnce())
+    expect(
+      statuses().map(([index, status]: [number, string]) => [index, status]),
+    ).toEqual([
+      [0, 'success'],
+      [1, 'fail'],
+      [2, 'fail'],
+      [3, 'fail'],
+    ])
+  })
+})

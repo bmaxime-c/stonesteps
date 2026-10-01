@@ -107,6 +107,10 @@ export function GroupRunner({
 
   // Reprise apres le montage, comme en solo : lire sessionStorage pendant le
   // rendu ferait diverger le HTML du serveur de celui du client.
+  //
+  // Apres une coupure, rien de plus a faire ici : le salon relu -- au rendu
+  // serveur, ou au reabonnement du canal (useRoom) -- porte le curseur du
+  // groupe, et fillSkipped compte echouees les series passees sans nous.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setRun(loadGroupRun(roomId, levelId) ?? freshRun(roomId, levelId))
