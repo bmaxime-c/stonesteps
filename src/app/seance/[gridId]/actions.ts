@@ -16,10 +16,10 @@ const NOT_THE_ROOM_LEVEL = "Ce niveau n'est pas celui du salon."
  * Controle d'une seance jouee dans un salon : le numero de niveau a ranger,
  * ou le refus.
  *
- * Trois verifications, toutes cote serveur, parce que le client pourrait
- * pretendre n'importe quoi : l'utilisateur est membre du salon, le niveau
- * enregistre est celui que le salon a lance, et ce niveau ne depasse pas le
- * plafond calcule a son entree. Sans la derniere, un participant entre sur un
+ * Verifications toutes cote serveur, parce que le client pourrait pretendre
+ * n'importe quoi : l'utilisateur est membre du salon, le salon est termine, le
+ * niveau enregistre est celui que le salon a lance, la seance en porte toutes
+ * les series, et ce niveau ne depasse pas le plafond calcule a son entree. Sans la derniere, un participant entre sur un
  * niveau facile pourrait se faire valider un niveau qu'il n'a jamais atteint.
  *
  * Le niveau se lit sur la version figee du salon : une publication pendant la
@@ -36,6 +36,16 @@ async function roomLevelNumber(
   const member = room?.members.find((candidate) => candidate.userId === userId)
   if (!room || !member) return { levelNumber: null, error: NOT_A_MEMBER }
 
+  // Le groupe enregistre une fois le niveau joue jusqu'au bout : une seance
+  // de salon en cours n'a pas encore de verdict.
+  if (room.status !== 'finished') {
+    return {
+      levelNumber: null,
+      error:
+        "La séance du salon n'est pas terminée : elle ne peut pas encore être enregistrée.",
+    }
+  }
+
   if (
     room.levelId === null ||
     room.levelId !== input.levelId ||
@@ -46,12 +56,27 @@ async function roomLevelNumber(
 
   const { data: level } = await supabase
     .from('levels')
-    .select('position, grid_version_id')
+    .select('position, grid_version_id, level_exercises ( level_sets ( id ) )')
     .eq('id', room.levelId)
     .maybeSingle()
 
   if (!level || level.grid_version_id !== room.gridVersionId) {
     return { levelNumber: null, error: NOT_THE_ROOM_LEVEL }
+  }
+
+  // Chaque serie du niveau a un resultat : jouee, ou comptee echouee si le
+  // groupe l'a passee sans nous. Une seance amputee de series pourrait sinon
+  // valider un niveau sur ses seules series reussies.
+  const setCount = level.level_exercises.reduce(
+    (total, exercise) => total + exercise.level_sets.length,
+    0,
+  )
+  if (input.results.length !== setCount) {
+    return {
+      levelNumber: null,
+      error:
+        'La séance ne porte pas toutes les séries du niveau : elle ne peut pas être enregistrée.',
+    }
   }
 
   if (level.position > member.levelCeiling) {

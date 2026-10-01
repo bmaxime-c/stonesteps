@@ -128,6 +128,17 @@ function room(overrides: Partial<Room> = {}): Room {
   }
 }
 
+/** Niveau tel que le lit la consolidation : position, version, series. */
+function levelRow(position: number, setCount: number) {
+  return {
+    position,
+    grid_version_id: 'v2',
+    level_exercises: [
+      { level_sets: Array.from({ length: setCount }, (_, i) => ({ id: `s${i}` })) },
+    ],
+  }
+}
+
 const sessionInsert = () =>
   db.calls.find((call) => call.table === 'sessions' && call.op === 'insert')
 
@@ -136,7 +147,7 @@ beforeEach(() => {
   db.calls = []
   db.responses = {
     'sessions.insert': { data: { id: 'sess1' } },
-    'levels.select': { data: { position: 2, grid_version_id: 'v2' } },
+    'levels.select': { data: levelRow(2, 1) },
   }
   loaders.room = room()
 })
@@ -193,7 +204,7 @@ describe('consolidateSession, seance de groupe', () => {
   })
 
   it('refuse un niveau au-dessus du plafond du membre', async () => {
-    db.responses['levels.select'] = { data: { position: 3, grid_version_id: 'v2' } }
+    db.responses['levels.select'] = { data: levelRow(3, 1) }
 
     const outcome = await consolidateSession(input({ roomId: 'r1' }))
 
@@ -251,5 +262,43 @@ describe('consolidateSession, seance de groupe', () => {
       sessionId: null,
       error: "Ce niveau n'est pas celui du salon.",
     })
+  })
+
+  it('refuse un salon qui n est pas termine', async () => {
+    loaders.room = room({ status: 'running', stage: 'set' })
+
+    const outcome = await consolidateSession(input({ roomId: 'r1' }))
+
+    expect(outcome).toEqual({
+      sessionId: null,
+      error: expect.stringContaining("n'est pas terminée"),
+    })
+    expect(sessionInsert()).toBeUndefined()
+  })
+
+  it('refuse une seance qui ne porte pas toutes les series du niveau', async () => {
+    db.responses['levels.select'] = { data: levelRow(2, 3) }
+
+    const outcome = await consolidateSession(input({ roomId: 'r1' }))
+
+    expect(outcome).toEqual({
+      sessionId: null,
+      error: expect.stringContaining('toutes les séries'),
+    })
+    expect(sessionInsert()).toBeUndefined()
+  })
+
+  it('compte les series sur tous les exercices du niveau', async () => {
+    db.responses['levels.select'] = {
+      data: {
+        position: 2,
+        grid_version_id: 'v2',
+        level_exercises: [{ level_sets: [] }, { level_sets: [{ id: 's0' }] }],
+      },
+    }
+
+    const outcome = await consolidateSession(input({ roomId: 'r1' }))
+
+    expect(outcome.error).toBeNull()
   })
 })
