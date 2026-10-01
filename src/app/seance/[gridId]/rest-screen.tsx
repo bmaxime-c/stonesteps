@@ -24,7 +24,8 @@ export function RestScreen({
   nextExerciseName: string
   nextSetLabel: string
   correction: Correction | null
-  onSkip: () => void
+  /** Absent : le repos ne se coupe pas, il est a tout le groupe. */
+  onSkip?: () => void
 }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-[clamp(14px,3dvh,24px)]">
@@ -44,13 +45,15 @@ export function RestScreen({
 
       {correction ? <CorrectionControl correction={correction} /> : null}
 
-      <button
-        type="button"
-        onClick={onSkip}
-        className="border-border-strong w-full max-w-[280px] shrink-0 rounded-full border-[1.5px] py-[clamp(14px,2.4dvh,18px)] text-[clamp(16px,2.3dvh,18px)] font-bold"
-      >
-        Passer le repos
-      </button>
+      {onSkip ? (
+        <button
+          type="button"
+          onClick={onSkip}
+          className="border-border-strong w-full max-w-[280px] shrink-0 rounded-full border-[1.5px] py-[clamp(14px,2.4dvh,18px)] text-[clamp(16px,2.3dvh,18px)] font-bold"
+        >
+          Passer le repos
+        </button>
+      ) : null}
     </div>
   )
 }

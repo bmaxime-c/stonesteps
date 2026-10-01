@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 
@@ -36,17 +35,27 @@ export function Lobby({
 }: {
   initialRoom: Room
   userId: string
-  grid: { name: string; version: number; accentColor: string }
+  grid: { name: string; version: number; accentColor: string; restSeconds: number }
   /** Niveaux de la version figee du salon. */
   levels: Level[]
   cues: TimerCuePreferences
 }) {
-  const { room, presentIds } = useRoom(initialRoom, userId)
+  const { room, presentIds, reload } = useRoom(initialRoom, userId)
 
-  if (room.status === 'running') {
-    return <GroupRunner room={room} levels={levels} cues={cues} />
+  // Lance puis termine : le coureur porte la seance jusqu'au resume.
+  if (room.status !== 'open') {
+    return (
+      <GroupRunner
+        room={room}
+        presentIds={presentIds}
+        userId={userId}
+        reload={reload}
+        grid={grid}
+        levels={levels}
+        cues={cues}
+      />
+    )
   }
-  if (room.status === 'finished') return <Finished gridName={grid.name} />
 
   const isHost = room.hostId === userId
   const ceiling = roomCeiling(room.members)
@@ -290,23 +299,5 @@ function LeaveButton({ roomId }: { roomId: string }) {
         <p className="text-fail text-center text-[13px] font-semibold">{error}</p>
       ) : null}
     </div>
-  )
-}
-
-/** Seance terminee : il ne reste qu'a rentrer. */
-function Finished({ gridName }: { gridName: string }) {
-  return (
-    <main className="gutter mx-auto flex min-h-dvh w-full max-w-[520px] flex-col justify-center gap-5 py-10 text-center">
-      <p className="text-tertiary text-[13px] font-bold tracking-[0.1em] uppercase">
-        {gridName}
-      </p>
-      <h1 className="text-[24px] font-extrabold">La séance est terminée</h1>
-      <Link
-        href="/"
-        className="border-border-strong rounded-full border-[1.5px] py-4 text-[16px] font-bold"
-      >
-        Retour à l&apos;accueil
-      </Link>
-    </main>
   )
 }

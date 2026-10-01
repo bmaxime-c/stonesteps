@@ -23,14 +23,23 @@ vi.mock('next/navigation', () => ({ useRouter: () => router }))
 
 // Le salon en direct est teste a part : ici, il rend le salon tel quel.
 vi.mock('@/lib/session/group/use-room', () => ({
-  useRoom: (initial: Room) => ({ room: initial, presentIds: live.present }),
+  useRoom: (initial: Room) => ({
+    room: initial,
+    presentIds: live.present,
+    reload: async () => {},
+  }),
 }))
 
 vi.mock('../actions', () => ({
   createRoom: actions.createRoom,
   leaveRoom: actions.leaveRoom,
   startRoom: actions.startRoom,
+  declareSet: vi.fn(),
+  advanceRoom: vi.fn(),
 }))
+
+// Le coureur de groupe enregistre la seance a la fin : teste a part.
+vi.mock('@/app/seance/[gridId]/actions', () => ({ consolidateSession: vi.fn() }))
 
 vi.mock('@/app/(app)/grilles/actions', () => ({
   followGrid: actions.followGrid,
@@ -71,7 +80,7 @@ const levels = [1, 2, 3, 4, 5].map((position) => ({
   exercises: [],
 }))
 const cues = { sound: false, blink: false, flash: false, warningPercent: 15 }
-const grid = { name: 'Tractions', version: 3, accentColor: '#00FF87' }
+const grid = { name: 'Tractions', version: 3, accentColor: '#00FF87', restSeconds: 60 }
 
 function renderLobby(userId: string, overrides: Partial<Room> = {}) {
   return render(
