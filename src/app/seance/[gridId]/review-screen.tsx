@@ -8,19 +8,23 @@ import { CorrectionControl, type Correction } from './correction-control'
  * Derniere serie du niveau, ou repos desactive sur la grille : sans cette
  * etape, le tap sur « Termine » ferait foi sans appel. On s'arrete donc le
  * temps de rectifier, et c'est l'utilisateur qui repart.
+ *
+ * En groupe, la meme etape porte la declaration : continuer l'envoie, et la
+ * renvoie apres un echec d'envoi -- y compris pour une serie sans chrono,
+ * d'ou une correction facultative.
  */
 export function ReviewScreen({
   correction,
   continueLabel,
   onContinue,
 }: {
-  correction: Correction
+  correction: Correction | null
   continueLabel: string
   onContinue: () => void
 }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-[clamp(14px,3dvh,24px)]">
-      <CorrectionControl correction={correction} />
+      {correction ? <CorrectionControl correction={correction} /> : null}
 
       <button
         type="button"

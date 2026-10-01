@@ -10,9 +10,10 @@ import type { MemberStatus } from '@/lib/session/group/run'
 /**
  * Attente du groupe, une fois sa serie jouee et declaree.
  *
- * Remplace l'etape de correction du solo : c'est le moment de rectifier le
- * chrono, et chaque correction redeclare la serie tant que le groupe ne l'a
- * pas depassee.
+ * Le chrono s'y rectifie encore, et chaque correction redeclare la serie tant
+ * que le groupe ne l'a pas depassee. Une serie chronometree que ne suit aucun
+ * repos est passee d'abord par l'etape de correction : le dernier a declarer
+ * fait avancer le groupe, il n'aurait pas le temps de corriger ici.
  *
  * Des autres, on voit qui est la, qui a fini, et son statut. Jamais ses
  * valeurs : elles ne quittent pas son appareil.

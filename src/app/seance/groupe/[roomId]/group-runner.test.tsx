@@ -150,7 +150,7 @@ function element({
 /** Seance rangee localement pour le salon, comme apres un rafraichissement. */
 function stored(
   results: SetResult[],
-  over: { saved?: boolean; startedAt?: number } = {},
+  over: { saved?: boolean; startedAt?: number; undeclared?: number | null } = {},
 ) {
   saveGroupRun({
     roomId: 'room-1',
@@ -158,6 +158,7 @@ function stored(
     startedAt: over.startedAt ?? 1,
     results,
     timer: null,
+    undeclared: over.undeclared ?? null,
     saved: over.saved ?? false,
   })
 }
@@ -374,6 +375,166 @@ describe('GroupRunner, attente du groupe', () => {
     await waitFor(() =>
       expect(actions.declareSet).toHaveBeenLastCalledWith('room-1', 0, 'success'),
     )
+  })
+})
+
+describe('GroupRunner, correction avant declaration', () => {
+  const timedFirst = levelsWith([
+    set(1, { timerMode: 'minimal', timerSeconds: 30 }),
+    set(2),
+  ])
+  const timedLast = levelsWith([
+    set(1),
+    set(2, { timerMode: 'minimal', timerSeconds: 30 }),
+  ])
+
+  /** Tient 29 s sur 30, puis tape Termine : un echec a corriger. */
+  async function holdShort(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole('button', { name: 'Démarrer le chrono' }))
+    await act(async () => {
+      vi.advanceTimersByTime(29_200)
+    })
+    await user.click(screen.getByRole('button', { name: 'Terminé' }))
+  }
+
+  it('sans repos derriere, corrige d abord et declare le statut corrige a Continuer', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    render(element({ userId: 'guest', levels: timedFirst, restSeconds: 0 }))
+
+    await holdShort(user)
+
+    // Rien ne part tant qu'on corrige : le groupe ne peut pas passer outre.
+    expect(actions.declareSet).not.toHaveBeenCalled()
+    expect(screen.queryByText(/En attente du groupe/)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Ajouter une seconde' }))
+    expect(actions.declareSet).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: 'Continuer' }))
+
+    expect(actions.declareSet).toHaveBeenCalledOnce()
+    expect(actions.declareSet).toHaveBeenCalledWith('room-1', 0, 'success')
+    expect(await screen.findByText(/En attente du groupe/)).toBeInTheDocument()
+  })
+
+  it('la derniere serie chronometree se corrige d abord, meme avec un repos', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    stored([result(0)])
+    render(element({ userId: 'guest', room: room({ cursor: 1 }), levels: timedLast }))
+
+    await holdShort(user)
+
+    expect(actions.declareSet).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Continuer' })).toBeInTheDocument()
+  })
+
+  it('l hote n avance pas pendant qu il corrige, meme si les autres ont declare', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const othersDone = room({
+      members: [
+        member('host', 'Alice'),
+        member('guest', 'Bruno', { declaredCursor: 0, lastStatus: 'success' }),
+      ],
+    })
+    render(element({ room: othersDone, levels: timedFirst, restSeconds: 0 }))
+
+    await holdShort(user)
+    await act(async () => {
+      vi.advanceTimersByTime(50)
+    })
+
+    expect(actions.advanceRoom).not.toHaveBeenCalled()
+  })
+
+  it('une serie close par le groupe pendant la correction est echouee', async () => {
+    // L'hote a force pendant que l'on corrigeait la derniere serie : le salon
+    // est fini, notre ligne ne porte aucune declaration a ce rang.
+    stored([result(0), result(1)], { undeclared: 1 })
+    render(
+      element({
+        userId: 'guest',
+        room: room({
+          status: 'finished',
+          stage: 'finished',
+          cursor: 1,
+          members: [
+            member('host', 'Alice'),
+            member('guest', 'Bruno', { declaredCursor: 0 }),
+          ],
+        }),
+      }),
+    )
+
+    await waitFor(() => expect(actions.consolidateSession).toHaveBeenCalledOnce())
+    const sent = actions.consolidateSession.mock.calls[0][0]
+    expect(sent.results.map((r: SetResult) => [r.setIndex, r.status])).toEqual([
+      [0, 'success'],
+      [1, 'fail'],
+    ])
+  })
+
+  it('une declaration recue par le salon compte, meme sans reponse de l appel', async () => {
+    stored([result(0), result(1)], { undeclared: 1 })
+    render(
+      element({
+        userId: 'guest',
+        room: room({
+          status: 'finished',
+          stage: 'finished',
+          cursor: 1,
+          members: [
+            member('host', 'Alice'),
+            member('guest', 'Bruno', { declaredCursor: 1 }),
+          ],
+        }),
+      }),
+    )
+
+    await waitFor(() => expect(actions.consolidateSession).toHaveBeenCalledOnce())
+    const sent = actions.consolidateSession.mock.calls[0][0]
+    expect(sent.results.map((r: SetResult) => r.status)).toEqual(['success', 'success'])
+  })
+
+  it('une declaration refusee parce que le groupe est passe est echouee', async () => {
+    actions.declareSet.mockResolvedValue({ error: null, stale: true })
+    const single = levelsWith([set(1)])
+    const { rerender } = render(element({ userId: 'guest', levels: single }))
+
+    await userEvent.click(screen.getByRole('button', { name: 'Valider la série' }))
+    await waitFor(() => expect(reload).toHaveBeenCalled())
+    rerender(
+      element({
+        userId: 'guest',
+        levels: single,
+        room: room({ status: 'finished', stage: 'finished', cursor: 0 }),
+      }),
+    )
+
+    await waitFor(() => expect(actions.consolidateSession).toHaveBeenCalledOnce())
+    const sent = actions.consolidateSession.mock.calls[0][0]
+    expect(sent.results.map((r: SetResult) => [r.setIndex, r.status])).toEqual([
+      [0, 'fail'],
+    ])
+  })
+
+  it('une declaration en echec se renvoie a Continuer', async () => {
+    actions.declareSet.mockResolvedValueOnce({
+      error: "La série n'a pas pu être déclarée.",
+      stale: false,
+    })
+    render(element({ userId: 'guest' }))
+
+    await userEvent.click(screen.getByRole('button', { name: 'Valider la série' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      "La série n'a pas pu être déclarée.",
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Continuer' }))
+
+    await waitFor(() => expect(actions.declareSet).toHaveBeenCalledTimes(2))
+    expect(await screen.findByText(/En attente du groupe/)).toBeInTheDocument()
   })
 })
 

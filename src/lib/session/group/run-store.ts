@@ -20,6 +20,11 @@ export type GroupRun = {
   results: SetResult[]
   /** Chrono local de la serie du curseur, tant qu'elle se joue. */
   timer: { cursor: number; startedAt: number } | null
+  /**
+   * Rang de la serie jouee dont la declaration n'est pas encore acceptee par
+   * le salon : en correction, ou en route. Null une fois acceptee.
+   */
+  undeclared: number | null
   /** La seance est enregistree en base : on ne l'enregistre pas deux fois. */
   saved: boolean
 }
@@ -48,7 +53,7 @@ export function loadGroupRun(roomId: string, levelId: string): GroupRun | null {
 
     const parsed = JSON.parse(raw) as GroupRun
     if (parsed.roomId !== roomId || parsed.levelId !== levelId) return null
-    return parsed
+    return { ...parsed, undeclared: parsed.undeclared ?? null }
   }, null)
 }
 

@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { consolidateSession } from '@/app/seance/[gridId]/actions'
 import type { Correction } from '@/app/seance/[gridId]/correction-control'
 import { RestScreen } from '@/app/seance/[gridId]/rest-screen'
+import { ReviewScreen } from '@/app/seance/[gridId]/review-screen'
 import { RunnerHeader } from '@/app/seance/[gridId]/runner-header'
 import { SetRunner } from '@/app/seance/[gridId]/set-runner'
 import { Summary } from '@/app/seance/[gridId]/summary'
@@ -20,10 +21,13 @@ import {
 } from '@/lib/session/group/flow'
 import type { Room } from '@/lib/session/group/model'
 import {
+  countedResults,
   memberStatuses,
+  pendingDeclaration,
   playedResult,
   playerStage,
   recordResult,
+  reviewsBeforeDeclaring,
 } from '@/lib/session/group/run'
 import {
   clearGroupRun,
@@ -52,14 +56,17 @@ import { WaitingScreen } from './waiting-screen'
  * ici : c'est lui qui fait avancer tout le monde ensemble.
  *
  * Chacun garde ses resultats sur son appareil, comme en solo, et ne declare au
- * salon que le statut de sa serie. Une fois declaree, il attend le groupe, en
- * corrigeant son chrono s'il le faut. L'hote fait avancer : des que tous les
- * presents ont declare, a la fin du repos commun, ou quand il force. Les
- * series que le groupe a passees sans nous sont comptees echouees. A la fin,
- * chacun enregistre sa propre seance.
+ * salon que le statut de sa serie. Une serie chronometree que ne suit aucun
+ * repos se corrige d'abord, comme en solo, et ne se declare qu'en quittant
+ * l'etape de correction. Une fois declaree, il attend le groupe, en
+ * corrigeant encore son chrono s'il le faut. L'hote fait avancer : des que
+ * tous les presents ont declare, a la fin du repos commun, ou quand il force.
+ * Les series que le groupe a passees sans nous, ou closes avant d'en recevoir
+ * la declaration, sont comptees echouees. A la fin, chacun enregistre sa
+ * propre seance.
  *
- * Memes ecrans que le solo, composes autrement : en-tete, serie, repos,
- * resume. L'etape de correction du solo devient l'ecran d'attente.
+ * Memes ecrans que le solo, composes autrement : en-tete, serie, correction,
+ * repos, resume, plus l'ecran d'attente du groupe.
  */
 export function GroupRunner({
   room,
@@ -94,6 +101,9 @@ export function GroupRunner({
   const [saveError, setSaveError] = useState<string | null>(null)
   const [stepError, setStepError] = useState<string | null>(null)
   const [forcing, setForcing] = useState(false)
+  // Declaration de sa serie en route : on attend le groupe, et l'on
+  // n'enregistre rien tant que le salon n'a pas tranche.
+  const [submitting, setSubmitting] = useState(false)
 
   // Reprise apres le montage, comme en solo : lire sessionStorage pendant le
   // rendu ferait diverger le HTML du serveur de celui du client.
@@ -110,10 +120,18 @@ export function GroupRunner({
   // Point d'arret unique des minuteurs, au demontage.
   useEffect(() => () => stopAllTimers(), [])
 
-  const played = useMemo(() => run?.results ?? [], [run])
   const roomStep: RoomStep = useMemo(
     () => ({ cursor: room.cursor, stage: room.stage }),
     [room.cursor, room.stage],
+  )
+  const selfDeclared =
+    room.members.find((member) => member.userId === userId)?.declaredCursor ?? -1
+  const pending = pendingDeclaration(run?.undeclared ?? null, selfDeclared)
+  // Ce qu'on a joue et qui compte : une serie que le groupe a close avant
+  // d'en recevoir la declaration est echouee, comme pour tout non-declare.
+  const played = useMemo(
+    () => countedResults(run?.results ?? [], pending, roomStep),
+    [pending, roomStep, run],
   )
   // Ce qui part au resume et en base : ce qu'on a joue, plus les series que
   // le groupe a passees sans nous, echouees.
@@ -121,7 +139,7 @@ export function GroupRunner({
     () => fillSkipped(played, roomStep, steps),
     [played, roomStep, steps],
   )
-  const stage = playerStage(room, played)
+  const stage = playerStage(room, played, submitting ? null : pending)
   const step = steps[room.cursor]
 
   // L'hote compte parmi les presents, que sa propre presence soit deja
@@ -138,10 +156,24 @@ export function GroupRunner({
   // l'ordre, sans quoi un statut perime pourrait ecraser le dernier.
   const declarations = useRef<Promise<void>>(Promise.resolve())
   const declare = useCallback(
-    (cursor: number, status: SetStatus) => {
+    (cursor: number, status: SetStatus, first = false) => {
+      if (first) setSubmitting(true)
       declarations.current = declarations.current.then(async () => {
         const outcome = await declareSet(roomId, cursor, status)
-        // Serie deja passee par le groupe : elle sera comptee echouee, rien
+        if (first) {
+          setSubmitting(false)
+          // Acceptee : la serie compte telle que declaree. Refusee, elle
+          // reste en attente -- echouee si le groupe l'a passee, a
+          // redeclarer sinon.
+          if (!outcome.stale && !outcome.error) {
+            setRun((current) =>
+              current && current.undeclared === cursor
+                ? { ...current, undeclared: null }
+                : current,
+            )
+          }
+        }
+        // Serie deja passee par le groupe : elle est comptee echouee, rien
         // a signaler. On relit pour rattraper le salon.
         if (outcome.stale) {
           await reload()
@@ -185,24 +217,45 @@ export function GroupRunner({
         actualValue,
         status: setStatus(step.set, { value: actualValue, completed }),
       }
-      setRun({ ...run, results: recordResult(run.results, result), timer: null })
-      declare(room.cursor, result.status)
+      setRun({
+        ...run,
+        results: recordResult(run.results, result),
+        timer: null,
+        undeclared: room.cursor,
+      })
+      // Sans repos derriere, le dernier a declarer n'aurait pas le temps de
+      // corriger : l'hote avance aussitot. On corrige donc d'abord, et la
+      // declaration part sur l'etape de correction.
+      if (reviewsBeforeDeclaring(step.set, room.cursor, steps.length, grid.restSeconds)) {
+        return
+      }
+      declare(room.cursor, result.status, true)
     },
-    [declare, room.cursor, run, stage, step],
+    [declare, grid.restSeconds, room.cursor, run, stage, step, steps.length],
   )
 
-  // Correction du chrono de la serie du curseur, pendant l'attente ou le
-  // repos qui la suit : elle se redeclare, tant que le groupe ne l'a pas
-  // depassee. Une serie passee sans nous ne se corrige pas.
+  // Fin de l'etape de correction : la serie se declare avec son statut
+  // corrige. Sert aussi a redeclarer apres un echec d'envoi.
+  const endReview = useCallback(() => {
+    if (stage !== 'review') return
+    const own = playedResult(played, room.cursor)
+    if (own) declare(room.cursor, own.status, true)
+  }, [declare, played, room.cursor, stage])
+
+  // Correction du chrono de la serie du curseur : avant sa declaration, sur
+  // l'etape de correction, ou pendant l'attente et le repos qui la suivent,
+  // ou elle se redeclare tant que le groupe ne l'a pas depassee. Une serie
+  // passee sans nous ne se corrige pas.
   const ownResult = playedResult(played, room.cursor)
   const correctLast = useCallback(
     (seconds: number) => {
       if (!run || !step || !ownResult || !isCorrectable(step.set)) return
-      if (stage !== 'waiting' && stage !== 'rest') return
+      if (stage !== 'review' && stage !== 'waiting' && stage !== 'rest') return
 
       const corrected = correctTimedResult(step.set, ownResult, seconds)
       setRun({ ...run, results: recordResult(run.results, corrected) })
-      declare(room.cursor, corrected.status)
+      // Avant declaration, la correction reste locale : elle partira avec.
+      if (stage !== 'review') declare(room.cursor, corrected.status)
     },
     [declare, ownResult, room.cursor, run, stage, step],
   )
@@ -302,7 +355,12 @@ export function GroupRunner({
     else setRun((current) => (current ? { ...current, saved: true } : current))
   }, [grid.name, grid.version, level, results, room.gridId, roomId, run])
 
-  const mustSave = stage === 'summary' && run !== null && played.length > 0 && !run.saved
+  const mustSave =
+    stage === 'summary' &&
+    run !== null &&
+    run.results.length > 0 &&
+    !run.saved &&
+    !submitting
   const tried = useRef(false)
   useEffect(() => {
     if (!mustSave || tried.current) return
@@ -314,7 +372,7 @@ export function GroupRunner({
 
   if (stage === 'summary') {
     // Rien joue sur cet appareil : pas de seance a enregistrer.
-    if (played.length === 0) return <Finished gridName={grid.name} />
+    if (run.results.length === 0) return <Finished gridName={grid.name} />
     return (
       <Summary
         gridName={grid.name}
@@ -333,7 +391,7 @@ export function GroupRunner({
 
   const nextStep = steps[room.cursor + 1]
   const correction: Correction | null =
-    (stage === 'waiting' || stage === 'rest') &&
+    (stage === 'review' || stage === 'waiting' || stage === 'rest') &&
     ownResult &&
     step.set.timerMode !== 'none'
       ? {
@@ -357,7 +415,13 @@ export function GroupRunner({
         total={steps.length}
       />
 
-      {stage === 'rest' && nextStep ? (
+      {stage === 'review' ? (
+        <ReviewScreen
+          correction={correction}
+          continueLabel="Continuer"
+          onContinue={endReview}
+        />
+      ) : stage === 'rest' && nextStep ? (
         <RestScreen
           remaining={restRemaining(grid.restSeconds, room.restStartedAt, now)}
           nextExerciseName={nextStep.exerciseName}
@@ -421,6 +485,7 @@ function freshRun(roomId: string, levelId: string): GroupRun {
     startedAt: Date.now(),
     results: [],
     timer: null,
+    undeclared: null,
     saved: false,
   }
 }

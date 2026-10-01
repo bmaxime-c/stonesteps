@@ -3,7 +3,15 @@ import { describe, expect, it } from 'vitest'
 import type { SetResult } from '@/lib/session/model'
 
 import type { Room, RoomMember } from './model'
-import { memberStatuses, playerStage, playedResult, recordResult } from './run'
+import {
+  countedResults,
+  memberStatuses,
+  pendingDeclaration,
+  playerStage,
+  playedResult,
+  recordResult,
+  reviewsBeforeDeclaring,
+} from './run'
 
 function result(setIndex: number, status: SetResult['status'] = 'success'): SetResult {
   return {
@@ -63,6 +71,82 @@ describe('playerStage', () => {
     expect(playerStage(room({ status: 'finished', stage: 'finished' }), [])).toBe(
       'summary',
     )
+  })
+})
+
+describe('playerStage, etape de correction', () => {
+  it('corrige avant de declarer la serie jouee en attente', () => {
+    expect(playerStage(room(), [result(0), result(1)], 1)).toBe('review')
+  })
+
+  it('attend le groupe une fois la declaration partie', () => {
+    expect(playerStage(room(), [result(0), result(1)], null)).toBe('waiting')
+  })
+
+  it('une attente sur une autre serie ne retient pas celle du curseur', () => {
+    expect(playerStage(room(), [result(0)], 0)).toBe('set')
+  })
+
+  it('le salon passe outre : repos ou fin l emportent sur la correction', () => {
+    expect(playerStage(room({ stage: 'rest' }), [result(1)], 1)).toBe('rest')
+    expect(
+      playerStage(room({ status: 'finished', stage: 'finished' }), [result(1)], 1),
+    ).toBe('summary')
+  })
+})
+
+describe('reviewsBeforeDeclaring', () => {
+  const timed = { timerMode: 'minimal' as const }
+
+  it('une serie chronometree sans repos derriere se corrige d abord', () => {
+    expect(reviewsBeforeDeclaring(timed, 0, 3, 0)).toBe(true)
+  })
+
+  it('la derniere serie chronometree se corrige d abord, meme avec repos', () => {
+    expect(reviewsBeforeDeclaring(timed, 2, 3, 60)).toBe(true)
+  })
+
+  it('avec un repos derriere, on declare tout de suite', () => {
+    expect(reviewsBeforeDeclaring(timed, 0, 3, 60)).toBe(false)
+  })
+
+  it('une serie sans chrono se declare tout de suite', () => {
+    expect(reviewsBeforeDeclaring({ timerMode: 'none' }, 2, 3, 0)).toBe(false)
+  })
+})
+
+describe('pendingDeclaration', () => {
+  it('rien en attente', () => {
+    expect(pendingDeclaration(null, -1)).toBeNull()
+  })
+
+  it('en attente tant que le salon n a rien recu a ce rang', () => {
+    expect(pendingDeclaration(2, 1)).toBe(2)
+  })
+
+  it('acquise des que le salon porte la declaration, reponse ou non', () => {
+    expect(pendingDeclaration(2, 2)).toBeNull()
+  })
+})
+
+describe('countedResults', () => {
+  const played = [result(0), result(1, 'success')]
+
+  it('garde la serie en attente tant que le groupe ne l a pas close', () => {
+    expect(countedResults(played, 1, { cursor: 1, stage: 'set' })).toBe(played)
+  })
+
+  it('retire la serie close avant sa declaration, comptee echouee ensuite', () => {
+    expect(
+      countedResults(played, 1, { cursor: 1, stage: 'finished' }).map((r) => r.setIndex),
+    ).toEqual([0])
+    expect(
+      countedResults(played, 1, { cursor: 2, stage: 'set' }).map((r) => r.setIndex),
+    ).toEqual([0])
+  })
+
+  it('sans attente, tout compte', () => {
+    expect(countedResults(played, null, { cursor: 1, stage: 'finished' })).toBe(played)
   })
 })
 

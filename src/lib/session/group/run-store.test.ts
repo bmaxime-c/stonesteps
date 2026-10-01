@@ -9,6 +9,7 @@ function run(over: Partial<GroupRun> = {}): GroupRun {
     startedAt: 1000,
     results: [],
     timer: null,
+    undeclared: null,
     saved: false,
     ...over,
   }
@@ -18,6 +19,19 @@ beforeEach(() => window.sessionStorage.clear())
 afterEach(() => vi.restoreAllMocks())
 
 describe('stockage local d une seance de groupe', () => {
+  it('relit une serie en attente de declaration', () => {
+    saveGroupRun(run({ undeclared: 2 }))
+
+    expect(loadGroupRun('r1', 'l2')?.undeclared).toBe(2)
+  })
+
+  it('une seance rangee avant le champ n a rien en attente', () => {
+    const { undeclared: _omitted, ...older } = run()
+    window.sessionStorage.setItem('stonesteps.room.r1', JSON.stringify(older))
+
+    expect(loadGroupRun('r1', 'l2')?.undeclared).toBeNull()
+  })
+
   it('relit la seance rangee pour ce salon et ce niveau', () => {
     saveGroupRun(run({ startedAt: 42 }))
 

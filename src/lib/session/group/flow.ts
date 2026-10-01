@@ -66,7 +66,7 @@ export function nextRoomStep(
  * En serie, celle du curseur est encore en cours ; au repos ou a la fin, elle
  * est derriere tout le monde.
  */
-function closedSets(step: RoomStep): number {
+export function closedSets(step: RoomStep): number {
   return step.stage === 'set' ? step.cursor : step.cursor + 1
 }
 
