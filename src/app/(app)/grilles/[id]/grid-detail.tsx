@@ -2,7 +2,7 @@
 
 import { ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 
 import { describeRest, describeSets, initials, shortDate } from '@/lib/grids/describe'
 import type { LevelSet } from '@/lib/grids/model'
@@ -29,6 +29,7 @@ export function GridDetail({
   grid,
   currentLevelId,
   levels,
+  groupSession,
 }: {
   grid: {
     id: string
@@ -47,6 +48,11 @@ export function GridDetail({
   }
   currentLevelId: string | null
   levels: DetailLevel[]
+  /**
+   * Ouverture d'une seance a plusieurs, fournie par la page : le bouton
+   * appelle une action serveur, que ce composant n'a pas a connaitre.
+   */
+  groupSession?: ReactNode
 }) {
   const [selectedId, setSelectedId] = useState(
     () => currentLevelId ?? levels[0]?.id ?? null,
@@ -169,6 +175,11 @@ export function GridDetail({
               />
             </>
           ) : null}
+
+          {/* A cote du lancement solo, quel que soit le niveau consulte : a
+              plusieurs, le niveau se choisit dans le salon, sous le plafond
+              du moins avance. */}
+          {groupSession}
         </>
       ) : (
         <p className="bg-inset border-border text-muted-foreground rounded-[16px] border px-4 py-3.5 text-center text-[13px]">

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 
+import { OpenRoomButton } from '@/app/seance/groupe/open-room-button'
 import { gridProgress } from '@/lib/grids/progress'
 import { loadGrid } from '@/lib/grids/queries'
 import { validatedAt } from '@/lib/session/level'
@@ -45,6 +46,7 @@ export default async function GridPage({ params }: PageProps<'/grilles/[id]'>) {
         removedByOwner: grid.deletedAt !== null,
       }}
       currentLevelId={current?.id ?? null}
+      groupSession={<OpenRoomButton gridId={grid.id} />}
       levels={version.levels.map((level) => ({
         id: level.id,
         position: level.position,

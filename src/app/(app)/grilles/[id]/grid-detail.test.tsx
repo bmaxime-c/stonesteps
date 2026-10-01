@@ -180,3 +180,20 @@ describe('grille adoptee', () => {
     ).not.toBeInTheDocument()
   })
 })
+
+describe('GridDetail, seance a plusieurs', () => {
+  it('propose la seance a plusieurs quel que soit le niveau consulte', async () => {
+    render(
+      <GridDetail
+        grid={grid}
+        currentLevelId="l2"
+        levels={levels}
+        groupSession={<button type="button">Séance à plusieurs</button>}
+      />,
+    )
+
+    expect(screen.getByRole('button', { name: 'Séance à plusieurs' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /Niveau 1/ }))
+    expect(screen.getByRole('button', { name: 'Séance à plusieurs' })).toBeInTheDocument()
+  })
+})
