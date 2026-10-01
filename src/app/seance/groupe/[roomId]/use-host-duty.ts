@@ -7,6 +7,7 @@ import type { Room } from '@/lib/session/group/model'
 import { startDelay, startTimer, stopDelay, stopTimer } from '@/lib/session/timers'
 import { useNow } from '@/lib/session/use-now'
 
+import type { ClaimHostResult } from '../action-state'
 import { claimRoomHost, heartbeatRoom } from '../actions'
 
 /** Duree d'affichage du bandeau « Tu es maintenant l'hôte ». */
@@ -32,10 +33,14 @@ export type HostDuty = {
  *
  * L'hote se manifeste toutes les HEARTBEAT_INTERVAL_MS tant que le salon vit.
  * Les autres le regardent : si l'hote a quitte la presence et se tait depuis
- * plus que le seuil, le membre present entre le plus tot reclame sa place,
- * une fois par silence constate -- un nouveau battement, ou un nouvel hote,
- * en autorise une autre. La base tranche (claim_room_host) : de deux
- * candidats, un seul passe, et un hote vivant garde sa place.
+ * plus que le seuil, le membre present entre le plus tot reclame sa place.
+ * Tant que le silence dure, il retente a chaque HEARTBEAT_INTERVAL_MS, quelle
+ * que soit l'issue de la tentative precedente : une coupure, une erreur, ou
+ * meme un refus host_alive -- l'horloge de l'appareil peut avancer sur celle
+ * du serveur -- ne doivent pas laisser le salon sans hote jusqu'a un
+ * rafraichissement. Un nouveau battement, ou un nouvel hote, autorise une
+ * tentative immediate. La base tranche (claim_room_host) : de deux candidats,
+ * un seul passe, et un hote vivant garde sa place.
  *
  * L'ancien hote depossede pendant une coupure l'apprend a son battement
  * suivant : il cesse de battre et redevient invite sans attendre la
@@ -80,8 +85,9 @@ export function useHostDuty({
 
     let live = true
     const beat = async () => {
-      const outcome = await heartbeatRoom(roomId)
-      if (!live || !outcome.deposed) return
+      // Perdu en route : rien a en conclure, le suivant partira a son heure.
+      const outcome = await heartbeatRoom(roomId).catch(() => null)
+      if (!live || !outcome?.deposed) return
       setDeposedAt(beatKeyRef.current)
       void reloadRef.current()
     }
@@ -101,20 +107,41 @@ export function useHostDuty({
     room.hostId !== userId &&
     hostCandidate(room.members, present, room.hostId) === userId
   const now = useNow(candidate, STALE_CHECK_MS)
-  const claimedFor = useRef<string | null>(null)
+  // Derniere tentative : le couple qu'elle visait, et son heure. Une seule a
+  // la fois en vol.
+  const lastClaim = useRef<{ key: string; at: number } | null>(null)
+  const claiming = useRef(false)
+  const mounted = useRef(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!candidate || claimedFor.current === beatKey) return
-    if (!hostStale(room.hostSeenAt, now)) return
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
 
-    claimedFor.current = beatKey
-    void claimRoomHost(roomId).then((outcome) => {
-      setError(outcome.error)
-      // Prise : le salon a change d'hote, on le relit sans attendre
-      // l'evenement.
-      if (outcome.claimed) void reloadRef.current()
-    })
+  useEffect(() => {
+    if (!candidate || claiming.current) return
+    if (!hostStale(room.hostSeenAt, now)) return
+    const last = lastClaim.current
+    if (last && last.key === beatKey && now - last.at < HEARTBEAT_INTERVAL_MS) return
+
+    lastClaim.current = { key: beatKey, at: now }
+    claiming.current = true
+    void claimRoomHost(roomId)
+      .catch((): ClaimHostResult => ({
+        claimed: false,
+        error: "Tu n'as pas pu prendre la main.",
+      }))
+      .then((outcome) => {
+        claiming.current = false
+        if (!mounted.current) return
+        setError(outcome.error)
+        // Prise : le salon a change d'hote, on le relit sans attendre
+        // l'evenement.
+        if (outcome.claimed) void reloadRef.current()
+      })
   }, [beatKey, candidate, now, room.hostSeenAt, roomId])
 
   // Bandeau : a la bascule d'invite a hote, pas pour l'hote d'origine.

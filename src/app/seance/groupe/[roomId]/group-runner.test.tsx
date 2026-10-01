@@ -901,6 +901,106 @@ describe('GroupRunner, battement et prise de main', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
+  it('une prise de main en erreur est retentee au battement suivant', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    actions.claimRoomHost
+      .mockResolvedValueOnce({ claimed: false, error: "Tu n'as pas pu prendre la main." })
+      .mockResolvedValue({ claimed: true, error: null })
+    render(
+      element({
+        room: room({ hostSeenAt: ago(16_000) }),
+        userId: 'guest',
+        present: ['guest'],
+      }),
+    )
+
+    await waitFor(() => expect(actions.claimRoomHost).toHaveBeenCalledOnce())
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      "Tu n'as pas pu prendre la main.",
+    )
+    // Pas de relance en rafale : on attend un battement.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3_000)
+    })
+    expect(actions.claimRoomHost).toHaveBeenCalledOnce()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3_000)
+    })
+    expect(actions.claimRoomHost).toHaveBeenCalledTimes(2)
+    // Reussie, l erreur s efface.
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
+  })
+
+  it('une prise de main perdue en route est retentee', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    actions.claimRoomHost
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValue({ claimed: true, error: null })
+    render(
+      element({
+        room: room({ hostSeenAt: ago(16_000) }),
+        userId: 'guest',
+        present: ['guest'],
+      }),
+    )
+
+    await waitFor(() => expect(actions.claimRoomHost).toHaveBeenCalledOnce())
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(6_000)
+    })
+    expect(actions.claimRoomHost).toHaveBeenCalledTimes(2)
+    expect(reload).toHaveBeenCalled()
+  })
+
+  it('un refus silencieux ne relance pas aussitot, mais retente si l hote reste muet', async () => {
+    // Horloge de l appareil en avance sur le serveur : la base tient encore
+    // l hote pour vivant. Sans relance, le salon resterait sans hote.
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    actions.claimRoomHost
+      .mockResolvedValueOnce({ claimed: false, error: null })
+      .mockResolvedValue({ claimed: true, error: null })
+    render(
+      element({
+        room: room({ hostSeenAt: ago(16_000) }),
+        userId: 'guest',
+        present: ['guest'],
+      }),
+    )
+
+    await waitFor(() => expect(actions.claimRoomHost).toHaveBeenCalledOnce())
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3_000)
+    })
+    expect(actions.claimRoomHost).toHaveBeenCalledOnce()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3_000)
+    })
+    expect(actions.claimRoomHost).toHaveBeenCalledTimes(2)
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('un battement perdu en route ne casse rien : le suivant part a son heure', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    actions.heartbeatRoom
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValue({ deposed: false })
+    render(
+      element({
+        room: room({ stage: 'rest', restStartedAt: new Date().toISOString() }),
+      }),
+    )
+
+    await waitFor(() => expect(actions.heartbeatRoom).toHaveBeenCalledOnce())
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_000)
+    })
+    expect(actions.heartbeatRoom).toHaveBeenCalledTimes(2)
+    // Toujours hote.
+    expect(screen.getByRole('button', { name: 'Passer le repos' })).toBeInTheDocument()
+  })
+
   it('le bandeau s affiche quand on devient hote, et l on se met a battre', async () => {
     const view = render(element({ userId: 'guest' }))
     expect(screen.queryByText("Tu es maintenant l'hôte")).not.toBeInTheDocument()
